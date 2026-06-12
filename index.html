@@ -5,15 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wannathis Animator</title>
 <style>
+  /* design language of mockup-online.wannathis.one: light, Euclid Circular B, pill buttons, violet accent */
+  @font-face{
+    font-family:'Euclid Circular B'; font-style:normal; font-weight:400; font-display:swap;
+    src:url(https://d2pas86kykpvmq.cloudfront.net/fonts/EuclidCircularB-Regular.woff2) format('woff2');
+  }
+  @font-face{
+    font-family:'Euclid Circular B'; font-style:normal; font-weight:500; font-display:swap;
+    src:url(https://d2pas86kykpvmq.cloudfront.net/fonts/EuclidCircularB-Medium.woff2) format('woff2');
+  }
   :root{
-    --bg:#0a0a0a; --panel:#141414; --panel2:#1e1e1e; --border:#282828;
-    --text:#e8e8e8; --muted:#878787; --accent:#f5f1e3;
+    --bg:#f4f4f6; --panel:#fff; --panel2:#f8f8f8; --border:#e3e2e8;
+    --text:#1c1c1c; --muted:#888; --dark:#2e2e2e; --accent:#713ade;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html,body{height:100%;}
   body{
     background:var(--bg); color:var(--text);
-    font-family:'Inter','Segoe UI',system-ui,sans-serif; font-size:13px;
+    font-family:'Euclid Circular B','Inter','Segoe UI',system-ui,sans-serif; font-size:13px;
     display:flex; overflow:hidden;
   }
   aside{
@@ -23,96 +32,96 @@
     transition:opacity .2s;
   }
   aside.locked{pointer-events:none; opacity:.55;}
-  aside::-webkit-scrollbar{width:6px;} aside::-webkit-scrollbar-thumb{background:#333; border-radius:3px;}
-  h1{font-size:13px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;}
+  aside::-webkit-scrollbar{width:6px;} aside::-webkit-scrollbar-thumb{background:#ddd; border-radius:3px;}
+  h1{font-size:13px; font-weight:500; letter-spacing:.08em; text-transform:uppercase;}
   h1 span{color:var(--muted); font-weight:400;}
   .group{display:flex; flex-direction:column; gap:8px;}
   .label{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted);}
-  .label small{color:#5a5a5a; letter-spacing:.05em; text-transform:none;}
+  .label small{color:#aaa; letter-spacing:.05em; text-transform:none;}
   .tplGrid{display:grid; grid-template-columns:1fr 1fr; gap:6px;}
-  .tplGrid .cat{grid-column:1/-1; font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:#5a5a5a; margin-top:5px;}
+  .tplGrid .cat{grid-column:1/-1; font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:#b3b3b8; margin-top:5px;}
   .tpl{
-    padding:9px 9px; background:var(--panel2); border:1px solid var(--border);
-    border-radius:8px; cursor:pointer; color:var(--text); font-size:11px; line-height:1.35;
-    text-align:left; transition:background .15s,border-color .15s; font-family:inherit;
+    padding:9px 10px; background:var(--panel2); border:1px solid var(--border);
+    border-radius:10px; cursor:pointer; color:var(--text); font-size:11px; line-height:1.35;
+    text-align:left; transition:background .15s,border-color .15s,color .15s; font-family:inherit;
   }
-  .tpl:hover{background:#272727;}
-  .tpl.active{background:var(--accent); color:#111; border-color:var(--accent); font-weight:600;}
+  .tpl:hover{background:#efeff2;}
+  .tpl.active{background:var(--dark); color:#fff; border-color:var(--dark); font-weight:500;}
   .chips{display:flex; flex-wrap:wrap; gap:5px;}
   .chip{
-    padding:6px 9px; background:var(--panel2); border:1px solid var(--border);
-    border-radius:7px; cursor:pointer; color:var(--text); font-size:11px;
-    transition:background .15s,border-color .15s; font-family:inherit;
+    padding:6px 11px; background:var(--panel2); border:1px solid var(--border);
+    border-radius:100px; cursor:pointer; color:var(--text); font-size:11px;
+    transition:background .15s,border-color .15s,color .15s; font-family:inherit;
   }
-  .chip:hover{background:#272727;}
-  .chip.active{background:var(--accent); color:#111; border-color:var(--accent); font-weight:600;}
-  .seg{display:flex; background:var(--panel2); border:1px solid var(--border); border-radius:8px; overflow:hidden;}
-  .seg button{flex:1; padding:7px 0; background:transparent; border:none; color:var(--muted); cursor:pointer; font-size:11.5px; font-family:inherit;}
-  .seg button.active{background:#333; color:var(--text); font-weight:600;}
+  .chip:hover{background:#efeff2;}
+  .chip.active{background:var(--dark); color:#fff; border-color:var(--dark); font-weight:500;}
+  .seg{display:flex; background:var(--panel2); border:1px solid var(--border); border-radius:100px; overflow:hidden; padding:3px; gap:3px;}
+  .seg button{flex:1; padding:6px 0; background:transparent; border:none; border-radius:100px; color:var(--muted); cursor:pointer; font-size:11.5px; font-family:inherit;}
+  .seg button.active{background:var(--dark); color:#fff; font-weight:500;}
   .slider-row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
   .slider-row .val{color:var(--muted); font-variant-numeric:tabular-nums; min-width:44px; text-align:right; font-size:11.5px;}
-  input[type=range]{-webkit-appearance:none; width:100%; height:3px; background:#333; border-radius:2px; outline:none;}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:13px; height:13px; border-radius:50%; background:var(--text); cursor:pointer;}
-  input[type=color]{width:100%; height:30px; border:1px solid var(--border); border-radius:8px; background:var(--panel2); cursor:pointer; padding:2px 4px;}
-  .drop{border:1px dashed #3a3a3a; border-radius:10px; padding:13px 10px; text-align:center; color:var(--muted); cursor:pointer; font-size:11.5px; line-height:1.5; transition:border-color .15s,color .15s;}
-  .drop:hover,.drop.over{border-color:var(--accent); color:var(--text);}
-  .drop .sub{font-size:10px; color:#555;}
+  input[type=range]{-webkit-appearance:none; width:100%; height:3px; background:#e3e2e8; border-radius:2px; outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:15px; height:15px; border-radius:50%; background:var(--dark); cursor:pointer; border:2.5px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.25);}
+  input[type=color]{width:100%; height:32px; border:1px solid var(--border); border-radius:10px; background:var(--panel2); cursor:pointer; padding:3px 5px;}
+  .drop{border:1.5px dashed #c8c8c8; border-radius:12px; padding:14px 10px; text-align:center; color:var(--muted); cursor:pointer; font-size:11.5px; line-height:1.5; transition:border-color .15s,color .15s,background .15s;}
+  .drop:hover,.drop.over{border-color:var(--accent); color:var(--text); background:#faf8ff;}
+  .drop .sub{font-size:10px; color:#b3b3b8;}
   .drop.busy{pointer-events:none; opacity:.6;}
   .thumbs{display:flex; flex-wrap:wrap; gap:6px;}
   .thumb{position:relative; width:40px; height:53px;}
-  .thumb img{width:40px; height:53px; object-fit:cover; border-radius:5px; border:1px solid var(--border); cursor:grab; display:block;}
+  .thumb img{width:40px; height:53px; object-fit:cover; border-radius:6px; border:1px solid var(--border); cursor:grab; display:block;}
   .thumb .x{
     position:absolute; top:-5px; right:-5px; width:16px; height:16px; border-radius:50%;
-    background:#222; color:#bbb; border:1px solid #444; font-size:10px; line-height:13px;
-    cursor:pointer; display:none; text-align:center; padding:0; font-family:inherit;
+    background:#fff; color:#666; border:1px solid #d8d8d8; font-size:10px; line-height:13px;
+    cursor:pointer; display:none; text-align:center; padding:0; font-family:inherit; box-shadow:0 1px 3px rgba(0,0,0,.12);
   }
   .thumb:hover .x{display:block;}
-  .thumb .x:hover{background:#c0392b; color:#fff; border-color:#c0392b;}
+  .thumb .x:hover{background:#e5484d; color:#fff; border-color:#e5484d;}
   .thumb.dragover img{border-color:var(--accent);}
-  .btn{padding:9px; border-radius:9px; border:1px solid var(--border); background:var(--panel2); color:var(--text); cursor:pointer; font-size:12px; font-family:inherit; font-weight:500; transition:background .15s;}
-  .btn:hover{background:#2a2a2a;}
-  .btn.primary{background:var(--accent); color:#111; border-color:var(--accent); font-weight:600;}
-  .btn.primary:hover{background:#fff;}
+  .btn{padding:10px; border-radius:100px; border:1px solid var(--border); background:var(--panel2); color:var(--text); cursor:pointer; font-size:12px; font-family:inherit; font-weight:500; transition:background .15s,color .15s;}
+  .btn:hover{background:#efeff2;}
+  .btn.primary{background:var(--dark); color:#fff; border-color:var(--dark);}
+  .btn.primary:hover{background:#000;}
   .btn:disabled{opacity:.45; cursor:default;}
   .btn.sm{padding:7px; font-size:11px;}
   .row2{display:flex; gap:8px;} .row2 .btn{flex:1;}
-  #easeCurve{width:100%; height:150px; background:#101010; border:1px solid var(--border); border-radius:10px; display:block; touch-action:none; cursor:crosshair;}
+  #easeCurve{width:100%; height:150px; background:#fafafa; border:1px solid var(--border); border-radius:12px; display:block; touch-action:none; cursor:crosshair;}
   .bezvals{display:flex; gap:5px;}
-  .bezvals div{flex:1; text-align:center; background:var(--panel2); border:1px solid var(--border); border-radius:7px; padding:6px 0; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums;}
+  .bezvals div{flex:1; text-align:center; background:var(--panel2); border:1px solid var(--border); border-radius:8px; padding:6px 0; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums;}
   details{border:none;}
   summary{cursor:pointer; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); list-style:none; user-select:none;}
   summary::before{content:'▸ ';} details[open] summary::before{content:'▾ ';}
-  .loopinfo{font-size:10.5px; color:#666; text-align:center; font-variant-numeric:tabular-nums;}
+  .loopinfo{font-size:10.5px; color:#999; text-align:center; font-variant-numeric:tabular-nums;}
   main{flex:1; position:relative; display:flex; align-items:center; justify-content:center; min-width:0;}
-  #stage{position:relative; box-shadow:0 0 80px rgba(0,0,0,.6);}
+  #stage{position:relative; box-shadow:0 18px 60px rgba(0,0,0,.16), 0 4px 14px rgba(0,0,0,.08); border-radius:4px;}
   #stage.checker{
-    background-image:conic-gradient(#2a2a2a 0 25%,#1c1c1c 0 50%,#2a2a2a 0 75%,#1c1c1c 0);
+    background-image:conic-gradient(#e8e8ec 0 25%,#f6f6f8 0 50%,#e8e8ec 0 75%,#f6f6f8 0);
     background-size:20px 20px;
   }
-  #stage canvas{display:block; width:100%; height:100%; border-radius:2px;}
-  .ratios{position:absolute; top:16px; right:16px; display:flex; gap:4px; background:rgba(20,20,20,.85); border:1px solid var(--border); border-radius:10px; padding:4px; backdrop-filter:blur(8px);}
-  .ratios button{padding:6px 10px; border:none; border-radius:7px; background:transparent; color:var(--muted); cursor:pointer; font-size:11.5px; font-family:inherit;}
-  .ratios button.active{background:#333; color:var(--text); font-weight:600;}
+  #stage canvas{display:block; width:100%; height:100%; border-radius:4px;}
+  .ratios{position:absolute; top:16px; right:16px; display:flex; gap:3px; background:rgba(255,255,255,.92); border:1px solid var(--border); border-radius:100px; padding:4px; backdrop-filter:blur(8px); box-shadow:0 2px 10px rgba(0,0,0,.06);}
+  .ratios button{padding:6px 11px; border:none; border-radius:100px; background:transparent; color:var(--muted); cursor:pointer; font-size:11.5px; font-family:inherit;}
+  .ratios button.active{background:var(--dark); color:#fff; font-weight:500;}
   body.exporting .ratios{pointer-events:none; opacity:.4;}
   #exportBadge{
     position:absolute; top:16px; left:16px; display:none; flex-direction:column; gap:7px;
-    background:rgba(20,20,20,.92); border:1px solid var(--border); border-radius:10px;
-    padding:10px 12px; font-size:11.5px; backdrop-filter:blur(8px); min-width:210px;
+    background:rgba(255,255,255,.95); border:1px solid var(--border); border-radius:14px;
+    padding:10px 12px; font-size:11.5px; backdrop-filter:blur(8px); min-width:210px; box-shadow:0 2px 10px rgba(0,0,0,.08);
   }
   #exportBadge .ebrow{display:flex; align-items:center; gap:8px;}
-  #exportBadge .dot{width:8px; height:8px; border-radius:50%; background:#ff4040; animation:blink 1s infinite;}
-  #exportBadge button{margin-left:auto; background:none; border:1px solid #444; color:#aaa; border-radius:6px; padding:3px 8px; font-size:10.5px; cursor:pointer; font-family:inherit;}
-  #exportBadge button:hover{border-color:#888; color:#fff;}
-  .ebTrack{height:4px; background:#2a2a2a; border-radius:2px; overflow:hidden;}
+  #exportBadge .dot{width:8px; height:8px; border-radius:50%; background:var(--accent); animation:blink 1s infinite;}
+  #exportBadge button{margin-left:auto; background:none; border:1px solid #d8d8d8; color:#888; border-radius:100px; padding:3px 10px; font-size:10.5px; cursor:pointer; font-family:inherit;}
+  #exportBadge button:hover{border-color:#888; color:#000;}
+  .ebTrack{height:4px; background:#ececf0; border-radius:2px; overflow:hidden;}
   .ebFill{height:100%; width:0%; background:var(--accent); transition:width .15s;}
   @keyframes blink{50%{opacity:.25;}}
-  .hint{font-size:10px; color:#555; line-height:1.5;}
+  .hint{font-size:10px; color:#aaa; line-height:1.5;}
   #toasts{position:absolute; bottom:18px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:8px; align-items:center; z-index:50; pointer-events:none;}
   .toast{
-    background:rgba(25,25,25,.95); border:1px solid #3a3a3a; color:#ddd;
-    padding:9px 16px; border-radius:10px; font-size:12px; max-width:420px;
+    background:var(--dark); border:none; color:#fff;
+    padding:10px 18px; border-radius:100px; font-size:12px; max-width:420px;
     opacity:0; transform:translateY(8px); transition:opacity .25s,transform .25s;
-    backdrop-filter:blur(8px);
+    box-shadow:0 6px 24px rgba(0,0,0,.2);
   }
   .toast.show{opacity:1; transform:translateY(0);}
 </style>
@@ -146,7 +155,7 @@
 
   <div class="group">
     <div class="slider-row"><div class="label">Card size</div><div class="val" id="sizeVal">×1.00</div></div>
-    <input type="range" id="cardSize" min="0.6" max="1.5" step="0.05" value="1">
+    <input type="range" id="cardSize" min="0.6" max="2" step="0.05" value="1">
   </div>
 
   <div class="group">
@@ -369,7 +378,11 @@ postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2), postMat));
 
 /* ================= helpers ================= */
 function frameAt(z){ const h=2*z*Math.tan(THREE.MathUtils.degToRad(camera.fov/2)); return {h, w:h*camera.aspect}; }
-function mat(tex,transparent=false){ return new THREE.MeshBasicMaterial({map:tex, side:THREE.DoubleSide, transparent, depthWrite:!transparent}); }
+function mat(tex,transparent=false){
+  const m=new THREE.MeshBasicMaterial({map:tex, side:THREE.DoubleSide, transparent, depthWrite:!transparent});
+  if(!transparent) m.alphaTest=.5; // rounded-corner crops stay transparent instead of going black
+  return m;
+}
 function plane(tex,w,h,transparent=false){ return new THREE.Mesh(new THREE.PlaneGeometry(w,h), mat(tex,transparent)); }
 function mulberry32(a){ return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 
@@ -560,7 +573,7 @@ const SCENES = {
     const texs=activeTextures(P.corner); const N=texs.length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const h=Math.min(fr.h*.84*Math.min(state.size,1.15), fr.h*.95, fr.w*.92/PA), w=h*PA;
+    const h=Math.min(fr.h*.84*state.size, fr.h*.96, fr.w*.96/PA), w=h*PA;
     const meshes=texs.map(t=>{
       const tc=t.clone(); tc.needsUpdate=true; // own GPU texture per card for UV animation
       const m=plane(tc,w,h,true);
@@ -597,9 +610,10 @@ const SCENES = {
     const texs=activeTextures(P.corner); const N=texs.length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const cols=N>=9?4:N>=4?3:2;
+    // bigger cards → fewer columns; spacing stays proportional, no collisions
+    const cols=Math.max(1,Math.min(6,Math.round((N>=9?4:N>=4?3:2)/state.size)));
     const cw=fr.w*1.04/cols, gap=cw*.10;
-    const w=Math.min((cw-gap)*state.size, cw*.98), h=w/PA, rowH=h+gap;
+    const w=cw-gap, h=w/PA, rowH=h+gap;
     let rows=Math.max(Math.ceil(N/cols), Math.ceil(fr.h/rowH)+2);
     while((rows*cols)%N) rows++; // even image distribution — no duplicate rows at the loop seam
     const meshes=[];
@@ -625,8 +639,8 @@ const SCENES = {
     const texs=activeTextures(P.corner); const N=texs.length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const h=Math.min(fr.h*.52*state.size, fr.h*.9), w=h*PA;
-    const gap=w*.34, step=w+gap; // wide gap: staggered neighbours can never collide mid-step
+    const h=Math.min(fr.h*.52*state.size, fr.h*.92), w=h*PA;
+    const gap=w*.26, step=w+gap;
     let n=Math.max(N, Math.ceil(fr.w/step)+2);
     while(n%N) n++; // no duplicate neighbours at the loop seam
     const meshes=[];
@@ -634,8 +648,9 @@ const SCENES = {
     const total=n*step, phase=makePhase(P);
     return { loopSeconds:(P.dur+P.hold)*n,
       update(T){
+        // lockstep: one shared phase keeps every gap constant — collisions are impossible
+        const adv=phase(T)*step*state.dir;
         for(let i=0;i<n;i++){
-          const adv=phase(T,i*P.stagger)*step*state.dir;
           let x=i*step-adv;
           x=((x%total)+total)%total;
           meshes[i].position.x=x-total/2+step/2;
@@ -688,9 +703,10 @@ const SCENES = {
     const texs=activeTextures(P.corner); const N0=texs.length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const lanes=N0>=10?4:3;
+    // bigger cards → fewer lanes; lane height stays proportional, no collisions
+    const lanes=Math.max(2,Math.min(6,Math.round((N0>=10?4:3)/state.size)));
     const laneH=(fr.h*1.15)/lanes;
-    const h=Math.min(laneH*.86*state.size, laneH*.98), w=h*PA, gap=w*.18, step=w+gap;
+    const h=laneH*.86, w=h*PA, gap=w*.18, step=w+gap;
     let perLane=Math.ceil(fr.w*1.4/step)+1;
     while(perLane%N0) perLane++; // even cycle inside each lane
     const total=perLane*step;
@@ -719,7 +735,7 @@ const SCENES = {
     const minN=P.minN||12;
     const n=N0>=minN?N0:N0*Math.ceil(minN/N0);
     const h=1.2*state.size, w=h*PA;
-    const spread=1.4, depth=spread*6, rnd=mulberry32(7);
+    const spread=1.4*Math.max(1,state.size), depth=spread*6, rnd=mulberry32(7); // field widens with cards
     const meshes=[];
     for(let i=0;i<n;i++){
       const m=plane(texs[i%N0],w,h,true);
@@ -742,37 +758,12 @@ const SCENES = {
       } };
   },
 
-  /* Helix — slow rotating spiral of cards, always facing camera */
-  helix(P){
-    const texs=activeTextures(P.corner); const N0=texs.length;
-    const minN=P.minN||18;
-    const n=N0>=minN?N0:N0*Math.ceil(minN/N0);
-    const h=.85*state.size, w=h*PA, turns=3;
-    const R=1.85, H=R*3.0;
-    const inner=new THREE.Group(); root.add(inner);
-    const meshes=[];
-    for(let i=0;i<n;i++){
-      const th=i/n*turns*Math.PI*2, y=-H/2+i/n*H;
-      const m=plane(texs[i%N0],w,h);
-      m.position.set(Math.sin(th)*R,y,Math.cos(th)*R);
-      inner.add(m); meshes.push(m);
-    }
-    camera.position.set(0,0,R+5.2+H*.3); camera.lookAt(0,0,0);
-    const phase=makePhase(P), q=new THREE.Quaternion();
-    return { loopSeconds:P.dur+P.hold,
-      update(T){
-        inner.rotation.y=phase(T)*Math.PI*2*state.dir;
-        q.copy(inner.quaternion).invert().multiply(camera.quaternion);
-        meshes.forEach(m=>m.quaternion.copy(q));
-      } };
-  },
-
   /* Globe — fibonacci sphere of cards, slow rotation */
   globe(P){
     const texs=activeTextures(P.corner); const N0=texs.length;
     const minN=P.minN||24;
     const n=N0>=minN?N0:N0*Math.ceil(minN/N0);
-    const h=.55*state.size, w=h*PA, R=1.65;
+    const h=.55*state.size, w=h*PA, R=1.65*Math.max(1,state.size); // sphere grows with cards
     const inner=new THREE.Group(); root.add(inner);
     const meshes=[];
     const ga=Math.PI*(3-Math.sqrt(5));
@@ -797,7 +788,7 @@ const SCENES = {
     const texs=activeTextures(P.corner); const N=texs.length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const h=Math.min(fr.h*.86*state.size, fr.h*.95), w=h*PA;
+    const h=Math.min(fr.h*.86*state.size, fr.h*.97), w=h*PA;
     const m=plane(texs[0],w,h); root.add(m);
     let lastIdx=-1;
     const cyc=P.dur+P.hold, loop=cyc*N;
@@ -816,7 +807,7 @@ const SCENES = {
     const texs=activeTextures(P.corner); const N=texs.length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const h=Math.min(fr.h*.66*state.size, fr.h*.92, fr.w*.8/PA), w=h*PA;
+    const h=Math.min(fr.h*.66*state.size, fr.h*.95, fr.w*.92/PA), w=h*PA;
     const meshes=texs.map(t=>{ const m=plane(t,w,h,true); m.visible=false; root.add(m); return m; });
     const seg=P.dur+P.hold;
     const loop=N===1?Math.max(5,seg):N*seg;
@@ -862,13 +853,12 @@ const TEMPLATES = [
   {id:'floating',     name:'Floating Cards',        scene:'floating',     ease:'Linear',         P:{loop:10,  corner:1.5}},
   {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Slow Cinematic', P:{dur:.8,   hold:2.4, corner:1.5}},
   {cat:'Walls & Strips'},
-  {id:'filmstrip',    name:'Horizontal Filmstrip',  scene:'filmstrip',    ease:'Soft In-Out',    P:{dur:1.2,  hold:.35, stagger:.04, drift:.04, corner:1.5}},
+  {id:'filmstrip',    name:'Horizontal Filmstrip',  scene:'filmstrip',    ease:'Soft In-Out',    P:{dur:1.2,  hold:.35, drift:.04, corner:1.5}},
   {id:'v-scroll',     name:'Vertical Scroll',       scene:'vScroll',      ease:'Smooth Out',     P:{dur:1.1,  hold:.5,  drift:.06, corner:0}},
   {id:'grid-pop',     name:'Grid Pop',              scene:'gridPop',      ease:'Snappy Pop',     P:{dur:.55,  hold:1.7, corner:2}},
   {id:'marquee',      name:'Marquee Lanes',         scene:'marquee',      ease:'Linear',         P:{dur:14,   hold:0,   corner:1, tiltZ:-6}},
   {cat:'Space'},
   {id:'field',        name:'Field Flight',          scene:'field',        ease:'Soft In-Out',    P:{dur:1.6,  hold:.4,  drift:.15, corner:0, minN:12}},
-  {id:'helix',        name:'Helix',                 scene:'helix',        ease:'Linear',         P:{dur:10,   hold:0,   corner:1, minN:18}},
   {id:'globe',        name:'Globe',                 scene:'globe',        ease:'Linear',         P:{dur:9,    hold:0,   corner:1, minN:24}},
   {cat:'Cuts'},
   {id:'zoom-gallery', name:'Zoom Gallery',          scene:'zoomGallery',  ease:'Slow Cinematic', P:{dur:.9,   hold:2.1, corner:0}},
@@ -899,23 +889,23 @@ function drawCurve(b){
   const pad=16, iw=W-pad*2, ih=H-pad*2;
   const px=t=>pad+t*iw, py=v=>H-pad-(v-yMin)/(yMax-yMin)*ih;
   curveMap={px,py,pad,iw,ih,yMin,yMax,H};
-  x.strokeStyle='#1d1d1d'; x.lineWidth=1;
+  x.strokeStyle='#ececef'; x.lineWidth=1;
   for(let i=0;i<=4;i++){
     x.beginPath(); x.moveTo(px(i/4),py(yMin)); x.lineTo(px(i/4),py(yMax)); x.stroke();
   }
-  [[0,'#2e2e2e'],[1,'#2e2e2e']].forEach(([v,col])=>{
+  [[0,'#d8d8de'],[1,'#d8d8de']].forEach(([v,col])=>{
     x.strokeStyle=col; x.beginPath(); x.moveTo(px(0),py(v)); x.lineTo(px(1),py(v)); x.stroke();
   });
-  x.strokeStyle='#555'; x.setLineDash([3,3]);
+  x.strokeStyle='#c9b8ef'; x.setLineDash([3,3]);
   x.beginPath(); x.moveTo(px(0),py(0)); x.lineTo(px(b[0]),py(b[1])); x.stroke();
   x.beginPath(); x.moveTo(px(1),py(1)); x.lineTo(px(b[2]),py(b[3])); x.stroke();
   x.setLineDash([]);
-  x.strokeStyle='#e8e8e8'; x.lineWidth=2;
+  x.strokeStyle='#2e2e2e'; x.lineWidth=2;
   x.beginPath(); x.moveTo(px(0),py(0));
   x.bezierCurveTo(px(b[0]),py(b[1]),px(b[2]),py(b[3]),px(1),py(1)); x.stroke();
   [[b[0],b[1]],[b[2],b[3]]].forEach(([hx,hy])=>{
     x.beginPath(); x.arc(px(hx),py(hy),5,0,Math.PI*2);
-    x.fillStyle='#101010'; x.fill(); x.strokeStyle='#ccc'; x.lineWidth=1.5; x.stroke();
+    x.fillStyle='#fff'; x.fill(); x.strokeStyle='#713ade'; x.lineWidth=2; x.stroke();
   });
 }
 function refreshEaseUI(){
