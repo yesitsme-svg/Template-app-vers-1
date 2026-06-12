@@ -30,6 +30,7 @@
   .label{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted);}
   .label small{color:#5a5a5a; letter-spacing:.05em; text-transform:none;}
   .tplGrid{display:grid; grid-template-columns:1fr 1fr; gap:6px;}
+  .tplGrid .cat{grid-column:1/-1; font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:#5a5a5a; margin-top:5px;}
   .tpl{
     padding:9px 9px; background:var(--panel2); border:1px solid var(--border);
     border-radius:8px; cursor:pointer; color:var(--text); font-size:11px; line-height:1.35;
@@ -141,6 +142,11 @@
   <div class="group">
     <div class="slider-row"><div class="label">Speed</div><div class="val" id="speedVal">×1.00</div></div>
     <input type="range" id="speed" min="0.25" max="2" step="0.05" value="1">
+  </div>
+
+  <div class="group">
+    <div class="slider-row"><div class="label">Card size</div><div class="val" id="sizeVal">×1.00</div></div>
+    <input type="range" id="cardSize" min="0.6" max="1.5" step="0.05" value="1">
   </div>
 
   <div class="group">
@@ -349,17 +355,14 @@ const postScene=new THREE.Scene();
 const postCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
 const postMat=new THREE.ShaderMaterial({
   transparent:true, depthTest:false,
-  uniforms:{uTime:{value:0},uGrain:{value:.09},uVig:{value:.5}},
+  uniforms:{uTime:{value:0},uGrain:{value:.12}},
   vertexShader:`varying vec2 vUv; void main(){vUv=uv; gl_Position=vec4(position.xy,0.,1.);}`,
-  fragmentShader:`
-    varying vec2 vUv; uniform float uTime,uGrain,uVig;
+  fragmentShader:` // fine full-frame film grain, no vignette
+    varying vec2 vUv; uniform float uTime,uGrain;
     float rnd(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
     void main(){
       float g=(rnd(vUv*vec2(1317.,733.)+fract(uTime*7.)) - .5)*uGrain;
-      float d=length(vUv-.5);
-      float vig=smoothstep(.45,.95,d)*uVig;
-      vec3 col = g>0. ? vec3(1.) : vec3(0.);
-      gl_FragColor=vec4(mix(col,vec3(0.),clamp(vig*4.,0.,1.)), abs(g)+vig);
+      gl_FragColor=vec4(vec3(step(0.,g)), abs(g));
     }`
 });
 postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2), postMat));
@@ -369,15 +372,6 @@ function frameAt(z){ const h=2*z*Math.tan(THREE.MathUtils.degToRad(camera.fov/2)
 function mat(tex,transparent=false){ return new THREE.MeshBasicMaterial({map:tex, side:THREE.DoubleSide, transparent, depthWrite:!transparent}); }
 function plane(tex,w,h,transparent=false){ return new THREE.Mesh(new THREE.PlaneGeometry(w,h), mat(tex,transparent)); }
 function mulberry32(a){ return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
-function shadowTexture(){
-  const c=document.createElement('canvas'); c.width=256; c.height=128;
-  const x=c.getContext('2d');
-  const g=x.createRadialGradient(128,64,8,128,64,120);
-  g.addColorStop(0,'rgba(0,0,0,.8)'); g.addColorStop(1,'rgba(0,0,0,0)');
-  x.save(); x.translate(128,64); x.scale(1,.45); x.translate(-128,-64);
-  x.fillStyle=g; x.beginPath(); x.arc(128,64,120,0,Math.PI*2); x.fill(); x.restore();
-  return new THREE.CanvasTexture(c);
-}
 
 /* phase: integer cycles + eased fraction; per-object stagger offset.
    drift blends in a constant-speed component so motion never dead-stops. */
@@ -399,7 +393,7 @@ const SCENES = {
   stackReveal(P){
     const texs=activeTextures(P.corner);
     const N0=texs.length, n=N0>=3?N0:N0*Math.ceil(3/N0);
-    const h=1.55, w=h*PA;
+    const h=1.55*state.size, w=h*PA;
     const gz=Math.min(.42,2.6/n), gy=Math.min(.16,.9/n), shrink=Math.min(.06,.38/n);
     const meshes=[];
     for(let i=0;i<n;i++){ const m=plane(texs[i%N0],w,h,true); root.add(m); meshes.push(m); }
@@ -444,7 +438,7 @@ const SCENES = {
     for(let cols=1;cols<=Math.min(N,6);cols++){
       const rows=Math.ceil(N/cols);
       const cellW=fr.w*.94/cols, cellH=fr.h*.94/rows;
-      const w=Math.min(cellW*.9, cellH*.9*PA);
+      const w=Math.min(cellW*.9*state.size, cellH*.9*PA*state.size, cellW*.98, cellH*.98*PA);
       if(!best||w>best.w) best={cols,rows,w,cellW,cellH};
     }
     const {cols,rows,w,cellW,cellH}=best; const h=w/PA;
@@ -476,39 +470,47 @@ const SCENES = {
       } };
   },
 
-  /* Carousel Slide — 3D ring, one card per step, auto radius (cards never intersect) */
-  carousel(P){
+  /* Ring family — Carousel Slide / Orbit Tilt / Vertical Wheel / Tilted Ring.
+     Auto radius (chord ≈ P.chord × card width) so cards never intersect;
+     side cards may exit the frame — intended. */
+  ring(P){
     const texs=activeTextures(P.corner); const N0=texs.length;
-    const n=N0>=8?N0:N0*Math.ceil(8/N0); // approved v2 density (8+ slots), images repeat evenly
-    const h=n>10?1.5*Math.sqrt(10/n):1.5, w=h*PA;
-    const R=Math.max(w*1.9/(2*Math.sin(Math.PI/n)),1.35); // chord ≈ 1.9×card width — airy, never intersects
+    const minN=P.minN||8;
+    const n=N0>=minN?N0:N0*Math.ceil(minN/N0); // images repeat evenly
+    const h=(n>10?1.5*Math.sqrt(10/n):1.5)*(P.sizeMul||1)*state.size, w=h*PA;
+    const R=Math.max(w*(P.chord||1.9)/(2*Math.sin(Math.PI/n)),1.35);
     const inner=new THREE.Group();
     const meshes=[];
     for(let i=0;i<n;i++){
       const m=plane(texs[i%N0],w,h);
       const th=(i/n)*Math.PI*2;
-      m.position.set(Math.sin(th)*R,0,Math.cos(th)*R);
-      m.rotation.y=th;
+      if(P.axis==='x'){ m.position.set(0,Math.sin(th)*R,Math.cos(th)*R); m.rotation.x=-th; }
+      else{ m.position.set(Math.sin(th)*R,0,Math.cos(th)*R); m.rotation.y=th; }
       inner.add(m); meshes.push(m);
     }
     root.add(inner);
-    const tilt=THREE.MathUtils.degToRad(7);
-    root.rotation.set(tilt,0,0);
+    root.rotation.set(THREE.MathUtils.degToRad(P.tiltX||0),0,THREE.MathUtils.degToRad(P.tiltZ||0));
+    const tilt=Math.abs(THREE.MathUtils.degToRad(P.tiltX||0));
     const halfV=Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
     const needHalfH=Math.sin(tilt)*R+h/2+.22;
-    const camZ=Math.max(R+3.1*(h/1.5), R*Math.cos(tilt)+needHalfH/halfV); // side cards may exit the frame — intended
-    const camCY=-Math.sin(tilt)*R*.95;
-    const phase=makePhase(P), angleScale=Math.PI*2/n, cyc=P.dur+P.hold;
+    const camZ=Math.max(R+3.1*(h/1.5), R*Math.cos(tilt)+needHalfH/halfV);
+    const camCY=-Math.sin(tilt)*R*.95*Math.sign(P.tiltX||0);
+    const phase=makePhase(P), cyc=P.dur+P.hold;
+    const angleScale=P.step==='card'?Math.PI*2/n:Math.PI*2;
+    const loop=P.step==='card'?cyc*n:cyc;
     let lean=0, lastT=null;
-    return { loopSeconds:cyc*n,
+    return { loopSeconds:loop,
       update(T){
-        inner.rotation.y=phase(T)*angleScale*state.dir;
-        // follow-through: cards lean with angular velocity, settle upright
-        const v=(phase(T)-phase(T-1/30))*30;
-        const target=THREE.MathUtils.clamp((v*cyc-(P.drift||0))*.03,0,.06)*state.dir;
-        if(lastT!==null && T>lastT && T-lastT<.2) lean+=(target-lean)*.12; else lean=target;
-        lastT=T;
-        for(let i=0;i<n;i++) meshes[i].rotation.y=(i/n)*Math.PI*2+lean;
+        const a=phase(T)*angleScale*state.dir;
+        if(P.axis==='x') inner.rotation.x=a; else inner.rotation.y=a;
+        if(P.step==='card' && P.axis!=='x'){
+          // follow-through: cards lean with angular velocity, settle upright
+          const v=(phase(T)-phase(T-1/30))*30;
+          const target=THREE.MathUtils.clamp((v*cyc-(P.drift||0))*.03,0,.06)*state.dir;
+          if(lastT!==null && T>lastT && T-lastT<.2) lean+=(target-lean)*.12; else lean=target;
+          lastT=T;
+          for(let i=0;i<n;i++) meshes[i].rotation.y=(i/n)*Math.PI*2+lean;
+        }
         camera.position.set(0,camCY,camZ);
         camera.lookAt(0,camCY,0);
       } };
@@ -523,7 +525,7 @@ const SCENES = {
     const fr=frameAt(5);
     const meshes=[];
     for(let i=0;i<n;i++){
-      const h=fr.h*(.26+rnd()*.10), w=h*PA;
+      const h=fr.h*(.26+rnd()*.10)*state.size, w=h*PA;
       const m=plane(texs[i%N0],w,h);
       const a=i*2.39996+rnd()*.5, r=Math.sqrt((i+.5)/n);
       m.userData={
@@ -552,22 +554,29 @@ const SCENES = {
       } };
   },
 
-  /* Zoom Gallery — slow Ken Burns push on each image, soft cross-dissolve */
+  /* Zoom Gallery — Ken Burns push INSIDE a fixed frame (UV zoom), clean dissolve.
+     The frame never changes size, so nothing pokes through during transitions. */
   zoomGallery(P){
     const texs=activeTextures(P.corner); const N=texs.length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const h=Math.min(fr.h*.84, fr.w*.84/PA), w=h*PA;
+    const h=Math.min(fr.h*.84*Math.min(state.size,1.15), fr.h*.95, fr.w*.92/PA), w=h*PA;
+    const meshes=texs.map(t=>{
+      const tc=t.clone(); tc.needsUpdate=true; // own GPU texture per card for UV animation
+      const m=plane(tc,w,h,true);
+      m.userData.disposeMap=true;
+      m.visible=false; root.add(m); return m;
+    });
+    const setZoom=(m,z)=>{ const t=m.material.map, s=1/z; t.repeat.set(s,s); t.offset.set((1-s)/2,(1-s)/2); };
     if(N===1){
-      const m=plane(texs[0],w,h); root.add(m);
+      const m=meshes[0]; m.visible=true; m.material.opacity=1;
       const L=Math.max(6,(P.dur+P.hold)*2);
       return { loopSeconds:L, update(T){
         const u=(((T/L)%1)+1)%1;
-        m.scale.setScalar(1.03+.07*(.5-.5*Math.cos(u*Math.PI*2)));
+        setZoom(m,1.04+.08*(.5-.5*Math.cos(u*Math.PI*2)));
       } };
     }
     const seg=P.dur+P.hold, loop=N*seg;
-    const meshes=texs.map(t=>{ const m=plane(t,w,h,true); m.visible=false; root.add(m); return m; });
     return { loopSeconds:loop,
       update(T){
         const local=((T%loop)+loop)%loop;
@@ -575,16 +584,9 @@ const SCENES = {
           const d=(((local-i*seg)%loop)+loop)%loop;
           if(d<seg+P.dur){
             m.visible=true;
-            const zoom=1.03+.09*(d/(seg+P.dur)); // continuous push for the whole stay
-            if(d<P.dur){ const p=state.easeFn(d/P.dur); // dissolve in on top
-              m.material.opacity=clamp01(p);
-              m.scale.setScalar(zoom*(0.985+.015*p));
-              m.renderOrder=5;
-            }else{
-              m.material.opacity=1;
-              m.scale.setScalar(zoom);
-              m.renderOrder=3;
-            }
+            setZoom(m,1.0+.13*(d/(seg+P.dur))); // continuous push for the whole stay
+            if(d<P.dur){ m.material.opacity=clamp01(state.easeFn(d/P.dur)); m.renderOrder=5; }
+            else{ m.material.opacity=1; m.renderOrder=3; }
           } else m.visible=false;
         });
       } };
@@ -595,9 +597,9 @@ const SCENES = {
     const texs=activeTextures(P.corner); const N=texs.length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const cols=N>=9?3:N>=4?2:1;
-    const fw=cols===1?fr.w*.6:fr.w*1.04;
-    const cw=fw/cols, gap=cw*.12, w=cw-gap, h=w/PA, rowH=h+gap;
+    const cols=N>=9?4:N>=4?3:2;
+    const cw=fr.w*1.04/cols, gap=cw*.10;
+    const w=Math.min((cw-gap)*state.size, cw*.98), h=w/PA, rowH=h+gap;
     let rows=Math.max(Math.ceil(N/cols), Math.ceil(fr.h/rowH)+2);
     while((rows*cols)%N) rows++; // even image distribution — no duplicate rows at the loop seam
     const meshes=[];
@@ -623,7 +625,8 @@ const SCENES = {
     const texs=activeTextures(P.corner); const N=texs.length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const h=fr.h*.52, w=h*PA, gap=w*.16, step=w+gap;
+    const h=Math.min(fr.h*.52*state.size, fr.h*.9), w=h*PA;
+    const gap=w*.34, step=w+gap; // wide gap: staggered neighbours can never collide mid-step
     let n=Math.max(N, Math.ceil(fr.w/step)+2);
     while(n%N) n++; // no duplicate neighbours at the loop seam
     const meshes=[];
@@ -644,7 +647,7 @@ const SCENES = {
   shuffleCards(P){
     const texs=activeTextures(P.corner);
     const N0=texs.length, n=N0>=3?N0:N0*Math.ceil(3/N0);
-    const h=1.6, w=h*PA;
+    const h=1.6*state.size, w=h*PA;
     const rnd=mulberry32(5);
     const jr=[...Array(n)].map(()=>(rnd()-.5)*.12);
     const jx=[...Array(n)].map(()=>(rnd()-.5)*.06);
@@ -680,59 +683,140 @@ const SCENES = {
       } };
   },
 
-  /* Magazine Layout Reveal — editorial pages, elements slide up in sequence */
-  magazine(P){
-    const srcs=sourceList(); const N=srcs.length;
+  /* Marquee Lanes — alternating lanes scroll continuously, slight tilt */
+  marquee(P){
+    const texs=activeTextures(P.corner); const N0=texs.length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const pages=[]; let i0=0;
-    while(i0<N){ const take=(N-i0)>=3?3:(N-i0); pages.push(srcs.slice(i0,i0+take)); i0+=take; }
-    function layoutFor(k){ // unit space: big card height = 1
-      if(k===3) return {bw:1.285,bh:1, els:[
-        {x:-.2675,y:0,h:1,a:3/4},{x:.41,y:.2675,h:.465,a:1},{x:.41,y:-.2675,h:.465,a:1}]};
-      if(k===2) return {bw:1.66,bh:1.06, els:[
-        {x:-.43,y:.05,h:1,a:3/4},{x:.45,y:-.08,h:.8,a:3/4}]};
-      return {bw:.75,bh:1, els:[{x:0,y:0,h:1,a:3/4}]};
+    const lanes=N0>=10?4:3;
+    const laneH=(fr.h*1.15)/lanes;
+    const h=Math.min(laneH*.86*state.size, laneH*.98), w=h*PA, gap=w*.18, step=w+gap;
+    let perLane=Math.ceil(fr.w*1.4/step)+1;
+    while(perLane%N0) perLane++; // even cycle inside each lane
+    const total=perLane*step;
+    const meshes=[];
+    for(let l=0;l<lanes;l++) for(let i=0;i<perLane;i++){
+      const m=plane(texs[(l*perLane+i+l*2)%N0],w,h);
+      m.userData={l,i}; root.add(m); meshes.push(m);
     }
-    const outDur=.45, gap=.3;
-    const items=[]; let t0=0;
-    pages.forEach(pg=>{
-      const L=layoutFor(pg.length);
-      const k=Math.min(fr.w*.84/L.bw, fr.h*.8/L.bh);
-      const maxStag=P.stagger*(pg.length-1);
-      pg.forEach((s,j)=>{
-        const el=L.els[j], h=el.h*k, w=h*el.a;
-        const m=plane(makeTexture(s.src,s.key,P.corner,el.a),w,h,true);
-        m.visible=false; m.renderOrder=j; root.add(m);
-        items.push({m, bx:el.x*k, by:el.y*k,
-          start:t0+j*P.stagger,
-          outStart:t0+maxStag+P.dur+P.hold+j*P.stagger*.4});
-      });
-      t0+=maxStag+P.dur+P.hold+outDur+maxStag*.4+gap;
-    });
-    const loop=t0, slide=fr.h*.045;
-    return { loopSeconds:loop,
+    root.rotation.z=THREE.MathUtils.degToRad(P.tiltZ||0);
+    const speed=total/(P.dur+P.hold);
+    return { loopSeconds:P.dur+P.hold,
       update(T){
-        const local=((T%loop)+loop)%loop;
-        items.forEach(it=>{
-          const p=state.easeFn(clamp01((local-it.start)/P.dur));
-          const q0=clamp01((local-it.outStart)/outDur), q=q0*q0*(3-2*q0);
-          const op=clamp01(p)*(1-q);
-          it.m.visible=op>.001;
-          it.m.material.opacity=op;
-          it.m.position.set(it.bx, it.by-(1-p)*slide+q*slide, 0);
+        meshes.forEach(m=>{
+          const {l,i}=m.userData;
+          const dir=(l%2?-1:1)*state.dir;
+          let x=i*step+dir*speed*T;
+          x=((x%total)+total)%total;
+          m.position.set(x-total/2+step/2,(l-(lanes-1)/2)*-laneH,0);
         });
       } };
   },
 
-  /* Clean Product Showcase — one centered card, soft shadow, calm swaps */
+  /* Field Flight — stepped fly-through a depth field of cards */
+  field(P){
+    const texs=activeTextures(P.corner); const N0=texs.length;
+    const minN=P.minN||12;
+    const n=N0>=minN?N0:N0*Math.ceil(minN/N0);
+    const h=1.2*state.size, w=h*PA;
+    const spread=1.4, depth=spread*6, rnd=mulberry32(7);
+    const meshes=[];
+    for(let i=0;i<n;i++){
+      const m=plane(texs[i%N0],w,h,true);
+      m.userData={x:(rnd()-.5)*spread*2.6, y:(rnd()-.5)*spread*1.6, z0:i/n*depth};
+      root.add(m); meshes.push(m);
+    }
+    camera.position.set(0,0,4); camera.lookAt(0,0,0);
+    const stepZ=depth/n, phase=makePhase(P);
+    return { loopSeconds:(P.dur+P.hold)*n,
+      update(T){
+        const adv=phase(T)*stepZ;
+        meshes.forEach(m=>{
+          const {x,y,z0}=m.userData;
+          let z=(((z0+adv)%depth)+depth)%depth;
+          m.position.set(x,y,4-1.2-(depth-z));
+          const nearFade=THREE.MathUtils.smoothstep(z,depth-stepZ*.9,depth);
+          const farFade=THREE.MathUtils.smoothstep(z,0,stepZ*.6);
+          m.material.opacity=(1-nearFade)*farFade;
+        });
+      } };
+  },
+
+  /* Helix — slow rotating spiral of cards, always facing camera */
+  helix(P){
+    const texs=activeTextures(P.corner); const N0=texs.length;
+    const minN=P.minN||18;
+    const n=N0>=minN?N0:N0*Math.ceil(minN/N0);
+    const h=.85*state.size, w=h*PA, turns=3;
+    const R=1.85, H=R*3.0;
+    const inner=new THREE.Group(); root.add(inner);
+    const meshes=[];
+    for(let i=0;i<n;i++){
+      const th=i/n*turns*Math.PI*2, y=-H/2+i/n*H;
+      const m=plane(texs[i%N0],w,h);
+      m.position.set(Math.sin(th)*R,y,Math.cos(th)*R);
+      inner.add(m); meshes.push(m);
+    }
+    camera.position.set(0,0,R+5.2+H*.3); camera.lookAt(0,0,0);
+    const phase=makePhase(P), q=new THREE.Quaternion();
+    return { loopSeconds:P.dur+P.hold,
+      update(T){
+        inner.rotation.y=phase(T)*Math.PI*2*state.dir;
+        q.copy(inner.quaternion).invert().multiply(camera.quaternion);
+        meshes.forEach(m=>m.quaternion.copy(q));
+      } };
+  },
+
+  /* Globe — fibonacci sphere of cards, slow rotation */
+  globe(P){
+    const texs=activeTextures(P.corner); const N0=texs.length;
+    const minN=P.minN||24;
+    const n=N0>=minN?N0:N0*Math.ceil(minN/N0);
+    const h=.55*state.size, w=h*PA, R=1.65;
+    const inner=new THREE.Group(); root.add(inner);
+    const meshes=[];
+    const ga=Math.PI*(3-Math.sqrt(5));
+    for(let i=0;i<n;i++){
+      const y=1-(i/(n-1))*2, rr=Math.sqrt(Math.max(1-y*y,0)), th=ga*i;
+      const m=plane(texs[i%N0],w,h);
+      m.position.set(Math.cos(th)*rr*R, y*R, Math.sin(th)*rr*R);
+      inner.add(m); meshes.push(m);
+    }
+    camera.position.set(0,0,R+3.6); camera.lookAt(0,0,0);
+    const phase=makePhase(P), q=new THREE.Quaternion();
+    return { loopSeconds:P.dur+P.hold,
+      update(T){
+        inner.rotation.y=phase(T)*Math.PI*2*state.dir;
+        q.copy(inner.quaternion).invert().multiply(camera.quaternion);
+        meshes.forEach(m=>m.quaternion.copy(q));
+      } };
+  },
+
+  /* Flicker — rapid full-frame cuts with a tiny scale punch */
+  flicker(P){
+    const texs=activeTextures(P.corner); const N=texs.length;
+    camera.position.set(0,0,5); camera.lookAt(0,0,0);
+    const fr=frameAt(5);
+    const h=Math.min(fr.h*.86*state.size, fr.h*.95), w=h*PA;
+    const m=plane(texs[0],w,h); root.add(m);
+    let lastIdx=-1;
+    const cyc=P.dur+P.hold, loop=cyc*N;
+    return { loopSeconds:loop,
+      update(T){
+        const local=((T%loop)+loop)%loop;
+        const idx=Math.min(Math.floor(local/cyc),N-1);
+        if(idx!==lastIdx){ m.material.map=texs[idx]; m.material.needsUpdate=true; lastIdx=idx; }
+        const mm=local-idx*cyc;
+        m.scale.setScalar(1+clamp01(state.easeFn(clamp01(mm/P.dur)))*.04);
+      } };
+  },
+
+  /* Clean Product Showcase — one centered card, gentle float, calm swaps */
   showcase(P){
     const texs=activeTextures(P.corner); const N=texs.length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const h=Math.min(fr.h*.66, fr.w*.62/PA), w=h*PA;
-    const sh=plane(shadowTexture(), w*1.25, w*.42, true);
-    sh.position.set(0,-h*.6,-.3); sh.renderOrder=0; root.add(sh);
+    const h=Math.min(fr.h*.66*state.size, fr.h*.92, fr.w*.8/PA), w=h*PA;
     const meshes=texs.map(t=>{ const m=plane(t,w,h,true); m.visible=false; root.add(m); return m; });
     const seg=P.dur+P.hold;
     const loop=N===1?Math.max(5,seg):N*seg;
@@ -741,8 +825,6 @@ const SCENES = {
         const local=((T%loop)+loop)%loop, u=local/seg;
         const yb=Math.sin(u*Math.PI*2)*h*.022;
         const ry=Math.sin(u*Math.PI*2+.8)*.05;
-        sh.material.opacity=.42-yb/h*5;
-        sh.scale.set(1-yb/h*3,1,1);
         if(N===1){
           const m=meshes[0]; m.visible=true; m.material.opacity=1;
           m.position.set(0,yb,0); m.rotation.y=ry;
@@ -767,18 +849,30 @@ const SCENES = {
   },
 };
 
-/* ================= the 10 templates ================= */
+/* ================= templates, grouped like the arqe catalog ================= */
 const TEMPLATES = [
+  {cat:'Carousels 3D'},
+  {id:'carousel',     name:'Carousel Slide',        scene:'ring',         ease:'Soft In-Out',    P:{dur:1.15, hold:.45, drift:.05, corner:0, axis:'y', tiltX:7,  step:'card', minN:8, chord:1.9}},
+  {id:'orbit-tilt',   name:'Orbit Tilt',            scene:'ring',         ease:'Smooth Out',     P:{dur:1.3,  hold:.45, drift:.05, corner:0, axis:'y', tiltZ:-65,step:'card', minN:7, chord:1.85}},
+  {id:'wheel',        name:'Vertical Wheel',        scene:'ring',         ease:'Soft In-Out',    P:{dur:1.3,  hold:.4,  drift:.05, corner:0, axis:'x', step:'card', minN:6, chord:2.2}},
+  {id:'tilted-ring',  name:'Tilted Ring',           scene:'ring',         ease:'Linear',         P:{dur:14,   hold:0,   drift:0,   corner:0, axis:'y', tiltX:14, tiltZ:16, step:'full', minN:9, chord:1.9, sizeMul:.85}},
+  {cat:'Cards'},
   {id:'stack-reveal', name:'Smooth Stack Reveal',   scene:'stackReveal',  ease:'Smooth Out',     P:{dur:1.0,  hold:.65, corner:2.5}},
-  {id:'grid-pop',     name:'Grid Pop',              scene:'gridPop',      ease:'Snappy Pop',     P:{dur:.55,  hold:1.7, corner:2}},
-  {id:'carousel',     name:'Carousel Slide',        scene:'carousel',     ease:'Soft In-Out',    P:{dur:1.15, hold:.45, drift:.05, corner:0}},
-  {id:'floating',     name:'Floating Cards',        scene:'floating',     ease:'Linear',         P:{loop:10,  corner:1.5}},
-  {id:'zoom-gallery', name:'Zoom Gallery',          scene:'zoomGallery',  ease:'Slow Cinematic', P:{dur:.9,   hold:2.1, corner:0}},
-  {id:'v-scroll',     name:'Vertical Scroll',       scene:'vScroll',      ease:'Smooth Out',     P:{dur:1.1,  hold:.5,  drift:.06, corner:0}},
-  {id:'filmstrip',    name:'Horizontal Filmstrip',  scene:'filmstrip',    ease:'Soft In-Out',    P:{dur:1.2,  hold:.35, stagger:.06, drift:.04, corner:1.5}},
   {id:'shuffle',      name:'Shuffle Cards',         scene:'shuffleCards', ease:'Elastic Soft',   P:{dur:.95,  hold:.55, corner:2.5}},
-  {id:'magazine',     name:'Magazine Reveal',       scene:'magazine',     ease:'Fast Reveal',    P:{dur:.7,   hold:1.7, stagger:.12, corner:0}},
+  {id:'floating',     name:'Floating Cards',        scene:'floating',     ease:'Linear',         P:{loop:10,  corner:1.5}},
   {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Slow Cinematic', P:{dur:.8,   hold:2.4, corner:1.5}},
+  {cat:'Walls & Strips'},
+  {id:'filmstrip',    name:'Horizontal Filmstrip',  scene:'filmstrip',    ease:'Soft In-Out',    P:{dur:1.2,  hold:.35, stagger:.04, drift:.04, corner:1.5}},
+  {id:'v-scroll',     name:'Vertical Scroll',       scene:'vScroll',      ease:'Smooth Out',     P:{dur:1.1,  hold:.5,  drift:.06, corner:0}},
+  {id:'grid-pop',     name:'Grid Pop',              scene:'gridPop',      ease:'Snappy Pop',     P:{dur:.55,  hold:1.7, corner:2}},
+  {id:'marquee',      name:'Marquee Lanes',         scene:'marquee',      ease:'Linear',         P:{dur:14,   hold:0,   corner:1, tiltZ:-6}},
+  {cat:'Space'},
+  {id:'field',        name:'Field Flight',          scene:'field',        ease:'Soft In-Out',    P:{dur:1.6,  hold:.4,  drift:.15, corner:0, minN:12}},
+  {id:'helix',        name:'Helix',                 scene:'helix',        ease:'Linear',         P:{dur:10,   hold:0,   corner:1, minN:18}},
+  {id:'globe',        name:'Globe',                 scene:'globe',        ease:'Linear',         P:{dur:9,    hold:0,   corner:1, minN:24}},
+  {cat:'Cuts'},
+  {id:'zoom-gallery', name:'Zoom Gallery',          scene:'zoomGallery',  ease:'Slow Cinematic', P:{dur:.9,   hold:2.1, corner:0}},
+  {id:'flicker',      name:'Flicker',               scene:'flicker',      ease:'Fast Reveal',    P:{dur:.34,  hold:.12, corner:0}},
 ];
 
 /* ================= state ================= */
@@ -786,7 +880,7 @@ const RATIOS={'3:4':[3,4],'9:16':[9,16],'1:1':[1,1],'4:3':[4,3],'16:9':[16,9]};
 const state={
   template:null, P:{}, ease:'Soft In-Out', bez:[.76,0,.24,1], easeFn:null,
   dir:1, bg:'#0d0d0d', transparent:false, ratio:'3:4',
-  playing:true, grain:true, speed:1,
+  playing:true, grain:true, speed:1, size:1,
 };
 let active=null, animTime=0;
 let exporting=false, exportCancelled=false;
@@ -878,7 +972,10 @@ EASINGS.forEach(e=>{
 function rebuild(resetTime=false){
   while(root.children.length){
     const ch=root.children[0]; root.remove(ch);
-    ch.traverse?.(o=>{ o.geometry?.dispose(); o.material?.dispose(); });
+    ch.traverse?.(o=>{
+      if(o.userData?.disposeMap) o.material?.map?.dispose(); // per-mesh texture clones (Zoom Gallery)
+      o.geometry?.dispose(); o.material?.dispose();
+    });
   }
   root.rotation.set(0,0,0);
   scene.background=state.transparent?null:new THREE.Color(state.bg);
@@ -899,6 +996,10 @@ function applyTemplate(t){
   document.querySelectorAll('#tpls .tpl').forEach(c=>c.classList.toggle('active',c.dataset.id===t.id));
 }
 TEMPLATES.forEach(t=>{
+  if(t.cat){
+    const d=document.createElement('div'); d.className='cat'; d.textContent=t.cat;
+    $('tpls').appendChild(d); return;
+  }
   const c=document.createElement('button');
   c.className='tpl'; c.textContent=t.name; c.dataset.id=t.id;
   c.addEventListener('click',()=>applyTemplate(t));
@@ -1107,6 +1208,8 @@ $('speed').addEventListener('input',e=>{
 });
 $('corner').addEventListener('input',e=>{ $('cornerVal').textContent=parseFloat(e.target.value).toFixed(1); });
 $('corner').addEventListener('change',e=>{ state.P.corner=parseFloat(e.target.value); rebuild(); });
+$('cardSize').addEventListener('input',e=>{ $('sizeVal').textContent='×'+parseFloat(e.target.value).toFixed(2); });
+$('cardSize').addEventListener('change',e=>{ state.size=parseFloat(e.target.value); rebuild(); });
 
 function updatePlayBtn(){ $('playBtn').textContent=state.playing?'⏸ Pause':'▶ Play'; }
 function togglePlay(){ state.playing=!state.playing; updatePlayBtn(); }
@@ -1191,7 +1294,7 @@ function renderThumbs(){
     });
     d.appendChild(img); d.appendChild(x); thumbs.appendChild(d);
   });
-  $('imgCount').textContent=userSources.length?`${userSources.length} / ${MAX_FILES}`:'';
+  $('imgCount').textContent=`${userSources.length} / ${MAX_FILES}`;
   $('imgActions').style.display=userSources.length?'flex':'none';
   $('demoHint').style.display=userSources.length?'none':'';
 }
@@ -1230,7 +1333,7 @@ window.__app={
 };
 window.addEventListener('error',e=>console.error('PAGE ERROR:',e.message,e.filename,e.lineno));
 resize();
-applyTemplate(TEMPLATES[0]);
+applyTemplate(TEMPLATES.find(t=>!t.cat));
 renderThumbs();
 </script>
 </body>
