@@ -1001,25 +1001,34 @@ const SCENES = {
       } };
   },
 
-  /* Orbit Ring — cards travel evenly around an empty centre, upright (Space) */
-  orbitRing(P){
-    const N0=sourceList().length, minN=P.minN||9;
+  /* Spiral Vortex — cards screw inward along a log spiral, fading at the core; infinite (Space) */
+  spiral(P){
+    const N0=sourceList().length, minN=P.minN||12;
     const n=N0>=minN?N0:N0*Math.ceil(minN/N0);
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5), D=Math.min(fr.w,fr.h);
+    const Rmax=D*0.46, Rmin=D*0.05, turns=P.turns||2.2;
     const entries=[]; let maxAsp=0.5;
     for(let i=0;i<n;i++){ const e=entryForSlot(i); entries.push(e); maxAsp=Math.max(maxAsp,e.asp); }
-    const R=D*0.38*(state.spacing||1);
-    const fitDim=(D/2-R)*2*0.92;                       // card extent that still fits inside the frame
-    const gapDim=2*R*Math.sin(Math.PI/n)/1.12;         // card extent that won't overlap a neighbour
-    const H=Math.max(0.08, Math.min(fitDim,gapDim)/Math.max(1,maxAsp));
+    // self-similar: card height ∝ its radius; size set so the spiral arms never collide
+    const sizeK=Math.min(0.58, 1.35/(turns*Math.max(maxAsp,1)))*(state.spacing||1);
     const meshes=[];
-    for(let i=0;i<n;i++){ const m=plane(entries[i].tex,H*entries[i].asp,H,true); m.userData.slot=i; root.add(m); meshes.push(m); }
-    const phase=makePhase(P);
-    return { loopSeconds:(P.dur+P.hold)*n,
+    for(let i=0;i<n;i++){ const m=plane(entries[i].tex,entries[i].asp,1,true); m.userData={slot:i}; root.add(m); meshes.push(m); }
+    const L=P.loop||(n*0.55);
+    return { loopSeconds:L,
       update(T){
-        const spin=phase(T)*(Math.PI*2/n)*state.dir;
-        for(let i=0;i<n;i++){ const a=i/n*Math.PI*2+spin; meshes[i].position.set(Math.sin(a)*R,Math.cos(a)*R,0); meshes[i].rotation.z=Math.sin(a)*(P.tilt||0); }
+        const base=(T/L)*state.dir;
+        for(let i=0;i<n;i++){
+          let p=((i/n+base)%1+1)%1;                     // 0 rim → 1 core, wraps seamlessly
+          const r=Rmax*Math.pow(Rmin/Rmax,p);           // exponential shrink = log spiral
+          const a=p*turns*Math.PI*2*state.dir;
+          const m=meshes[i];
+          m.scale.setScalar(r*sizeK);
+          m.position.set(Math.sin(a)*r,Math.cos(a)*r,0);
+          m.rotation.z=-a*0.12;                          // gentle swirl
+          m.renderOrder=Math.round(p*1000);             // inner cards in front
+          setCardOpacity(m, Math.min(clamp01(p/0.13), clamp01((1-p)/0.16))); // fade at rim+core → seamless
+        }
       } };
   },
 
@@ -1031,15 +1040,15 @@ const SCENES = {
     const fr=frameAt(5), D=Math.min(fr.w,fr.h);
     const rnd=mulberry32(11);
     const entries=[], tilt=[]; let maxAsp=0.5;
-    for(let i=0;i<n;i++){ const e=entryForSlot(i); entries.push(e); tilt.push((rnd()-0.5)*0.5); maxAsp=Math.max(maxAsp,e.asp); }
+    for(let i=0;i<n;i++){ const e=entryForSlot(i); entries.push(e); tilt.push((rnd()-0.5)*0.42); maxAsp=Math.max(maxAsp,e.asp); }
     const diagF=Math.sqrt(maxAsp*maxAsp+1);            // tilted-card bounding factor
-    const R=D*0.37*(state.spacing||1);
-    const fitDim=(D/2-R)*2*0.9;
-    const gapDim=2*R*Math.sin(Math.PI/n)/1.05;
+    const R=D*0.30*(state.spacing||1);                 // tighter ring → dense collage wheel
+    const fitDim=(D/2-R*0.45)*2*0.9;
+    const gapDim=2*R*Math.sin(Math.PI/n)/0.6;          // denom<1 → cards overlap into a wreath
     const H=Math.max(0.07, Math.min(fitDim,gapDim)/diagF);
     const inner=new THREE.Group(); root.add(inner);
     const meshes=[];
-    for(let i=0;i<n;i++){ const m=plane(entries[i].tex,H*entries[i].asp,H,true); m.userData.slot=i; const a=i/n*Math.PI*2; m.position.set(Math.sin(a)*R,Math.cos(a)*R,0); m.rotation.z=tilt[i]; inner.add(m); meshes.push(m); }
+    for(let i=0;i<n;i++){ const m=plane(entries[i].tex,H*entries[i].asp,H,true); m.userData.slot=i; const a=i/n*Math.PI*2; m.position.set(Math.sin(a)*R,Math.cos(a)*R,0); m.rotation.z=tilt[i]; m.renderOrder=i; inner.add(m); meshes.push(m); }
     const L=P.loop||16;
     return { loopSeconds:L,
       update(T){ inner.rotation.z=((T/L)%1)*Math.PI*2*state.dir; } };
@@ -1074,117 +1083,108 @@ const SCENES = {
     const N0=sourceList().length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const H=fr.h*0.32;
-    const stepX=H*0.46*(state.spacing||1), stepY=H*0.4*(state.spacing||1);
+    const H=fr.h*0.34;
+    const stepX=H*0.5*(state.spacing||1), stepY=H*0.42*(state.spacing||1);
     let n=Math.max(N0, Math.ceil(Math.max(fr.w/stepX,fr.h/stepY))+4);
     while(n%N0) n++;
     const meshes=[];
     for(let i=0;i<n;i++){ const e=entryForSlot(i%N0); const m=plane(e.tex,H*e.asp,H,true); m.userData.slot=i%N0; root.add(m); meshes.push(m); }
-    const phase=makePhase(P);
-    return { loopSeconds:(P.dur+P.hold)*n,
+    const L=P.loop||(n*0.7);
+    return { loopSeconds:L,
       update(T){
-        const adv=phase(T)*state.dir;
+        const adv=((T/L)%1)*n*state.dir;               // constant-speed conveyor → buttery on Linear, no stutter
         for(let i=0;i<n;i++){
-          let pw=(((i-adv)%n)+n)%n;
+          let pw=(((i-adv)%n)+n)%n;                     // wraps off-screen at the corners
           meshes[i].position.set((pw-n/2)*stepX,-(pw-n/2)*stepY,0);
-          meshes[i].renderOrder=Math.round(pw);
+          meshes[i].renderOrder=Math.round((n-pw)*4);   // newer (top-left) cards in front
         }
       } };
   },
 
-  /* Jitter Grid — fixed grid, each cell wiggles subtly in place (raw & columns) */
-  jitterGrid(P){
+  /* Scroll Columns — vertical editorial columns of frames, adjacent columns scroll opposite, infinite (Raw & Columns) */
+  scrollCols(P){
     const N=sourceList().length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const want=Math.max(N,6);
-    const cols=Math.max(2,Math.min(5,Math.round(Math.sqrt(want*fr.w/fr.h))));
-    const rows=Math.max(2,Math.ceil(want/cols));
-    const cellW=fr.w/cols, cellH=fr.h/rows;
-    const gap=Math.min(cellW,cellH)*0.12*(state.spacing||1);
-    const w=cellW-gap, h=cellH-gap, asp=w/h;
-    const rnd=mulberry32(3), amp=gap*0.34;
-    const meshes=[]; let i=0;
-    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
-      const slot=i++; const m=plane(texAt(slot,asp),w,h,true); m.userData={slot};
-      m.userData.bx=(c-(cols-1)/2)*cellW; m.userData.by=((rows-1)/2-r)*cellH; m.userData.phi=rnd()*Math.PI*2;
-      root.add(m); meshes.push(m);
+    const cols=P.cols||(N>=4?3:2);
+    const gap=fr.w*0.012*(P.gap||1);
+    const cw=(fr.w-gap*(cols+1))/cols;
+    const cardH=cw/(P.cellAsp||0.74), ch=cardH+gap;      // row pitch incl gap
+    const perCol=Math.ceil(fr.h/ch)+2;                   // buffer so wrap is off-screen
+    const span=perCol*ch;
+    const meshes=[]; let slot=0;
+    for(let c=0;c<cols;c++){
+      const x=-fr.w/2+gap+cw/2+c*(cw+gap), dir=(c%2===0)?1:-1;
+      for(let j=0;j<perCol;j++){
+        const m=plane(texAt(slot,cw/cardH),cw,cardH,true); m.userData={slot,x,y0:j*ch,dir};
+        m.position.x=x; root.add(m); meshes.push(m); slot++;
+      }
     }
     const L=P.loop||6;
     return { loopSeconds:L,
       update(T){
-        const u=(((T/L)%1)+1)%1, W=Math.PI*2;
-        meshes.forEach(m=>{ const d=m.userData;   // integer cycles per loop → seamless
-          m.position.set(d.bx+Math.sin(u*W+d.phi)*amp, d.by+Math.cos(u*W*2+d.phi)*amp, 0);
-          m.rotation.z=Math.sin(u*W+d.phi*1.3)*0.018;
+        const t=(((T/L)%1)+1)%1;
+        meshes.forEach(m=>{ const d=m.userData;
+          let y=(d.y0+d.dir*t*span*state.dir)%span; if(y<0)y+=span;
+          m.position.y=y-span/2;                          // off-screen wrap → seamless
         });
       } };
   },
 
-  /* Spotlight Grid — uniform grid, one cell pops as a hero and the focus tours (raw & columns) */
-  spotlightGrid(P){
+  /* Marquee Rows — horizontal editorial rows of frames, adjacent rows scroll opposite, infinite (Raw & Columns) */
+  scrollRows(P){
     const N=sourceList().length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const want=Math.max(N,6);
-    const cols=Math.max(2,Math.min(5,Math.round(Math.sqrt(want*fr.w/fr.h))));
-    const rows=Math.max(2,Math.ceil(want/cols));
-    const cellW=fr.w/cols, cellH=fr.h/rows;
-    const gap=Math.min(cellW,cellH)*0.13*(state.spacing||1);
-    const w=cellW-gap, h=cellH-gap, asp=w/h;
-    const cells=cols*rows, meshes=[]; let i=0;
-    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
-      const slot=i++; const m=plane(texAt(slot,asp),w,h,true); m.userData={slot,r,c};
-      m.position.set((c-(cols-1)/2)*cellW, ((rows-1)/2-r)*cellH, 0); // grid position (kept; update only changes z)
-      root.add(m); meshes.push(m);
+    const rows=P.rows||(N>=4?3:2);
+    const gap=fr.h*0.018*(P.gap||1);
+    const rh=(fr.h-gap*(rows+1))/rows;
+    const cardW=rh*(P.cellAsp||1.3), cwp=cardW+gap;       // column pitch incl gap
+    const perRow=Math.ceil(fr.w/cwp)+2;
+    const span=perRow*cwp;
+    const meshes=[]; let slot=0;
+    for(let r=0;r<rows;r++){
+      const y=fr.h/2-gap-rh/2-r*(rh+gap), dir=(r%2===0)?-1:1;
+      for(let j=0;j<perRow;j++){
+        const m=plane(texAt(slot,cardW/rh),cardW,rh,true); m.userData={slot,y,x0:j*cwp,dir};
+        m.position.y=y; root.add(m); meshes.push(m); slot++;
+      }
     }
-    const cyc=P.dur+P.hold;
-    return { loopSeconds:cyc*cells,
-      update(T){
-        const k=Math.floor(T/cyc), m0=T-k*cyc;
-        const cur=((k%cells)+cells)%cells, nxt=(cur+1)%cells;
-        const e=clamp01(state.easeFn(clamp01(m0/P.dur)));
-        meshes.forEach((m,idx)=>{
-          let pop=0;
-          if(idx===cur) pop=1-e; else if(idx===nxt) pop=e;
-          const sc=1+pop*0.45;            // hero scales up
-          m.scale.setScalar(sc);
-          m.position.z=pop*0.35;
-          m.renderOrder=Math.round(pop*100);
-          setCardOpacity(m, 0.78+pop*0.22); // non-hero slightly dimmed
-        });
-      } };
-  },
-
-  /* Wave Grid — uniform grid with a diagonal scale/brightness wave (raw & columns) */
-  waveGrid(P){
-    const N=sourceList().length;
-    camera.position.set(0,0,5); camera.lookAt(0,0,0);
-    const fr=frameAt(5);
-    const want=Math.max(N,6);
-    const cols=Math.max(2,Math.min(5,Math.round(Math.sqrt(want*fr.w/fr.h))));
-    const rows=Math.max(2,Math.ceil(want/cols));
-    const cellW=fr.w/cols, cellH=fr.h/rows;
-    const gap=Math.min(cellW,cellH)*0.13*(state.spacing||1);
-    const w=cellW-gap, h=cellH-gap, asp=w/h;
-    const meshes=[]; let i=0; const diagMax=(cols-1)+(rows-1);
-    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
-      const slot=i++; const m=plane(texAt(slot,asp),w,h,true); m.userData={slot};
-      m.userData.bx=(c-(cols-1)/2)*cellW; m.userData.by=((rows-1)/2-r)*cellH;
-      m.userData.d=diagMax?((c+r)/diagMax):0;            // 0..1 along the diagonal
-      root.add(m); meshes.push(m);
-    }
-    const L=P.loop||4.5;
+    const L=P.loop||7;
     return { loopSeconds:L,
       update(T){
-        const u=(((T/L)%1)+1)%1;
+        const t=(((T/L)%1)+1)%1;
         meshes.forEach(m=>{ const d=m.userData;
-          const ph=((u - d.d*0.5)%1+1)%1;                 // wave sweeps the diagonal
-          const pulse=Math.sin(ph*Math.PI*2);
-          const k=pulse>0?pulse:0;                         // only the rising crest
-          m.scale.setScalar(1+k*0.12);
-          m.position.set(d.bx, d.by, k*0.25);
-          setCardOpacity(m, 0.72+k*0.28);
+          let x=(d.x0+d.dir*t*span*state.dir)%span; if(x<0)x+=span;
+          m.position.x=x-span/2;
+        });
+      } };
+  },
+
+  /* Drifting Wall — full grid of frames drifting diagonally, infinite toroidal loop (Raw & Columns) */
+  gridDrift(P){
+    const N=sourceList().length;
+    camera.position.set(0,0,5); camera.lookAt(0,0,0);
+    const fr=frameAt(5);
+    const cols=P.cols||3, rows=P.rows||3;
+    const gap=Math.min(fr.w,fr.h)*0.018*(P.gap||1);
+    const cw=fr.w/cols, ch=fr.h/rows;
+    const spanX=cols*cw, spanY=rows*ch;
+    const cardW=cw-gap, cardH=ch-gap, asp=cardW/cardH;
+    const GC=cols+1, GR=rows+1;                           // one extra rank so the drift never bares an edge
+    const meshes=[]; let slot=0;
+    for(let r=0;r<GR;r++) for(let c=0;c<GC;c++){
+      const m=plane(texAt(slot,asp),cardW,cardH,true); m.userData={slot,bx:c*cw,by:r*ch};
+      root.add(m); meshes.push(m); slot++;
+    }
+    const L=P.loop||9, dx=(P.dx==null?1:P.dx), dy=(P.dy==null?1:P.dy);
+    return { loopSeconds:L,
+      update(T){
+        const t=(((T/L)%1)+1)%1;
+        meshes.forEach(m=>{ const d=m.userData;
+          let x=(d.bx+t*spanX*dx*state.dir)%spanX; if(x<0)x+=spanX;
+          let y=(d.by+t*spanY*dy*state.dir)%spanY; if(y<0)y+=spanY;
+          m.position.set(x-spanX/2, y-spanY/2, 0);
         });
       } };
   },
@@ -1200,14 +1200,14 @@ const TEMPLATES = [
   {id:'stack-reveal', name:'Smooth Stack Reveal',   scene:'stackReveal',  ease:'Smooth Out',     P:{dur:1.0,  hold:.65, corner:2.5}},
   {id:'shuffle',      name:'Shuffle Cards',         scene:'shuffleCards', ease:'Elastic Soft',   P:{dur:.95,  hold:.55, corner:2.5}},
   {id:'stack-feed',   name:'Stack Feed',            scene:'stackFeed',    ease:'Smooth Out',     P:{dur:1.0,  hold:.7,  corner:2}},
-  {id:'diag-cascade', name:'Diagonal Cascade',      scene:'diagCascade',  ease:'Soft In-Out',    P:{dur:1.1,  hold:.3,  corner:2}},
-  {id:'wreath',       name:'Card Wreath',           scene:'wreath',       ease:'Linear',         P:{loop:18,  corner:1.5, minN:9}},
+  {id:'diag-cascade', name:'Diagonal Cascade',      scene:'diagCascade',  ease:'Linear',         P:{loop:9,   corner:2}},
+  {id:'wreath',       name:'Card Wreath',           scene:'wreath',       ease:'Linear',         P:{loop:18,  corner:1.5, minN:12}},
   {id:'floating',     name:'Floating Cards',        scene:'floating',     ease:'Linear',         P:{loop:10,  corner:1.5}},
   {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Slow Cinematic', P:{dur:.8,   hold:2.4, corner:1.5}},
   {cat:'Raw & Columns'},
-  {id:'jitter-grid',  name:'Jitter Grid',           scene:'jitterGrid',   ease:'Linear',         P:{loop:6,   corner:2.5}},
-  {id:'spotlight-grid',name:'Spotlight Grid',       scene:'spotlightGrid',ease:'Snappy Pop',     P:{dur:.6,   hold:1.3, corner:2.5}},
-  {id:'wave-grid',    name:'Wave Grid',             scene:'waveGrid',     ease:'Linear',         P:{loop:4.5, corner:2.5}},
+  {id:'scroll-cols',  name:'Scroll Columns',        scene:'scrollCols',   ease:'Linear',         P:{loop:7,   corner:2, cols:3, cellAsp:0.74}},
+  {id:'marquee-rows', name:'Marquee Rows',          scene:'scrollRows',   ease:'Linear',         P:{loop:8,   corner:2, rows:3, cellAsp:1.3}},
+  {id:'grid-drift',   name:'Drifting Wall',         scene:'gridDrift',    ease:'Linear',         P:{loop:10,  corner:2, cols:3, rows:3, dx:1, dy:1}},
   {cat:'Walls & Strips'},
   {id:'filmstrip',    name:'Horizontal Filmstrip',  scene:'filmstrip',    ease:'Soft In-Out',    P:{dur:1.2,  hold:.35, drift:.04, corner:1.5}},
   {id:'v-scroll',     name:'Vertical Scroll',       scene:'vScroll',      ease:'Smooth Out',     P:{dur:1.1,  hold:.5,  drift:.06, corner:0}},
@@ -1215,7 +1215,7 @@ const TEMPLATES = [
   {id:'marquee',      name:'Marquee Lanes',         scene:'marquee',      ease:'Linear',         P:{dur:14,   hold:0,   corner:1, tiltZ:-6}},
   {cat:'Space'},
   {id:'field',        name:'Field Flight',          scene:'field',        ease:'Soft In-Out',    spacing:0.5, P:{dur:1.3,  hold:.2,  drift:.35, corner:0, minN:18}},
-  {id:'orbit-ring',   name:'Orbit Ring',            scene:'orbitRing',    ease:'Soft In-Out',    P:{dur:1.2,  hold:.4,  drift:.04, corner:1.5, tilt:0.08, minN:10}},
+  {id:'spiral',       name:'Spiral Vortex',         scene:'spiral',       ease:'Linear',         P:{loop:7,   corner:1.5, turns:2.2, minN:12}},
   {id:'globe',        name:'Globe',                 scene:'globe',        ease:'Linear',         P:{dur:9,    hold:0,   corner:1, minN:24}},
   {cat:'Cuts'},
   {id:'zoom-gallery', name:'Zoom Gallery',          scene:'zoomGallery',  ease:'Slow Cinematic', P:{dur:.9,   hold:2.1, corner:0}},
