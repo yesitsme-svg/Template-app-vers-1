@@ -26,11 +26,13 @@
     display:flex; overflow:hidden;
   }
   aside{
-    width:300px; min-width:300px; height:100vh; overflow-y:auto;
-    background:var(--panel); border-right:1px solid var(--border);
-    padding:18px 16px 40px; display:flex; flex-direction:column; gap:18px;
+    height:100vh; overflow-y:auto;
+    background:var(--panel);
+    padding:18px 16px 40px; display:flex; flex-direction:column; gap:16px;
     transition:opacity .2s;
   }
+  #previews{width:222px; min-width:222px; border-right:1px solid var(--border);}
+  #settings{width:312px; min-width:312px; border-left:1px solid var(--border);}
   aside.locked{pointer-events:none; opacity:.55;}
   aside::-webkit-scrollbar{width:6px;} aside::-webkit-scrollbar-thumb{background:#ddd; border-radius:3px;}
   h1{font-size:13px; font-weight:500; letter-spacing:.08em; text-transform:uppercase;}
@@ -38,15 +40,16 @@
   .group{display:flex; flex-direction:column; gap:8px;}
   .label{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted);}
   .label small{color:#aaa; letter-spacing:.05em; text-transform:none;}
-  .tplGrid{display:grid; grid-template-columns:1fr 1fr; gap:6px;}
-  .tplGrid .cat{grid-column:1/-1; font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:#b3b3b8; margin-top:5px;}
-  .tpl{
-    padding:9px 10px; background:var(--panel2); border:1px solid var(--border);
-    border-radius:10px; cursor:pointer; color:var(--text); font-size:11px; line-height:1.35;
-    text-align:left; transition:background .15s,border-color .15s,color .15s; font-family:inherit;
-  }
-  .tpl:hover{background:#efeff2;}
-  .tpl.active{background:var(--dark); color:#fff; border-color:var(--dark); font-weight:500;}
+  .pvGrid{display:grid; grid-template-columns:1fr 1fr; gap:9px 8px;}
+  .pvGrid .cat{grid-column:1/-1; font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:#b3b3b8; margin-top:6px;}
+  .pv{display:flex; flex-direction:column; gap:5px; cursor:pointer; background:none; border:none; padding:0; font-family:inherit;}
+  .pv .pvimg{width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:9px; border:1px solid var(--border); background:#1b1b1d; display:block; transition:border-color .15s,box-shadow .15s;}
+  .pv span{font-size:10px; color:var(--muted); text-align:center; line-height:1.2;}
+  .pv:hover .pvimg{border-color:#bbb;}
+  .pv.active .pvimg{border-color:var(--dark); box-shadow:0 0 0 2px var(--dark);}
+  .pv.active span{color:var(--text); font-weight:500;}
+  .linklike{align-self:flex-start; background:none; border:none; padding:1px 0; color:var(--accent); font-size:11px; cursor:pointer; font-family:inherit; text-decoration:underline; text-underline-offset:2px;}
+  .linklike:hover{color:#5a2bb8;}
   .chips{display:flex; flex-wrap:wrap; gap:5px;}
   .chip{
     padding:6px 11px; background:var(--panel2); border:1px solid var(--border);
@@ -92,8 +95,9 @@
   summary{cursor:pointer; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); list-style:none; user-select:none;}
   summary::before{content:'▸ ';} details[open] summary::before{content:'▾ ';}
   .loopinfo{font-size:10.5px; color:#999; text-align:center; font-variant-numeric:tabular-nums;}
-  main{flex:1; position:relative; display:flex; align-items:center; justify-content:center; min-width:0;}
-  #stage{position:relative; box-shadow:0 18px 60px rgba(0,0,0,.16), 0 4px 14px rgba(0,0,0,.08); border-radius:4px;}
+  main{flex:1; position:relative; display:flex; flex-direction:column; min-width:0;}
+  .stageWrap{flex:1; position:relative; display:flex; align-items:center; justify-content:center; width:100%; min-height:0;}
+  #stage{position:relative; box-shadow:0 18px 60px rgba(0,0,0,.16), 0 4px 14px rgba(0,0,0,.08); border-radius:4px; cursor:pointer;}
   #stage.checker{
     background-image:conic-gradient(#e8e8ec 0 25%,#f6f6f8 0 50%,#e8e8ec 0 75%,#f6f6f8 0);
     background-size:20px 20px;
@@ -116,6 +120,23 @@
   .ebFill{height:100%; width:0%; background:var(--accent); transition:width .15s;}
   @keyframes blink{50%{opacity:.25;}}
   .hint{font-size:10px; color:#aaa; line-height:1.5;}
+  #timeline{
+    flex:0 0 auto; display:flex; align-items:center; gap:13px;
+    margin:0 26px 18px; padding:9px 16px;
+    background:var(--panel); border:1px solid var(--border); border-radius:100px;
+    box-shadow:0 2px 12px rgba(0,0,0,.05);
+  }
+  body.exporting #timeline{pointer-events:none; opacity:.5;}
+  #tlPlay{
+    width:32px; height:32px; flex:0 0 auto; border-radius:50%; border:none; cursor:pointer;
+    background:var(--dark); color:#fff; font-size:13px; line-height:1; font-family:inherit;
+    display:flex; align-items:center; justify-content:center;
+  }
+  #tlPlay:hover{background:#000;}
+  #tlTrack{flex:1; height:6px; background:#e7e7ec; border-radius:3px; position:relative; cursor:pointer; touch-action:none;}
+  #tlFill{position:absolute; left:0; top:0; bottom:0; background:var(--accent); border-radius:3px;}
+  #tlHead{position:absolute; top:50%; left:0; width:15px; height:15px; border-radius:50%; background:#fff; border:2.5px solid var(--accent); transform:translate(-50%,-50%); box-shadow:0 1px 4px rgba(0,0,0,.2);}
+  #tlTime{flex:0 0 auto; min-width:96px; text-align:right; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums;}
   #toasts{position:absolute; bottom:18px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:8px; align-items:center; z-index:50; pointer-events:none;}
   .toast{
     background:var(--dark); border:none; color:#fff;
@@ -128,29 +149,49 @@
 </head>
 <body>
 
-<aside id="side">
+<aside id="previews">
   <h1>WANNATHIS <span>ANIMATOR</span></h1>
-
   <div class="group">
-    <div class="label">Template</div>
-    <div class="tplGrid" id="tpls"></div>
+    <div class="label">Templates</div>
+    <div class="pvGrid" id="tpls"></div>
   </div>
+</aside>
 
+<main>
+  <div class="stageWrap">
+    <div id="stage"></div>
+    <div class="ratios" id="ratios">
+      <button data-r="3:4" class="active">3:4</button>
+      <button data-r="9:16">9:16</button>
+      <button data-r="1:1">1:1</button>
+      <button data-r="4:3">4:3</button>
+      <button data-r="16:9">16:9</button>
+    </div>
+    <div id="exportBadge">
+      <div class="ebrow"><span class="dot"></span><span id="ebText">Exporting…</span><button id="ebCancel">Cancel</button></div>
+      <div class="ebTrack"><div class="ebFill" id="ebFill"></div></div>
+    </div>
+    <div id="toasts"></div>
+  </div>
+  <div id="timeline">
+    <button id="tlPlay" title="Play / Pause (Space)">⏸</button>
+    <div id="tlTrack"><div id="tlFill"></div><div id="tlHead"></div></div>
+    <div id="tlTime">0.0 / 0.0s</div>
+  </div>
+</main>
+
+<aside id="settings">
   <div class="group">
     <div class="label">Images <small id="imgCount"></small></div>
     <div class="drop" id="drop">Drop images here or click to browse<br><span class="sub">JPG · PNG · WEBP — up to 20 files, 15 MB each</span></div>
     <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" multiple hidden>
+    <input type="file" id="replaceInput" accept="image/jpeg,image/png,image/webp" hidden>
     <div class="thumbs" id="thumbs"></div>
     <div class="row2" id="imgActions" style="display:none">
       <button class="btn sm" id="shuffleBtn">⇄ Shuffle</button>
       <button class="btn sm" id="clearBtn">Clear all</button>
     </div>
-    <div class="hint" id="demoHint">Showing demo posters — drop your own images to replace them.</div>
-  </div>
-
-  <div class="group">
-    <div class="slider-row"><div class="label">Speed</div><div class="val" id="speedVal">×1.00</div></div>
-    <input type="range" id="speed" min="0.25" max="2" step="0.05" value="1">
+    <div class="hint" id="demoHint">Showing demo posters — drop your own, or click any card on the canvas to replace it.</div>
   </div>
 
   <div class="group">
@@ -159,11 +200,24 @@
   </div>
 
   <div class="group">
+    <div class="slider-row"><div class="label">Speed</div><div class="val" id="speedVal">×1.00</div></div>
+    <input type="range" id="speed" min="0.25" max="2" step="0.05" value="1">
+  </div>
+
+  <div class="group">
     <div class="label">Easing</div>
     <div class="chips" id="easeChips"></div>
-    <canvas id="easeCurve"></canvas>
-    <div class="bezvals" id="bezVals"></div>
-    <div class="hint">Drag the two handles to shape the curve. Picking a template resets it to that template's ideal default.</div>
+    <button class="linklike" id="easeToggle">Adjust curve</button>
+    <div id="easeAdvanced" style="display:none">
+      <canvas id="easeCurve"></canvas>
+      <div class="bezvals" id="bezVals"></div>
+      <div class="hint">Drag the two handles to shape the curve.</div>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="slider-row"><div class="label">Corner radius</div><div class="val" id="cornerVal">0</div></div>
+    <input type="range" id="corner" min="0" max="12" step="0.5" value="0">
   </div>
 
   <div class="group">
@@ -179,9 +233,7 @@
   <details>
     <summary>Advanced</summary>
     <div class="group" style="margin-top:10px">
-      <div class="slider-row"><div class="label">Corner radius</div><div class="val" id="cornerVal">0</div></div>
-      <input type="range" id="corner" min="0" max="12" step="0.5" value="0">
-      <div class="label" style="margin-top:4px">Direction</div>
+      <div class="label">Direction</div>
       <div class="seg" id="dirSeg">
         <button data-v="1" class="active">Forward</button>
         <button data-v="-1">Reverse</button>
@@ -197,29 +249,10 @@
   <div class="group">
     <div class="loopinfo" id="loopInfo"></div>
     <button class="btn primary" id="mp4Btn">⬇ Export MP4</button>
-    <div class="row2">
-      <button class="btn" id="pngBtn">PNG frame</button>
-      <button class="btn" id="playBtn">⏸ Pause</button>
-    </div>
-    <div class="hint">MP4 — one seamless loop, rendered frame by frame at 30 fps. PNG — the current frame.</div>
+    <button class="btn" id="pngBtn">Export PNG frame</button>
+    <div class="hint">MP4 — one seamless loop at 30 fps. PNG — the frame you're parked on (scrub the timeline to pick it).</div>
   </div>
 </aside>
-
-<main>
-  <div id="stage"></div>
-  <div class="ratios" id="ratios">
-    <button data-r="3:4" class="active">3:4</button>
-    <button data-r="9:16">9:16</button>
-    <button data-r="1:1">1:1</button>
-    <button data-r="4:3">4:3</button>
-    <button data-r="16:9">16:9</button>
-  </div>
-  <div id="exportBadge">
-    <div class="ebrow"><span class="dot"></span><span id="ebText">Exporting…</span><button id="ebCancel">Cancel</button></div>
-    <div class="ebTrack"><div class="ebFill" id="ebFill"></div></div>
-  </div>
-  <div id="toasts"></div>
-</main>
 
 <script type="importmap">
 {"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}
@@ -574,10 +607,10 @@ const SCENES = {
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
     const h=Math.min(fr.h*.84*state.size, fr.h*.96, fr.w*.96/PA), w=h*PA;
-    const meshes=texs.map(t=>{
+    const meshes=texs.map((t,i)=>{
       const tc=t.clone(); tc.needsUpdate=true; // own GPU texture per card for UV animation
       const m=plane(tc,w,h,true);
-      m.userData.disposeMap=true;
+      m.userData.disposeMap=true; m.userData.src=i; // cloned tex isn't in activeTextures → tag for picking
       m.visible=false; root.add(m); return m;
     });
     const setZoom=(m,z)=>{ const t=m.material.map, s=1/z; t.repeat.set(s,s); t.offset.set((1-s)/2,(1-s)/2); };
@@ -909,10 +942,19 @@ function drawCurve(b){
   });
 }
 function refreshEaseUI(){
-  drawCurve(state.bez);
-  $('bezVals').innerHTML=state.bez.map(v=>`<div>${v.toFixed(2)}</div>`).join('');
+  const open=$('easeAdvanced').style.display!=='none';
+  if(open){
+    drawCurve(state.bez);
+    $('bezVals').innerHTML=state.bez.map(v=>`<div>${v.toFixed(2)}</div>`).join('');
+  }
+  $('easeToggle').textContent = open ? 'Hide curve'
+    : (state.ease==='Custom' ? 'Custom curve ✎' : 'Adjust curve');
   document.querySelectorAll('#easeChips .chip').forEach(c=>c.classList.toggle('active',c.textContent===state.ease));
 }
+$('easeToggle').addEventListener('click',()=>{
+  const a=$('easeAdvanced'); a.style.display=a.style.display==='none'?'':'none';
+  refreshEaseUI();
+});
 function setEase(name){
   const e=EASINGS.find(e=>e.name===name)||EASINGS[1];
   state.ease=e.name; state.bez=[...e.b]; state.easeFn=cubicBezier(...e.b);
@@ -960,6 +1002,7 @@ EASINGS.forEach(e=>{
 
 /* ================= rebuild & template switching ================= */
 function rebuild(resetTime=false){
+  clearHighlight();
   while(root.children.length){
     const ch=root.children[0]; root.remove(ch);
     ch.traverse?.(o=>{
@@ -973,6 +1016,47 @@ function rebuild(resetTime=false){
   if(resetTime) animTime=0;
   updateLoopInfo();
 }
+
+/* ================= click a card on the canvas to replace its image ================= */
+const raycaster=new THREE.Raycaster();
+let outline=null, highlightTO=null, replaceIdx=-1;
+function clearHighlight(){
+  clearTimeout(highlightTO);
+  if(outline){ outline.parent?.remove(outline); outline.geometry.dispose(); outline.material.dispose(); outline=null; }
+}
+function highlight(mesh){
+  clearHighlight();
+  const g=mesh.geometry.parameters;
+  outline=new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.PlaneGeometry(g.width*1.015,g.height*1.015)),
+    new THREE.LineBasicMaterial({color:0x713ade}));
+  outline.position.z=0.02; outline.renderOrder=999;
+  mesh.add(outline);
+  highlightTO=setTimeout(clearHighlight,2600);
+}
+function texToSrcIndex(mapTex){
+  const texs=activeTextures(state.P.corner);
+  const i=texs.indexOf(mapTex);
+  return i<0?null:i;
+}
+renderer.domElement.addEventListener('pointerdown',e=>{
+  if(exporting||!active) return;
+  const rect=renderer.domElement.getBoundingClientRect();
+  const ndc=new THREE.Vector2(
+    ((e.clientX-rect.left)/rect.width)*2-1,
+    -((e.clientY-rect.top)/rect.height)*2+1);
+  raycaster.setFromCamera(ndc,camera);
+  const hits=raycaster.intersectObjects(root.children,true).filter(h=>
+    h.object.visible && h.object.geometry?.type==='PlaneGeometry' &&
+    (h.object.material?.opacity===undefined || h.object.material.opacity>0.15));
+  if(!hits.length) return;
+  const mesh=hits[0].object;
+  let src=mesh.userData.src; if(src==null) src=texToSrcIndex(mesh.material.map);
+  if(src==null) return;
+  highlight(mesh);
+  if(!userSources.length){ replaceIdx=-1; fileInput.click(); return; } // demos: add real images first
+  replaceIdx=src; replaceInput.click();
+});
 function updateLoopInfo(){
   if(active) $('loopInfo').textContent=`Loop ≈ ${(active.loopSeconds/state.speed).toFixed(1)} s · 30 fps`;
 }
@@ -983,18 +1067,71 @@ function applyTemplate(t){
   $('corner').value=state.P.corner??0;
   $('cornerVal').textContent=(state.P.corner??0).toFixed(1);
   rebuild(true);
-  document.querySelectorAll('#tpls .tpl').forEach(c=>c.classList.toggle('active',c.dataset.id===t.id));
+  document.querySelectorAll('#tpls .pv').forEach(c=>c.classList.toggle('active',c.dataset.id===t.id));
 }
 TEMPLATES.forEach(t=>{
   if(t.cat){
     const d=document.createElement('div'); d.className='cat'; d.textContent=t.cat;
     $('tpls').appendChild(d); return;
   }
-  const c=document.createElement('button');
-  c.className='tpl'; c.textContent=t.name; c.dataset.id=t.id;
-  c.addEventListener('click',()=>applyTemplate(t));
-  $('tpls').appendChild(c);
+  const b=document.createElement('button');
+  b.className='pv'; b.dataset.id=t.id;
+  const img=document.createElement('img'); img.className='pvimg'; img.id='pv-'+t.id; img.alt=t.name; img.draggable=false;
+  const span=document.createElement('span'); span.textContent=t.name;
+  b.appendChild(img); b.appendChild(span);
+  b.addEventListener('click',()=>applyTemplate(t));
+  $('tpls').appendChild(b);
 });
+
+/* ================= template preview thumbnails =================
+   A dedicated small renderer draws a representative frame of every template
+   into its card image, so the left panel mirrors what each animation does. */
+const thumbRenderer=new THREE.WebGLRenderer({antialias:true, alpha:false});
+thumbRenderer.outputColorSpace=THREE.SRGBColorSpace;
+thumbRenderer.setSize(150,200,false);
+function clearRootMeshes(){
+  clearHighlight();
+  while(root.children.length){
+    const ch=root.children[0]; root.remove(ch);
+    ch.traverse?.(o=>{
+      if(o.userData?.disposeMap) o.material?.map?.dispose();
+      o.geometry?.dispose(); o.material?.dispose();
+    });
+  }
+}
+let thumbsScheduled=false;
+function scheduleThumbs(){
+  if(thumbsScheduled) return;
+  thumbsScheduled=true;
+  setTimeout(()=>{ thumbsScheduled=false; generateThumbnails(); },70);
+}
+function generateThumbnails(){
+  const saved={ easeFn:state.easeFn, size:state.size, dir:state.dir, P:state.P,
+                time:animTime, bg:scene.background, aspect:camera.aspect };
+  state.size=1; state.dir=1;
+  camera.aspect=PA; camera.updateProjectionMatrix();
+  scene.background=new THREE.Color('#1b1b1d');
+  for(const t of TEMPLATES){
+    if(!t.id) continue;
+    clearRootMeshes(); root.rotation.set(0,0,0);
+    const e=EASINGS.find(x=>x.name===t.ease)||EASINGS[1];
+    state.easeFn=cubicBezier(...e.b);
+    let built;
+    try{ built=SCENES[t.scene]({...t.P}); built.update(built.loopSeconds*0.4); }
+    catch(err){ console.warn('thumb',t.id,err); continue; }
+    thumbRenderer.render(scene,camera);
+    const img=document.getElementById('pv-'+t.id);
+    if(img) img.src=thumbRenderer.domElement.toDataURL('image/jpeg',0.82);
+  }
+  // restore live state and rebuild the active template
+  clearRootMeshes();
+  state.easeFn=saved.easeFn; state.size=saved.size; state.dir=saved.dir; state.P=saved.P;
+  animTime=saved.time; camera.aspect=saved.aspect; camera.updateProjectionMatrix();
+  scene.background=saved.bg;
+  root.rotation.set(0,0,0);
+  active=SCENES[state.template.scene](state.P);
+  updateLoopInfo();
+}
 
 /* ================= render loop ================= */
 function renderFrame(){
@@ -1012,6 +1149,7 @@ function tickFrame(now){
   const dt=Math.min((now-last)/1000,.1); last=now;
   if(state.playing) animTime+=dt*state.speed;
   renderFrame();
+  updateTimeline();
   if(rec && rec.state==='recording' && animTime>=recUntil) rec.stop();
 }
 requestAnimationFrame(tickFrame);
@@ -1032,7 +1170,8 @@ function setExportUI(on,label='Exporting MP4'){
 }
 function exportingUI(on){
   $('exportBadge').style.display=on?'flex':'none';
-  $('side').classList.toggle('locked',on);
+  $('previews').classList.toggle('locked',on);
+  $('settings').classList.toggle('locked',on);
   document.body.classList.toggle('exporting',on);
   $('mp4Btn').disabled=on; $('pngBtn').disabled=on;
 }
@@ -1157,7 +1296,7 @@ function resize(){
   W&=~1; H&=~1; // H.264 needs even dimensions
   renderer.setSize(W,H,false);
   camera.aspect=W/H; camera.updateProjectionMatrix();
-  const availW=window.innerWidth-300-120, availH=window.innerHeight-80;
+  const availW=window.innerWidth-222-312-72, availH=window.innerHeight-150;
   const s=Math.min(availW/W,availH/H,1);
   stage.style.width=Math.round(W*s)+'px';
   stage.style.height=Math.round(H*s)+'px';
@@ -1197,16 +1336,40 @@ $('speed').addEventListener('input',e=>{
   updateLoopInfo();
 });
 $('corner').addEventListener('input',e=>{ $('cornerVal').textContent=parseFloat(e.target.value).toFixed(1); });
-$('corner').addEventListener('change',e=>{ state.P.corner=parseFloat(e.target.value); rebuild(); });
+$('corner').addEventListener('change',e=>{ state.P.corner=parseFloat(e.target.value); rebuild(); scheduleThumbs(); });
 $('cardSize').addEventListener('input',e=>{ $('sizeVal').textContent='×'+parseFloat(e.target.value).toFixed(2); });
 $('cardSize').addEventListener('change',e=>{ state.size=parseFloat(e.target.value); rebuild(); });
 
-function updatePlayBtn(){ $('playBtn').textContent=state.playing?'⏸ Pause':'▶ Play'; }
+function updatePlayBtn(){ $('tlPlay').textContent=state.playing?'⏸':'▶'; }
 function togglePlay(){ state.playing=!state.playing; updatePlayBtn(); }
-$('playBtn').addEventListener('click',togglePlay);
+$('tlPlay').addEventListener('click',togglePlay);
 window.addEventListener('keydown',e=>{
-  if(e.code==='Space' && e.target===document.body){ e.preventDefault(); togglePlay(); }
+  if(e.code==='Space' && (e.target===document.body || e.target.id==='tlPlay')){ e.preventDefault(); togglePlay(); }
 });
+
+/* ================= timeline scrubber ================= */
+const tlTrack=$('tlTrack');
+function updateTimeline(){
+  if(!active) return;
+  const loop=active.loopSeconds, t=((animTime%loop)+loop)%loop, f=loop>0?t/loop:0;
+  $('tlFill').style.width=(f*100)+'%';
+  $('tlHead').style.left=(f*100)+'%';
+  $('tlTime').textContent=`${t.toFixed(1)} / ${loop.toFixed(1)}s`;
+}
+let scrubbing=false;
+function scrubTo(e){
+  if(!active) return;
+  const r=tlTrack.getBoundingClientRect();
+  animTime=clamp01((e.clientX-r.left)/r.width)*active.loopSeconds;
+  renderFrame(); updateTimeline();
+}
+tlTrack.addEventListener('pointerdown',e=>{
+  if(exporting) return;
+  scrubbing=true; state.playing=false; updatePlayBtn();
+  tlTrack.setPointerCapture(e.pointerId); scrubTo(e);
+});
+tlTrack.addEventListener('pointermove',e=>{ if(scrubbing) scrubTo(e); });
+['pointerup','pointercancel'].forEach(ev=>tlTrack.addEventListener(ev,()=>{ scrubbing=false; }));
 
 /* ================= toasts ================= */
 function toast(msg){
@@ -1219,13 +1382,43 @@ function toast(msg){
 /* ================= uploads ================= */
 const MAX_FILES=20, MAX_FILE_MB=15, MAX_DIM=2048;
 const OK_TYPES=['image/jpeg','image/png','image/webp'];
-const drop=$('drop'), fileInput=$('fileInput'), thumbs=$('thumbs');
+const drop=$('drop'), fileInput=$('fileInput'), replaceInput=$('replaceInput'), thumbs=$('thumbs');
 const DROP_HTML=drop.innerHTML;
 drop.addEventListener('click',()=>fileInput.click());
 drop.addEventListener('dragover',e=>{e.preventDefault(); drop.classList.add('over');});
 drop.addEventListener('dragleave',()=>drop.classList.remove('over'));
 drop.addEventListener('drop',e=>{e.preventDefault(); drop.classList.remove('over'); addFiles(e.dataTransfer.files);});
 fileInput.addEventListener('change',()=>{addFiles(fileInput.files); fileInput.value='';});
+replaceInput.addEventListener('change',async()=>{
+  const f=replaceInput.files[0]; replaceInput.value='';
+  if(!f || replaceIdx<0 || replaceIdx>=userSources.length) return;
+  const src=await processFile(f);
+  if(!src) return;
+  const old=userSources[replaceIdx];
+  dropCachedTextures(old.uid); old.src.close?.();
+  userSources[replaceIdx]=src;
+  clearHighlight(); renderThumbs(); rebuild(); scheduleThumbs();
+  toast('Image replaced.');
+});
+
+async function processFile(f){ // validate + downscale + build a source object (or null)
+  if(!OK_TYPES.includes(f.type)){ toast(`${f.name}: only JPG, PNG or WEBP files are supported.`); return null; }
+  if(f.size>MAX_FILE_MB*1048576){ toast(`${f.name}: file is over the ${MAX_FILE_MB} MB limit.`); return null; }
+  try{
+    let bmp=await createImageBitmap(f);
+    if(Math.max(bmp.width,bmp.height)>MAX_DIM){ // downscale heavy assets for safe rendering
+      const s=MAX_DIM/Math.max(bmp.width,bmp.height);
+      const b2=await createImageBitmap(bmp,{
+        resizeWidth:Math.round(bmp.width*s), resizeHeight:Math.round(bmp.height*s), resizeQuality:'high'});
+      bmp.close(); bmp=b2;
+    }
+    const tc=document.createElement('canvas'); tc.width=80; tc.height=106;
+    const tx=tc.getContext('2d');
+    const ts=Math.max(80/bmp.width,106/bmp.height);
+    tx.drawImage(bmp,(80-bmp.width*ts)/2,(106-bmp.height*ts)/2,bmp.width*ts,bmp.height*ts);
+    return {src:bmp, thumb:tc.toDataURL('image/jpeg',.75), name:f.name, uid:'u'+(uidSeq++)};
+  }catch(err){ console.error(err); toast(`${f.name}: could not read this file.`); return null; }
+}
 
 async function addFiles(files){
   const list=[...files];
@@ -1233,30 +1426,12 @@ async function addFiles(files){
   drop.classList.add('busy'); drop.textContent='Processing images…';
   let added=0;
   for(const f of list){
-    if(!OK_TYPES.includes(f.type)){ toast(`${f.name}: only JPG, PNG or WEBP files are supported.`); continue; }
-    if(f.size>MAX_FILE_MB*1048576){ toast(`${f.name}: file is over the ${MAX_FILE_MB} MB limit.`); continue; }
     if(userSources.length>=MAX_FILES){ toast(`Limit is ${MAX_FILES} images per project.`); break; }
-    try{
-      let bmp=await createImageBitmap(f);
-      if(Math.max(bmp.width,bmp.height)>MAX_DIM){ // downscale heavy assets for safe rendering
-        const s=MAX_DIM/Math.max(bmp.width,bmp.height);
-        const b2=await createImageBitmap(bmp,{
-          resizeWidth:Math.round(bmp.width*s), resizeHeight:Math.round(bmp.height*s), resizeQuality:'high'});
-        bmp.close(); bmp=b2;
-      }
-      const tc=document.createElement('canvas'); tc.width=80; tc.height=106;
-      const tx=tc.getContext('2d');
-      const ts=Math.max(80/bmp.width,106/bmp.height);
-      tx.drawImage(bmp,(80-bmp.width*ts)/2,(106-bmp.height*ts)/2,bmp.width*ts,bmp.height*ts);
-      userSources.push({src:bmp, thumb:tc.toDataURL('image/jpeg',.75), name:f.name, uid:'u'+(uidSeq++)});
-      added++;
-    }catch(err){
-      console.error(err);
-      toast(`${f.name}: could not read this file.`);
-    }
+    const src=await processFile(f);
+    if(src){ userSources.push(src); added++; }
   }
   drop.classList.remove('busy'); drop.innerHTML=DROP_HTML;
-  if(added){ renderThumbs(); rebuild(true); }
+  if(added){ renderThumbs(); rebuild(true); scheduleThumbs(); }
 }
 
 let dragIdx=-1;
@@ -1274,13 +1449,13 @@ function renderThumbs(){
       if(dragIdx<0||dragIdx===i) return;
       const [it]=userSources.splice(dragIdx,1);
       userSources.splice(i,0,it);
-      dragIdx=-1; renderThumbs(); rebuild();
+      dragIdx=-1; renderThumbs(); rebuild(); scheduleThumbs();
     });
     const x=document.createElement('button'); x.className='x'; x.textContent='✕'; x.title='Remove';
     x.addEventListener('click',()=>{
       dropCachedTextures(u.uid); u.src.close?.();
       userSources.splice(i,1);
-      renderThumbs(); rebuild();
+      renderThumbs(); rebuild(); scheduleThumbs();
     });
     d.appendChild(img); d.appendChild(x); thumbs.appendChild(d);
   });
@@ -1293,12 +1468,12 @@ $('shuffleBtn').addEventListener('click',()=>{
     const j=Math.floor(Math.random()*(i+1));
     [userSources[i],userSources[j]]=[userSources[j],userSources[i]];
   }
-  renderThumbs(); rebuild();
+  renderThumbs(); rebuild(); scheduleThumbs();
 });
 $('clearBtn').addEventListener('click',()=>{
   userSources.forEach(u=>{ dropCachedTextures(u.uid); u.src.close?.(); });
   userSources=[];
-  renderThumbs(); rebuild(true);
+  renderThumbs(); rebuild(true); scheduleThumbs();
 });
 
 /* ================= init ================= */
@@ -1318,13 +1493,16 @@ window.__app={
       x.fillText(String(i+1),240,400);
       return {src:c, thumb:c.toDataURL('image/jpeg',.5), name:'test-'+(i+1), uid:'u'+(uidSeq++)};
     });
-    renderThumbs(); rebuild(true);
+    renderThumbs(); rebuild(true); generateThumbnails();
   },
+  regenThumbs:()=>generateThumbnails(),
 };
 window.addEventListener('error',e=>console.error('PAGE ERROR:',e.message,e.filename,e.lineno));
 resize();
 applyTemplate(TEMPLATES.find(t=>!t.cat));
 renderThumbs();
+updatePlayBtn();
+generateThumbnails();
 </script>
 </body>
 </html>
