@@ -849,32 +849,39 @@ const SCENES = {
       } };
   },
 
-  /* Field Flight — stepped fly-through a depth field of cards */
+  /* Field Flight — fly-through a deep field of cards: they emerge from the fog
+     far away, drift past the camera and fade out, scattered off-centre so the
+     near (big) cards never pile up in the middle. */
   field(P){
     const N0=sourceList().length;
-    const minN=P.minN||12;
+    const minN=P.minN||16;
     const n=N0>=minN?N0:N0*Math.ceil(minN/N0);
-    const H=1.2;
-    const spread=1.4*(state.spacing||1), depth=spread*6, rnd=mulberry32(7); // field widens with cards
+    const H=0.8;
+    const rnd=mulberry32(7);
+    const sp=state.spacing||1, spreadX=3.6*sp, spreadY=2.5*sp;
+    const camZ=5, depth=18*sp;             // long tunnel so cards stay spread in depth
     const meshes=[];
     for(let i=0;i<n;i++){
       const e=entryForSlot(i);
       const m=plane(e.tex,H*e.asp,H,true); m.userData={slot:i};
-      Object.assign(m.userData,{x:(rnd()-.5)*spread*2.6, y:(rnd()-.5)*spread*1.6, z0:i/n*depth});
+      const ang=i*2.39996+rnd()*.6, rad=0.42+rnd()*0.95; // ring-ish scatter, avoids the dead centre
+      Object.assign(m.userData,{ x:Math.cos(ang)*rad*spreadX, y:Math.sin(ang)*rad*spreadY, z0:(i/n)*depth });
       root.add(m); meshes.push(m);
     }
-    camera.position.set(0,0,4); camera.lookAt(0,0,0);
-    const stepZ=depth/n, phase=makePhase(P);
+    camera.position.set(0,0,camZ); camera.lookAt(0,0,0);
+    const phase=makePhase(P);
     return { loopSeconds:(P.dur+P.hold)*n,
       update(T){
-        const adv=phase(T)*stepZ;
+        const adv=phase(T)*(depth/n);
         meshes.forEach(m=>{
           const {x,y,z0}=m.userData;
-          let z=(((z0+adv)%depth)+depth)%depth;
-          m.position.set(x,y,4-1.2-(depth-z));
-          const nearFade=THREE.MathUtils.smoothstep(z,depth-stepZ*.9,depth);
-          const farFade=THREE.MathUtils.smoothstep(z,0,stepZ*.6);
-          setCardOpacity(m,(1-nearFade)*farFade);
+          const z=(((z0+adv)%depth)+depth)%depth;     // 0 = far, depth = at the camera
+          const worldZ=camZ-depth+z;
+          m.position.set(x,y,worldZ);
+          const dist=camZ-worldZ;                      // depth (far) → 0 (at camera)
+          const emerge=1-THREE.MathUtils.smoothstep(dist, depth*0.72, depth*0.98); // fade in from the fog
+          const pass  =THREE.MathUtils.smoothstep(dist, 0.35, 1.6);                // fade out as it flies past
+          setCardOpacity(m, emerge*pass);
         });
       } };
   },
@@ -979,7 +986,6 @@ const SCENES = {
 const TEMPLATES = [
   {cat:'Carousels 3D'},
   {id:'carousel',     name:'Carousel Slide',        scene:'ring',         ease:'Soft In-Out',    P:{dur:1.15, hold:.45, drift:.05, corner:0, axis:'y', tiltX:7,  step:'card', minN:8, chord:1.9}},
-  {id:'orbit-tilt',   name:'Orbit Tilt',            scene:'ring',         ease:'Smooth Out',     P:{dur:1.3,  hold:.45, drift:.05, corner:0, axis:'y', tiltZ:-65,step:'card', minN:7, chord:1.85}},
   {id:'wheel',        name:'Vertical Wheel',        scene:'ring',         ease:'Soft In-Out',    P:{dur:1.3,  hold:.4,  drift:.05, corner:0, axis:'x', step:'card', minN:6, chord:2.2}},
   {id:'tilted-ring',  name:'Tilted Ring',           scene:'ring',         ease:'Linear',         P:{dur:14,   hold:0,   drift:0,   corner:0, axis:'y', tiltX:14, tiltZ:16, step:'full', minN:9, chord:1.9, sizeMul:.85}},
   {cat:'Cards'},
@@ -993,7 +999,7 @@ const TEMPLATES = [
   {id:'grid-pop',     name:'Grid Pop',              scene:'gridPop',      ease:'Snappy Pop',     P:{dur:.55,  hold:1.7, corner:2}},
   {id:'marquee',      name:'Marquee Lanes',         scene:'marquee',      ease:'Linear',         P:{dur:14,   hold:0,   corner:1, tiltZ:-6}},
   {cat:'Space'},
-  {id:'field',        name:'Field Flight',          scene:'field',        ease:'Soft In-Out',    P:{dur:1.6,  hold:.4,  drift:.15, corner:0, minN:12}},
+  {id:'field',        name:'Field Flight',          scene:'field',        ease:'Soft In-Out',    P:{dur:1.3,  hold:.2,  drift:.35, corner:0, minN:18}},
   {id:'globe',        name:'Globe',                 scene:'globe',        ease:'Linear',         P:{dur:9,    hold:0,   corner:1, minN:24}},
   {cat:'Cuts'},
   {id:'zoom-gallery', name:'Zoom Gallery',          scene:'zoomGallery',  ease:'Slow Cinematic', P:{dur:.9,   hold:2.1, corner:0}},
