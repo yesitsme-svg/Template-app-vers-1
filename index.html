@@ -203,6 +203,16 @@
   </div>
 
   <div class="group">
+    <div class="slider-row"><div class="label">Spacing</div><div class="val" id="spacingVal">×1.00</div></div>
+    <input type="range" id="spacing" min="0.4" max="2.2" step="0.05" value="1">
+  </div>
+
+  <div class="group">
+    <div class="slider-row"><div class="label">Depth fade</div><div class="val" id="fadeVal">0%</div></div>
+    <input type="range" id="fade" min="0" max="100" step="1" value="0">
+  </div>
+
+  <div class="group">
     <div class="slider-row"><div class="label">Speed</div><div class="val" id="speedVal">×1.00</div></div>
     <input type="range" id="speed" min="0.25" max="2" step="0.05" value="1">
   </div>
@@ -231,6 +241,13 @@
     </div>
     <input type="color" id="bgColor" value="#0d0d0d">
     <div class="hint" id="bgHint" style="display:none">Transparency is kept in PNG export. MP4 has no alpha — video is rendered on the chosen color.</div>
+  </div>
+
+  <div class="group">
+    <div class="slider-row"><div class="label">Rotate Y</div><div class="val" id="rotYVal">0°</div></div>
+    <input type="range" id="rotY" min="-60" max="60" step="1" value="0">
+    <div class="slider-row" style="margin-top:4px"><div class="label">Rotate X</div><div class="val" id="rotXVal">0°</div></div>
+    <input type="range" id="rotX" min="-45" max="45" step="1" value="0">
   </div>
 
   <details>
@@ -347,23 +364,20 @@ const PLACEHOLDERS = [
   }),
 ];
 
-/* ================= textures (cover-crop, optional rounded corners) ================= */
-const PA=3/4; // default card aspect
-let userSources = []; // {src: ImageBitmap, thumb, name, uid}
+/* ================= textures (each card sized to its image's own aspect) ================= */
+const PA=3/4; // default card aspect (also the grey/demo card aspect)
+let userSources = []; // {src, thumb, name, uid, aspect}
 let uidSeq=0;
 const texCache = new Map();
-function makeTexture(source, key, rPct, aspect=PA){
-  const ck=key+'|'+rPct+'|'+aspect.toFixed(3);
+const clampAspect=a=>Math.max(0.42, Math.min(2.4, a)); // keep extreme panoramas/strips layout-safe
+function makeTexture(source, key, aspect){
+  const ck=key+'|'+aspect.toFixed(3);
   if(texCache.has(ck)) return texCache.get(ck);
   const W=768, H=Math.round(768/aspect);
   const c=document.createElement('canvas'); c.width=W; c.height=H;
   const x=c.getContext('2d');
-  if(rPct>0){
-    const r=rPct/100*Math.min(W,H)/2*1.6;
-    x.beginPath(); x.roundRect(0,0,W,H,r); x.clip();
-  }
   const sw=source.width||source.naturalWidth, sh=source.height||source.naturalHeight;
-  const s=Math.max(W/sw,H/sh), dw=sw*s, dh=sh*s;
+  const s=Math.max(W/sw,H/sh), dw=sw*s, dh=sh*s; // cover-fit; when aspect matches the image there's no crop
   x.drawImage(source,(W-dw)/2,(H-dh)/2,dw,dh);
   const tex=new THREE.CanvasTexture(c);
   tex.colorSpace=THREE.SRGBColorSpace;
@@ -382,13 +396,19 @@ function greyCard(){
 const PREVIEW_CARDS=[0,1,2,3,4,5].map(greyCard);
 let previewMode=false;
 function sourceList(){
-  if(previewMode) return PREVIEW_CARDS.map((p,i)=>({src:p, key:'pg'+i}));
+  if(previewMode) return PREVIEW_CARDS.map((p,i)=>({src:p, key:'pg'+i, aspect:PA}));
   return userSources.length
-    ? userSources.map(u=>({src:u.src, key:u.uid}))
-    : PLACEHOLDERS.map((p,i)=>({src:p, key:'p'+i}));
+    ? userSources.map(u=>({src:u.src, key:u.uid, aspect:u.aspect}))
+    : PLACEHOLDERS.map((p,i)=>({src:p, key:'p'+i, aspect:PA}));
 }
-function activeTextures(rPct, aspect=PA){
-  return sourceList().map(s=>makeTexture(s.src,s.key,rPct,aspect));
+/* per-card slot → image. Click-to-replace overrides a single slot, so a card
+   can differ from others sharing the same source. */
+const slotOverrides=new Map(); // slot:int -> {src,key,aspect}
+function entryForSlot(slot){
+  const list=sourceList();
+  let src=slotOverrides.get(slot);
+  if(!src) src=list[((slot%list.length)+list.length)%list.length];
+  return {tex:makeTexture(src.src,src.key,src.aspect), asp:src.aspect};
 }
 function dropCachedTextures(uid){
   for(const [k,t] of [...texCache]){
@@ -428,12 +448,43 @@ postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2), postMat));
 
 /* ================= helpers ================= */
 function frameAt(z){ const h=2*z*Math.tan(THREE.MathUtils.degToRad(camera.fov/2)); return {h, w:h*camera.aspect}; }
-function mat(tex,transparent=false){
-  const m=new THREE.MeshBasicMaterial({map:tex, side:THREE.DoubleSide, transparent, depthWrite:!transparent});
-  if(!transparent) m.alphaTest=.5; // rounded-corner crops stay transparent instead of going black
-  return m;
+
+/* card material — custom shader so corner radius is a clean SDF mask and the
+   depth fade can melt a card into the background colour (arqe's depthFade model:
+   mix toward bgColor in sRGB space, which is sorting-safe — no alpha tricks). */
+const hex01=hex=>{ const h=hex.replace('#',''); return [parseInt(h.slice(0,2),16)/255,parseInt(h.slice(2,4),16)/255,parseInt(h.slice(4,6),16)/255]; };
+let curBg=[0.05,0.05,0.05];       // sRGB background fed to every card shader
+let cornerNorm=0;                  // corner radius in 0..0.5 uv units
+const CARD_VERT=`varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`;
+const CARD_FRAG=`
+  uniform sampler2D map; uniform vec3 bgColor; uniform float uFade,uOpacity,cornerRadius,aspect;
+  varying vec2 vUv;
+  vec3 lin2srgb(vec3 c){ bvec3 co=lessThan(c,vec3(0.0031308)); return mix(1.055*pow(max(c,vec3(0.0)),vec3(1.0/2.4))-0.055, c*12.92, vec3(co)); }
+  void main(){
+    if(cornerRadius>0.001){
+      vec2 p=vUv-0.5; p.y*=aspect;
+      vec2 hs=vec2(0.5, aspect*0.5);
+      float cr=min(cornerRadius, min(0.5, aspect*0.5));
+      vec2 d=max(abs(p)-(hs-cr),0.0);
+      if(length(d)>cr) discard;
+    }
+    vec4 tex=texture2D(map,vUv);
+    vec3 texS=lin2srgb(tex.rgb);          // CanvasTexture is SRGB → GPU gives linear; back to sRGB to mix
+    vec3 res=mix(bgColor, texS, clamp(uFade,0.0,1.0));
+    gl_FragColor=vec4(res, tex.a*uOpacity);
+  }`;
+function makeCardMaterial(tex,aspect,transparent){
+  return new THREE.ShaderMaterial({
+    uniforms:{ map:{value:tex}, bgColor:{value:new THREE.Vector3(curBg[0],curBg[1],curBg[2])},
+               uFade:{value:1}, uOpacity:{value:1}, cornerRadius:{value:cornerNorm}, aspect:{value:aspect} },
+    vertexShader:CARD_VERT, fragmentShader:CARD_FRAG,
+    transparent, depthWrite:!transparent, side:THREE.DoubleSide,
+  });
 }
-function plane(tex,w,h,transparent=false){ return new THREE.Mesh(new THREE.PlaneGeometry(w,h), mat(tex,transparent)); }
+function plane(tex,w,h,transparent=false){ return new THREE.Mesh(new THREE.PlaneGeometry(w,h), makeCardMaterial(tex,h/w,transparent)); }
+function setCardOpacity(m,v){ m.material.uniforms.uOpacity.value=v; }     // engines use these instead of material.opacity / .map
+function setCardTex(m,t){ m.material.uniforms.map.value=t; }
+function forEachCard(fn){ root.traverse(o=>{ if(o.material&&o.material.uniforms&&o.material.uniforms.uFade) fn(o); }); }
 function mulberry32(a){ return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 
 /* phase: integer cycles + eased fraction; per-object stagger offset.
@@ -454,12 +505,11 @@ const SCENES = {
 
   /* Smooth Stack Reveal — deck; front card drops away, resurfaces at the back */
   stackReveal(P){
-    const texs=activeTextures(P.corner);
-    const N0=texs.length, n=N0>=3?N0:N0*Math.ceil(3/N0);
-    const h=1.55*state.size, w=h*PA;
+    const N0=sourceList().length, n=N0>=3?N0:N0*Math.ceil(3/N0);
+    const H=1.55*state.size;
     const gz=Math.min(.42,2.6/n), gy=Math.min(.16,.9/n), shrink=Math.min(.06,.38/n);
     const meshes=[];
-    for(let i=0;i<n;i++){ const m=plane(texs[i%N0],w,h,true); root.add(m); meshes.push(m); }
+    for(let i=0;i<n;i++){ const e=entryForSlot(i); const m=plane(e.tex,H*e.asp,H,true); m.userData.slot=i; root.add(m); meshes.push(m); }
     camera.position.set(0,.18,4.6); camera.lookAt(0,0,0);
     const cyc=P.dur+P.hold;
     return { loopSeconds:cyc*n,
@@ -471,21 +521,21 @@ const SCENES = {
           const b=(((i-c)%n)+n)%n, m=meshes[i];
           if(b===0){ // the revealing card
             if(e<.5){ const f=e/.5; // fly down & fade
-              m.position.set(0,-f*1.45*h+bob,.17*f);
+              m.position.set(0,-f*1.45*H+bob,.17*f);
               m.scale.setScalar(1+f*.05);
-              m.material.opacity=1-f;
+              setCardOpacity(m,1-f);
               m.renderOrder=n+1;
             }else{ const f=(e-.5)/.5; // fade in at the back
               m.position.set(0,(n-1)*gy+bob,-(n-1)*gz);
               m.scale.setScalar(1-(n-1)*shrink);
-              m.material.opacity=f;
+              setCardOpacity(m,f);
               m.renderOrder=0;
             }
           }else{
             const s=b-e; // everyone slides one slot forward
             m.position.set(0,s*gy+bob,-s*gz);
             m.scale.setScalar(1-s*shrink);
-            m.material.opacity=1;
+            setCardOpacity(m,1);
             m.renderOrder=n-Math.round(s);
           }
         }
@@ -494,7 +544,7 @@ const SCENES = {
 
   /* Grid Pop — auto-fitted grid, cells pop in from the center out */
   gridPop(P){
-    const texs=activeTextures(P.corner); const N=texs.length;
+    const N=sourceList().length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
     let best=null;
@@ -504,15 +554,17 @@ const SCENES = {
       const w=Math.min(cellW*.9*state.size, cellH*.9*PA*state.size, cellW*.98, cellH*.98*PA);
       if(!best||w>best.w) best={cols,rows,w,cellW,cellH};
     }
-    const {cols,rows,w,cellW,cellH}=best; const h=w/PA;
+    const {cols,rows,w,cellW,cellH}=best; const boxH=w/PA; // each image is contained inside this box, keeping its own aspect
     const meshes=[];
     for(let i=0;i<N;i++){
       const r=Math.floor(i/cols), c=i%cols;
       const inRow=Math.min(cols,N-r*cols); // center a partial last row
       const x=(c-(inRow-1)/2)*cellW, y=((rows-1)/2-r)*cellH;
-      const m=plane(texs[i],w,h,true);
+      const e=entryForSlot(i);
+      const ch=Math.min(boxH, w/e.asp), cw=ch*e.asp; // contain within the cell box
+      const m=plane(e.tex,cw,ch,true); m.userData={slot:i};
       m.position.set(x,y,0); m.visible=false;
-      m.userData={delay:Math.hypot(x,y)*.13+i*.012};
+      m.userData.delay=Math.hypot(x,y)*.13+i*.012;
       root.add(m); meshes.push(m);
     }
     const maxDelay=Math.max(...meshes.map(m=>m.userData.delay));
@@ -528,7 +580,7 @@ const SCENES = {
           const s=Math.max(p*(1-q),.0001);
           m.visible=s>.002;
           m.scale.setScalar(s);
-          m.material.opacity=clamp01(p*2)*(1-q);
+          setCardOpacity(m,clamp01(p*2)*(1-q));
         });
       } };
   },
@@ -537,15 +589,18 @@ const SCENES = {
      Auto radius (chord ≈ P.chord × card width) so cards never intersect;
      side cards may exit the frame — intended. */
   ring(P){
-    const texs=activeTextures(P.corner); const N0=texs.length;
+    const N0=sourceList().length;
     const minN=P.minN||8;
     const n=N0>=minN?N0:N0*Math.ceil(minN/N0); // images repeat evenly
-    const h=(n>10?1.5*Math.sqrt(10/n):1.5)*(P.sizeMul||1)*state.size, w=h*PA;
-    const R=Math.max(w*(P.chord||1.9)/(2*Math.sin(Math.PI/n)),1.35);
+    const H=(n>10?1.5*Math.sqrt(10/n):1.5)*(P.sizeMul||1)*state.size;
+    const entries=[]; let maxW=0;
+    for(let i=0;i<n;i++){ const e=entryForSlot(i); entries.push(e); maxW=Math.max(maxW,H*e.asp); }
+    // radius sized for the widest card so mixed aspects never intersect; even angular spacing
+    const R=Math.max(maxW*(P.chord||1.9)*(state.spacing||1)/(2*Math.sin(Math.PI/n)),1.35);
     const inner=new THREE.Group();
     const meshes=[];
     for(let i=0;i<n;i++){
-      const m=plane(texs[i%N0],w,h);
+      const m=plane(entries[i].tex,H*entries[i].asp,H); m.userData.slot=i;
       const th=(i/n)*Math.PI*2;
       if(P.axis==='x'){ m.position.set(0,Math.sin(th)*R,Math.cos(th)*R); m.rotation.x=-th; }
       else{ m.position.set(Math.sin(th)*R,0,Math.cos(th)*R); m.rotation.y=th; }
@@ -555,8 +610,8 @@ const SCENES = {
     root.rotation.set(THREE.MathUtils.degToRad(P.tiltX||0),0,THREE.MathUtils.degToRad(P.tiltZ||0));
     const tilt=Math.abs(THREE.MathUtils.degToRad(P.tiltX||0));
     const halfV=Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
-    const needHalfH=Math.sin(tilt)*R+h/2+.22;
-    const camZ=Math.max(R+3.1*(h/1.5), R*Math.cos(tilt)+needHalfH/halfV);
+    const needHalfH=Math.sin(tilt)*R+H/2+.22;
+    const camZ=Math.max(R+3.1*(H/1.5), R*Math.cos(tilt)+needHalfH/halfV);
     const camCY=-Math.sin(tilt)*R*.95*Math.sign(P.tiltX||0);
     const phase=makePhase(P), cyc=P.dur+P.hold;
     const angleScale=P.step==='card'?Math.PI*2/n:Math.PI*2;
@@ -581,22 +636,22 @@ const SCENES = {
 
   /* Floating Cards — scattered depth collage, gentle seamless bobbing */
   floating(P){
-    const texs=activeTextures(P.corner);
-    const N0=texs.length, n=N0>=6?N0:N0*Math.ceil(6/N0);
+    const N0=sourceList().length, n=N0>=6?N0:N0*Math.ceil(6/N0);
     const rnd=mulberry32(13);
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
+    const sp=state.spacing||1;
     const meshes=[];
     for(let i=0;i<n;i++){
-      const h=fr.h*(.26+rnd()*.10)*state.size, w=h*PA;
-      const m=plane(texs[i%N0],w,h);
+      const e=entryForSlot(i); const h=fr.h*(.26+rnd()*.10)*state.size, w=h*e.asp;
+      const m=plane(e.tex,w,h); m.userData={slot:i};
       const a=i*2.39996+rnd()*.5, r=Math.sqrt((i+.5)/n);
-      m.userData={
-        x:Math.cos(a)*r*fr.w*.42, y:Math.sin(a)*r*fr.h*.40,
+      Object.assign(m.userData,{
+        x:Math.cos(a)*r*fr.w*.42*sp, y:Math.sin(a)*r*fr.h*.40*sp,
         z:-((i%5)*.6+rnd()*.3),
         f:1+(i%2), phi:rnd()*Math.PI*2,
         rA:.02+rnd()*.03, bA:fr.h*(.015+rnd()*.02),
-      };
+      });
       root.add(m); meshes.push(m);
     }
     const L=P.loop;
@@ -620,19 +675,22 @@ const SCENES = {
   /* Zoom Gallery — Ken Burns push INSIDE a fixed frame (UV zoom), clean dissolve.
      The frame never changes size, so nothing pokes through during transitions. */
   zoomGallery(P){
-    const texs=activeTextures(P.corner); const N=texs.length;
+    const N=sourceList().length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const h=Math.min(fr.h*.84*state.size, fr.h*.96, fr.w*.96/PA), w=h*PA;
-    const meshes=texs.map((t,i)=>{
-      const tc=t.clone(); tc.needsUpdate=true; // own GPU texture per card for UV animation
-      const m=plane(tc,w,h,true);
-      m.userData.disposeMap=true; m.userData.src=i; // cloned tex isn't in activeTextures → tag for picking
-      m.visible=false; root.add(m); return m;
-    });
-    const setZoom=(m,z)=>{ const t=m.material.map, s=1/z; t.repeat.set(s,s); t.offset.set((1-s)/2,(1-s)/2); };
+    const maxH=Math.min(fr.h*.84*state.size, fr.h*.96), maxW=fr.w*.96;
+    const meshes=[];
+    for(let i=0;i<N;i++){
+      const e=entryForSlot(i);
+      const ch=Math.min(maxH, maxW/e.asp), cw=ch*e.asp; // contain image at its aspect
+      const tc=e.tex.clone(); tc.needsUpdate=true; // own GPU texture per card for UV animation
+      const m=plane(tc,cw,ch,true);
+      m.userData.disposeMap=true; m.userData.slot=i;
+      m.visible=false; root.add(m); meshes.push(m);
+    }
+    const setZoom=(m,z)=>{ const t=m.material.uniforms.map.value, s=1/z; t.repeat.set(s,s); t.offset.set((1-s)/2,(1-s)/2); };
     if(N===1){
-      const m=meshes[0]; m.visible=true; m.material.opacity=1;
+      const m=meshes[0]; m.visible=true; setCardOpacity(m,1);
       const L=Math.max(6,(P.dur+P.hold)*2);
       return { loopSeconds:L, update(T){
         const u=(((T/L)%1)+1)%1;
@@ -648,8 +706,8 @@ const SCENES = {
           if(d<seg+P.dur){
             m.visible=true;
             setZoom(m,1.0+.13*(d/(seg+P.dur))); // continuous push for the whole stay
-            if(d<P.dur){ m.material.opacity=clamp01(state.easeFn(d/P.dur)); m.renderOrder=5; }
-            else{ m.material.opacity=1; m.renderOrder=3; }
+            if(d<P.dur){ setCardOpacity(m,clamp01(state.easeFn(d/P.dur))); m.renderOrder=5; }
+            else{ setCardOpacity(m,1); m.renderOrder=3; }
           } else m.visible=false;
         });
       } };
@@ -657,19 +715,21 @@ const SCENES = {
 
   /* Vertical Scroll — poster wall scrolling upward, stepped */
   vScroll(P){
-    const texs=activeTextures(P.corner); const N=texs.length;
+    const N=sourceList().length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
     // bigger cards → fewer columns; spacing stays proportional, no collisions
     const cols=Math.max(1,Math.min(6,Math.round((N>=9?4:N>=4?3:2)/state.size)));
-    const cw=fr.w*1.04/cols, gap=cw*.10;
-    const w=cw-gap, h=w/PA, rowH=h+gap;
+    const cw=fr.w*1.04/cols, gap=cw*.10*(state.spacing||1);
+    const w=cw-gap, boxH=w/PA, rowH=boxH+gap;
     let rows=Math.max(Math.ceil(N/cols), Math.ceil(fr.h/rowH)+2);
     while((rows*cols)%N) rows++; // even image distribution — no duplicate rows at the loop seam
     const meshes=[];
     for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
-      const m=plane(texs[(r*cols+c)%N],w,h);
-      m.userData={r,c}; root.add(m); meshes.push(m);
+      const slot=r*cols+c, e=entryForSlot(slot);
+      const ch=Math.min(boxH, w/e.asp), cwid=ch*e.asp; // contain image in the cell box
+      const m=plane(e.tex,cwid,ch);
+      m.userData={r,c,slot}; root.add(m); meshes.push(m);
     }
     const totalH=rows*rowH, phase=makePhase(P);
     return { loopSeconds:(P.dur+P.hold)*rows,
@@ -686,39 +746,43 @@ const SCENES = {
 
   /* Horizontal Filmstrip — sliding row with per-card stagger */
   filmstrip(P){
-    const texs=activeTextures(P.corner); const N=texs.length;
+    const N=sourceList().length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const h=Math.min(fr.h*.52*state.size, fr.h*.92), w=h*PA;
-    const gap=w*.26, step=w+gap;
-    let n=Math.max(N, Math.ceil(fr.w/step)+2);
+    const H=Math.min(fr.h*.52*state.size, fr.h*.92);
+    const gap=H*PA*.26*(state.spacing||1); // uniform gap; widths vary per image
+    let n=Math.max(N, Math.ceil(fr.w/(H*PA+gap))+2);
     while(n%N) n++; // no duplicate neighbours at the loop seam
-    const meshes=[];
-    for(let i=0;i<n;i++){ const m=plane(texs[i%N],w,h); root.add(m); meshes.push(m); }
-    const total=n*step, phase=makePhase(P);
+    const meshes=[], cumX=[]; let x0=0;
+    for(let i=0;i<n;i++){
+      const e=entryForSlot(i), w=H*e.asp;
+      const m=plane(e.tex,w,H); m.userData.slot=i;
+      cumX.push(x0 + w/2); x0 += w + gap; // place by cumulative width so mixed aspects keep even gaps
+      root.add(m); meshes.push(m);
+    }
+    const total=x0, avgStep=total/n, phase=makePhase(P);
     return { loopSeconds:(P.dur+P.hold)*n,
       update(T){
         // lockstep: one shared phase keeps every gap constant — collisions are impossible
-        const adv=phase(T)*step*state.dir;
+        const adv=phase(T)*avgStep*state.dir;
         for(let i=0;i<n;i++){
-          let x=i*step-adv;
+          let x=cumX[i]-adv;
           x=((x%total)+total)%total;
-          meshes[i].position.x=x-total/2+step/2;
+          meshes[i].position.x=x-total/2;
         }
       } };
   },
 
   /* Shuffle Cards — jittered deck, top card arcs over to the back */
   shuffleCards(P){
-    const texs=activeTextures(P.corner);
-    const N0=texs.length, n=N0>=3?N0:N0*Math.ceil(3/N0);
-    const h=1.6*state.size, w=h*PA;
+    const N0=sourceList().length, n=N0>=3?N0:N0*Math.ceil(3/N0);
+    const H=1.6*state.size;
     const rnd=mulberry32(5);
     const jr=[...Array(n)].map(()=>(rnd()-.5)*.12);
     const jx=[...Array(n)].map(()=>(rnd()-.5)*.06);
     const gz=Math.min(.075,.55/n);
-    const meshes=[];
-    for(let i=0;i<n;i++){ const m=plane(texs[i%N0],w,h); root.add(m); meshes.push(m); }
+    const meshes=[], ws=[];
+    for(let i=0;i<n;i++){ const e=entryForSlot(i), wi=H*e.asp; ws.push(wi); const m=plane(e.tex,wi,H); m.userData.slot=i; root.add(m); meshes.push(m); }
     camera.position.set(0,.04,4.7); camera.lookAt(0,0,0);
     const cyc=P.dur+P.hold;
     return { loopSeconds:cyc*n,
@@ -733,8 +797,8 @@ const SCENES = {
             const g=eR<0?eR:Math.min(eR,1); // keep wind-up, clamp landing
             const gl=clamp01(g), arc=Math.sin(gl*Math.PI);
             m.position.set(
-              jx[i]+Math.sin(g*Math.PI)*w*1.12*state.dir,
-              arc*h*.10+breathe,
+              jx[i]+Math.sin(g*Math.PI)*ws[i]*1.12*state.dir,
+              arc*H*.10+breathe,
               -(n-1)*gz*gl+arc*.42);
             m.rotation.z=jr[i]+arc*.3*state.dir;
             m.scale.setScalar(1-(n-1)*.025*gl);
@@ -750,20 +814,23 @@ const SCENES = {
 
   /* Marquee Lanes — alternating lanes scroll continuously, slight tilt */
   marquee(P){
-    const texs=activeTextures(P.corner); const N0=texs.length;
+    const N0=sourceList().length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
     // bigger cards → fewer lanes; lane height stays proportional, no collisions
     const lanes=Math.max(2,Math.min(6,Math.round((N0>=10?4:3)/state.size)));
     const laneH=(fr.h*1.15)/lanes;
-    const h=laneH*.86, w=h*PA, gap=w*.18, step=w+gap;
+    const boxH=laneH*.86, w=boxH*PA, gap=w*.18*(state.spacing||1), step=w+gap;
     let perLane=Math.ceil(fr.w*1.4/step)+1;
     while(perLane%N0) perLane++; // even cycle inside each lane
     const total=perLane*step;
     const meshes=[];
     for(let l=0;l<lanes;l++) for(let i=0;i<perLane;i++){
-      const m=plane(texs[(l*perLane+i+l*2)%N0],w,h);
-      m.userData={l,i}; root.add(m); meshes.push(m);
+      const slot=l*perLane+i+l*2;
+      const e=entryForSlot(slot);
+      const ch=Math.min(boxH, w/e.asp), cw=ch*e.asp; // contain image in the lane cell
+      const m=plane(e.tex,cw,ch); m.userData={l,i,slot};
+      root.add(m); meshes.push(m);
     }
     root.rotation.z=THREE.MathUtils.degToRad(P.tiltZ||0);
     const speed=total/(P.dur+P.hold);
@@ -781,15 +848,16 @@ const SCENES = {
 
   /* Field Flight — stepped fly-through a depth field of cards */
   field(P){
-    const texs=activeTextures(P.corner); const N0=texs.length;
+    const N0=sourceList().length;
     const minN=P.minN||12;
     const n=N0>=minN?N0:N0*Math.ceil(minN/N0);
-    const h=1.2*state.size, w=h*PA;
-    const spread=1.4*Math.max(1,state.size), depth=spread*6, rnd=mulberry32(7); // field widens with cards
+    const H=1.2*state.size;
+    const spread=1.4*Math.max(1,state.size)*(state.spacing||1), depth=spread*6, rnd=mulberry32(7); // field widens with cards
     const meshes=[];
     for(let i=0;i<n;i++){
-      const m=plane(texs[i%N0],w,h,true);
-      m.userData={x:(rnd()-.5)*spread*2.6, y:(rnd()-.5)*spread*1.6, z0:i/n*depth};
+      const e=entryForSlot(i);
+      const m=plane(e.tex,H*e.asp,H,true); m.userData={slot:i};
+      Object.assign(m.userData,{x:(rnd()-.5)*spread*2.6, y:(rnd()-.5)*spread*1.6, z0:i/n*depth});
       root.add(m); meshes.push(m);
     }
     camera.position.set(0,0,4); camera.lookAt(0,0,0);
@@ -803,23 +871,24 @@ const SCENES = {
           m.position.set(x,y,4-1.2-(depth-z));
           const nearFade=THREE.MathUtils.smoothstep(z,depth-stepZ*.9,depth);
           const farFade=THREE.MathUtils.smoothstep(z,0,stepZ*.6);
-          m.material.opacity=(1-nearFade)*farFade;
+          setCardOpacity(m,(1-nearFade)*farFade);
         });
       } };
   },
 
   /* Globe — fibonacci sphere of cards, slow rotation */
   globe(P){
-    const texs=activeTextures(P.corner); const N0=texs.length;
+    const N0=sourceList().length;
     const minN=P.minN||24;
     const n=N0>=minN?N0:N0*Math.ceil(minN/N0);
-    const h=.55*state.size, w=h*PA, R=1.65*Math.max(1,state.size); // sphere grows with cards
+    const H=.55*state.size, R=1.65*Math.max(1,state.size)*(state.spacing||1); // sphere grows with cards/spacing
     const inner=new THREE.Group(); root.add(inner);
     const meshes=[];
     const ga=Math.PI*(3-Math.sqrt(5));
     for(let i=0;i<n;i++){
       const y=1-(i/(n-1))*2, rr=Math.sqrt(Math.max(1-y*y,0)), th=ga*i;
-      const m=plane(texs[i%N0],w,h);
+      const e=entryForSlot(i);
+      const m=plane(e.tex,H*e.asp,H); m.userData={slot:i};
       m.position.set(Math.cos(th)*rr*R, y*R, Math.sin(th)*rr*R);
       inner.add(m); meshes.push(m);
     }
@@ -835,39 +904,52 @@ const SCENES = {
 
   /* Flicker — rapid full-frame cuts with a tiny scale punch */
   flicker(P){
-    const texs=activeTextures(P.corner); const N=texs.length;
+    const N=sourceList().length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const h=Math.min(fr.h*.86*state.size, fr.h*.97), w=h*PA;
-    const m=plane(texs[0],w,h); root.add(m);
-    let lastIdx=-1;
+    const H=Math.min(fr.h*.86*state.size, fr.h*.97); // fixed height; width follows each image
+    const e0=entryForSlot(0);
+    const m=plane(e0.tex,H*PA,H); m.userData.slot=0; root.add(m); // base geom at PA, scaled per image
+    let lastIdx=-1, baseScale=1;
     const cyc=P.dur+P.hold, loop=cyc*N;
     return { loopSeconds:loop,
       update(T){
         const local=((T%loop)+loop)%loop;
         const idx=Math.min(Math.floor(local/cyc),N-1);
-        if(idx!==lastIdx){ m.material.map=texs[idx]; m.material.needsUpdate=true; lastIdx=idx; }
-        const mm=local-idx*cyc;
-        m.scale.setScalar(1+clamp01(state.easeFn(clamp01(mm/P.dur)))*.04);
+        if(idx!==lastIdx){
+          const e=entryForSlot(idx);
+          setCardTex(m,e.tex);
+          baseScale=e.asp/PA; // stretch base PA card to this image's aspect
+          m.material.uniforms.aspect.value=1/e.asp;
+          m.userData.slot=idx; lastIdx=idx;
+        }
+        const punch=1+clamp01(state.easeFn(clamp01((local-idx*cyc)/P.dur)))*.04;
+        m.scale.set(baseScale*punch,punch,1);
       } };
   },
 
   /* Clean Product Showcase — one centered card, gentle float, calm swaps */
   showcase(P){
-    const texs=activeTextures(P.corner); const N=texs.length;
+    const N=sourceList().length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const h=Math.min(fr.h*.66*state.size, fr.h*.95, fr.w*.92/PA), w=h*PA;
-    const meshes=texs.map(t=>{ const m=plane(t,w,h,true); m.visible=false; root.add(m); return m; });
+    const maxH=Math.min(fr.h*.74*state.size, fr.h*.95), maxW=fr.w*.92;
+    const meshes=[], ws=[]; let H0=maxH;
+    for(let i=0;i<N;i++){
+      const e=entryForSlot(i);
+      const ch=Math.min(maxH, maxW/e.asp), cw=ch*e.asp; // contain at native aspect
+      H0=ch; ws.push(cw);
+      const m=plane(e.tex,cw,ch,true); m.userData={slot:i}; m.visible=false; root.add(m); meshes.push(m);
+    }
     const seg=P.dur+P.hold;
     const loop=N===1?Math.max(5,seg):N*seg;
     return { loopSeconds:loop,
       update(T){
         const local=((T%loop)+loop)%loop, u=local/seg;
-        const yb=Math.sin(u*Math.PI*2)*h*.022;
+        const yb=Math.sin(u*Math.PI*2)*H0*.022;
         const ry=Math.sin(u*Math.PI*2+.8)*.05;
         if(N===1){
-          const m=meshes[0]; m.visible=true; m.material.opacity=1;
+          const m=meshes[0]; m.visible=true; setCardOpacity(m,1);
           m.position.set(0,yb,0); m.rotation.y=ry;
           return;
         }
@@ -877,13 +959,13 @@ const SCENES = {
             m.visible=true;
             let x=0,op=1,r=0;
             if(d<P.dur){ const p=clamp01(state.easeFn(d/P.dur)); // glide in from the right
-              x=(1-p)*w*.7*state.dir; op=p; r=(1-p)*.3*state.dir; m.renderOrder=5;
+              x=(1-p)*ws[i]*.7*state.dir; op=p; r=(1-p)*.3*state.dir; m.renderOrder=5;
             }else if(d>seg){ const q=clamp01(state.easeFn((d-seg)/P.dur)); // exit left
-              x=-q*w*.7*state.dir; op=1-q; r=-q*.3*state.dir; m.renderOrder=4;
+              x=-q*ws[i]*.7*state.dir; op=1-q; r=-q*.3*state.dir; m.renderOrder=4;
             }else m.renderOrder=3;
             m.position.set(x,yb,0);
             m.rotation.y=ry+r;
-            m.material.opacity=op;
+            setCardOpacity(m,op);
           } else m.visible=false;
         });
       } };
@@ -921,11 +1003,45 @@ const state={
   template:null, P:{}, ease:'Soft In-Out', bez:[.76,0,.24,1], easeFn:null,
   dir:1, bg:'#0d0d0d', transparent:false, ratio:'3:4',
   playing:true, grain:true, speed:1, size:1,
+  spacing:1, rotY:0, rotX:0, fade:0,
 };
 let active=null, animTime=0;
 let exporting=false, exportCancelled=false;
 
 const $=id=>document.getElementById(id);
+
+/* userPivot wraps the main root so rotation sliders orbit the whole scene
+   on top of whatever per-template tilt the engine applies to root. */
+const userPivot=new THREE.Group();
+MAIN_SCENE.remove(MAIN_ROOT); userPivot.add(MAIN_ROOT); MAIN_SCENE.add(userPivot);
+function applyUserRot(){ userPivot.rotation.set(THREE.MathUtils.degToRad(state.rotX),THREE.MathUtils.degToRad(state.rotY),0); }
+
+/* push background colour + corner radius into every card shader */
+function refreshCardUniforms(){
+  curBg=hex01(state.bg);
+  cornerNorm=Math.min(0.5,(state.P.corner||0)/12*0.45);
+  forEachCard(o=>{
+    o.material.uniforms.bgColor.value.set(curBg[0],curBg[1],curBg[2]);
+    o.material.uniforms.cornerRadius.value=cornerNorm;
+  });
+}
+/* arqe-style depth fade: far cards melt toward the background colour.
+   visibility = pow(1 - normalizedDepth, 1 + fade^2 * 20). */
+const _fadeVec=new THREE.Vector3();
+function applyDepthFade(){
+  const f=state.fade;
+  if(f<=0){ forEachCard(o=>{ o.material.uniforms.uFade.value=1; }); return; }
+  const cards=[];
+  forEachCard(o=>{ if(o.visible) cards.push(o); });
+  if(!cards.length) return;
+  let near=Infinity, far=-Infinity; const ds=[];
+  for(const o of cards){ o.getWorldPosition(_fadeVec); const d=camera.position.distanceTo(_fadeVec); ds.push(d); if(d<near)near=d; if(d>far)far=d; }
+  const range=Math.max(0.0001, far-near), N=1+f*f*20;
+  for(let i=0;i<cards.length;i++){
+    const t=(ds[i]-near)/range; // 0 near → 1 far
+    cards[i].material.uniforms.uFade.value=Math.pow(1-t,N);
+  }
+}
 
 /* ================= easing UI (chips + draggable curve) ================= */
 let curveMap=null, dragRange=null;
@@ -1023,20 +1139,21 @@ function rebuild(resetTime=false){
   while(root.children.length){
     const ch=root.children[0]; root.remove(ch);
     ch.traverse?.(o=>{
-      if(o.userData?.disposeMap) o.material?.map?.dispose(); // per-mesh texture clones (Zoom Gallery)
+      if(o.userData?.disposeMap) o.material?.uniforms?.map?.value?.dispose(); // per-mesh texture clones (Zoom Gallery)
       o.geometry?.dispose(); o.material?.dispose();
     });
   }
   root.rotation.set(0,0,0);
   scene.background=state.transparent?null:new THREE.Color(state.bg);
+  curBg=hex01(state.bg); cornerNorm=Math.min(0.5,(state.P.corner||0)/12*0.45); // ready before cards are built
   active=SCENES[state.template.scene](state.P);
   if(resetTime) animTime=0;
   updateLoopInfo();
 }
 
-/* ================= click a card on the canvas to replace its image ================= */
+/* ================= click a card on the canvas to replace ONLY that card ================= */
 const raycaster=new THREE.Raycaster();
-let outline=null, highlightTO=null, replaceIdx=-1;
+let outline=null, highlightTO=null, replaceSlot=null;
 function clearHighlight(){
   clearTimeout(highlightTO);
   if(outline){ outline.parent?.remove(outline); outline.geometry.dispose(); outline.material.dispose(); outline=null; }
@@ -1051,11 +1168,6 @@ function highlight(mesh){
   mesh.add(outline);
   highlightTO=setTimeout(clearHighlight,2600);
 }
-function texToSrcIndex(mapTex){
-  const texs=activeTextures(state.P.corner);
-  const i=texs.indexOf(mapTex);
-  return i<0?null:i;
-}
 renderer.domElement.addEventListener('pointerdown',e=>{
   if(exporting||!active) return;
   const rect=renderer.domElement.getBoundingClientRect();
@@ -1065,14 +1177,14 @@ renderer.domElement.addEventListener('pointerdown',e=>{
   raycaster.setFromCamera(ndc,camera);
   const hits=raycaster.intersectObjects(root.children,true).filter(h=>
     h.object.visible && h.object.geometry?.type==='PlaneGeometry' &&
-    (h.object.material?.opacity===undefined || h.object.material.opacity>0.15));
+    (h.object.material?.uniforms?.uOpacity?.value??1)>0.15);
   if(!hits.length) return;
   const mesh=hits[0].object;
-  let src=mesh.userData.src; if(src==null) src=texToSrcIndex(mesh.material.map);
-  if(src==null) return;
+  const slot=mesh.userData.slot;
+  if(slot==null) return;
   highlight(mesh);
-  if(!userSources.length){ replaceIdx=-1; fileInput.click(); return; } // demos: add real images first
-  replaceIdx=src; replaceInput.click();
+  if(!userSources.length){ replaceSlot=null; fileInput.click(); return; } // demos: add real images first
+  replaceSlot=slot; replaceInput.click(); // override just this slot
 });
 function updateLoopInfo(){
   if(active) $('loopInfo').textContent=`Loop ≈ ${(active.loopSeconds/state.speed).toFixed(1)} s · 30 fps`;
@@ -1156,6 +1268,8 @@ function tickPreviews(dt){
 /* ================= render loop ================= */
 function renderFrame(){
   active?.update(animTime);
+  applyUserRot();
+  applyDepthFade();
   postMat.uniforms.uTime.value=animTime;
   renderer.clear();
   renderer.render(scene,camera);
@@ -1341,10 +1455,12 @@ bindSeg('bgSeg',v=>{
   $('bgHint').style.display=state.transparent?'':'none';
   stage.classList.toggle('checker',state.transparent);
   scene.background=state.transparent?null:new THREE.Color(state.bg);
+  refreshCardUniforms();
 });
 $('bgColor').addEventListener('input',e=>{
   state.bg=e.target.value;
   if(!state.transparent) scene.background=new THREE.Color(state.bg);
+  refreshCardUniforms();
 });
 $('ratios').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
   if(exporting) return;
@@ -1356,10 +1472,14 @@ $('speed').addEventListener('input',e=>{
   $('speedVal').textContent='×'+state.speed.toFixed(2);
   updateLoopInfo();
 });
-$('corner').addEventListener('input',e=>{ $('cornerVal').textContent=parseFloat(e.target.value).toFixed(1); });
-$('corner').addEventListener('change',e=>{ state.P.corner=parseFloat(e.target.value); rebuild(); });
+$('corner').addEventListener('input',e=>{ state.P.corner=parseFloat(e.target.value); $('cornerVal').textContent=state.P.corner.toFixed(1); refreshCardUniforms(); });
 $('cardSize').addEventListener('input',e=>{ $('sizeVal').textContent='×'+parseFloat(e.target.value).toFixed(2); });
 $('cardSize').addEventListener('change',e=>{ state.size=parseFloat(e.target.value); rebuild(); });
+$('spacing').addEventListener('input',e=>{ $('spacingVal').textContent='×'+parseFloat(e.target.value).toFixed(2); });
+$('spacing').addEventListener('change',e=>{ state.spacing=parseFloat(e.target.value); rebuild(); });
+$('fade').addEventListener('input',e=>{ state.fade=parseFloat(e.target.value)/100; $('fadeVal').textContent=Math.round(state.fade*100)+'%'; });
+$('rotY').addEventListener('input',e=>{ state.rotY=parseFloat(e.target.value); $('rotYVal').textContent=state.rotY+'°'; });
+$('rotX').addEventListener('input',e=>{ state.rotX=parseFloat(e.target.value); $('rotXVal').textContent=state.rotX+'°'; });
 
 function updatePlayBtn(){ $('tlPlay').textContent=state.playing?'⏸':'▶'; }
 function togglePlay(){ state.playing=!state.playing; updatePlayBtn(); }
@@ -1413,14 +1533,14 @@ drop.addEventListener('drop',e=>{e.preventDefault(); drop.classList.remove('over
 fileInput.addEventListener('change',()=>{addFiles(fileInput.files); fileInput.value='';});
 replaceInput.addEventListener('change',async()=>{
   const f=replaceInput.files[0]; replaceInput.value='';
-  if(!f || replaceIdx<0 || replaceIdx>=userSources.length) return;
+  if(!f || replaceSlot==null) return;
   const src=await processFile(f);
   if(!src) return;
-  const old=userSources[replaceIdx];
-  dropCachedTextures(old.uid); old.src.close?.();
-  userSources[replaceIdx]=src;
-  clearHighlight(); renderThumbs(); rebuild();
-  toast('Image replaced.');
+  const prev=slotOverrides.get(replaceSlot); // free a previous override on this slot
+  if(prev){ dropCachedTextures(prev.key); prev.src.close?.(); }
+  slotOverrides.set(replaceSlot,{src:src.src, key:src.uid, aspect:src.aspect}); // overrides ONLY this card
+  clearHighlight(); rebuild();
+  toast('Card replaced.');
 });
 
 async function processFile(f){ // validate + downscale + build a source object (or null)
@@ -1438,7 +1558,7 @@ async function processFile(f){ // validate + downscale + build a source object (
     const tx=tc.getContext('2d');
     const ts=Math.max(80/bmp.width,106/bmp.height);
     tx.drawImage(bmp,(80-bmp.width*ts)/2,(106-bmp.height*ts)/2,bmp.width*ts,bmp.height*ts);
-    return {src:bmp, thumb:tc.toDataURL('image/jpeg',.75), name:f.name, uid:'u'+(uidSeq++)};
+    return {src:bmp, thumb:tc.toDataURL('image/jpeg',.75), name:f.name, uid:'u'+(uidSeq++), aspect:clampAspect(bmp.width/bmp.height)};
   }catch(err){ console.error(err); toast(`${f.name}: could not read this file.`); return null; }
 }
 
@@ -1492,9 +1612,13 @@ $('shuffleBtn').addEventListener('click',()=>{
   }
   renderThumbs(); rebuild();
 });
+function clearSlotOverrides(){
+  for(const o of slotOverrides.values()){ dropCachedTextures(o.key); o.src.close?.(); }
+  slotOverrides.clear();
+}
 $('clearBtn').addEventListener('click',()=>{
   userSources.forEach(u=>{ dropCachedTextures(u.uid); u.src.close?.(); });
-  userSources=[];
+  userSources=[]; clearSlotOverrides();
   renderThumbs(); rebuild(true);
 });
 
@@ -1505,15 +1629,20 @@ window.__app={
   getActive:()=>active, getTime:()=>animTime, setTime:t=>{animTime=t;},
   applyTemplateById:id=>{ const t=TEMPLATES.find(t=>t.id===id); if(t) applyTemplate(t); return !!t; },
   exportMP4, exportPNG, lastExport:null,
-  setTestImages(n){ // debug helper: replace project with n generated images
+  dbgOverrides:()=>[...slotOverrides.keys()],
+  setTestImages(n,mixed){ // debug helper: replace project with n generated images (optionally mixed aspects)
     userSources.forEach(u=>{ dropCachedTextures(u.uid); u.src.close?.(); });
+    clearSlotOverrides();
+    const aspects=[3/4,1,16/9,4/5,9/16];
     userSources=[...Array(n)].map((_,i)=>{
-      const c=document.createElement('canvas'); c.width=480; c.height=640;
+      const asp=mixed?aspects[i%aspects.length]:3/4;
+      const W=Math.round(640*asp), H=640;
+      const c=document.createElement('canvas'); c.width=W; c.height=H;
       const x=c.getContext('2d');
-      x.fillStyle=`hsl(${Math.round(i*360/Math.max(n,1))},55%,52%)`; x.fillRect(0,0,480,640);
-      x.fillStyle='#fff'; x.font='700 220px Inter, sans-serif'; x.textAlign='center';
-      x.fillText(String(i+1),240,400);
-      return {src:c, thumb:c.toDataURL('image/jpeg',.5), name:'test-'+(i+1), uid:'u'+(uidSeq++)};
+      x.fillStyle=`hsl(${Math.round(i*360/Math.max(n,1))},55%,52%)`; x.fillRect(0,0,W,H);
+      x.fillStyle='#fff'; x.font='700 200px Inter, sans-serif'; x.textAlign='center';
+      x.fillText(String(i+1),W/2,H/2+70);
+      return {src:c, thumb:c.toDataURL('image/jpeg',.5), name:'test-'+(i+1), uid:'u'+(uidSeq++), aspect:clampAspect(asp)};
     });
     renderThumbs(); rebuild(true);
   },
