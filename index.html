@@ -199,7 +199,7 @@
 
   <div class="group">
     <div class="slider-row"><div class="label">Card size</div><div class="val" id="sizeVal">×1.00</div></div>
-    <input type="range" id="cardSize" min="0.25" max="4" step="0.05" value="1">
+    <input type="range" id="cardSize" min="0.15" max="6" step="0.05" value="1">
   </div>
 
   <div class="group">
@@ -1013,29 +1013,33 @@ let exporting=false, exportCancelled=false;
 
 const $=id=>document.getElementById(id);
 
-/* Rotation orbits the camera around the exact point it's looking at, so the
-   cards stay centred in frame and the scene tilts "from the middle" for every
-   template. We capture each engine's lookAt target by patching the main camera. */
-const _UP=new THREE.Vector3(0,1,0), _lookTarget=new THREE.Vector3();
+/* Rotation rigidly turns the whole layout while the camera stays put, pivoting
+   around the point the camera is framed on (the engine's lookAt target). That
+   point is screen-centre, so the composition spins/tilts in place and never
+   drifts to an edge. We capture the target by patching the main camera's lookAt. */
+const userPivot=new THREE.Group(); userPivot.matrixAutoUpdate=false;
+MAIN_SCENE.remove(MAIN_ROOT); userPivot.add(MAIN_ROOT); MAIN_SCENE.add(userPivot);
 const _origLookAt=MAIN_CAMERA.lookAt.bind(MAIN_CAMERA);
-MAIN_CAMERA.lookAt=function(x,y,z){ if(x&&x.isVector3) _lookTarget.copy(x); else _lookTarget.set(x,y,z); return _origLookAt(x,y,z); };
-const _off=new THREE.Vector3(), _qy=new THREE.Quaternion(), _qx=new THREE.Quaternion(), _right=new THREE.Vector3(), _pivot=new THREE.Vector3(), _wp=new THREE.Vector3();
-function applyUserRot(){
-  if(!state.rotY && !state.rotX) return;
-  // pivot = centroid of the visible cards, so they stay dead-centre while the scene turns
+const _wp=new THREE.Vector3(), _pivot=new THREE.Vector3(), _quat=new THREE.Quaternion(), _euler=new THREE.Euler(), _mr=new THREE.Matrix4(), _mt=new THREE.Matrix4(), _mti=new THREE.Matrix4();
+function cardCentroid(){
   let cx=0,cy=0,cz=0,n=0;
   forEachCard(o=>{ if(o.visible){ o.getWorldPosition(_wp); cx+=_wp.x; cy+=_wp.y; cz+=_wp.z; n++; } });
-  if(!n) return;
-  _pivot.set(cx/n,cy/n,cz/n);
-  _off.copy(camera.position).sub(_pivot);
-  _qy.setFromAxisAngle(_UP, THREE.MathUtils.degToRad(state.rotY));
-  _off.applyQuaternion(_qy);                                  // yaw around the centre
-  _right.crossVectors(_off,_UP); if(_right.lengthSq()<1e-6) _right.set(1,0,0); _right.normalize();
-  _qx.setFromAxisAngle(_right, THREE.MathUtils.degToRad(state.rotX));
-  _off.applyQuaternion(_qx);                                  // pitch around the centre
-  camera.position.copy(_pivot).add(_off);
-  _origLookAt(_pivot.x,_pivot.y,_pivot.z);
-  camera.updateMatrixWorld();
+  return n?_pivot.set(cx/n,cy/n,cz/n):null;
+}
+function applyUserRot(){
+  userPivot.matrix.identity(); userPivot.matrixWorldNeedsUpdate=true;
+  if(!state.rotY && !state.rotX) return;
+  MAIN_SCENE.updateMatrixWorld(true);
+  if(!cardCentroid()) return;                          // pivot = centroid of the cards
+  const C=_pivot.clone();
+  _quat.setFromEuler(_euler.set(THREE.MathUtils.degToRad(state.rotX),THREE.MathUtils.degToRad(state.rotY),0,'YXZ'));
+  _mr.makeRotationFromQuaternion(_quat);
+  _mt.makeTranslation(C.x,C.y,C.z); _mti.makeTranslation(-C.x,-C.y,-C.z);
+  userPivot.matrix.copy(_mt).multiply(_mr).multiply(_mti); // rigid rotation about the centroid
+  userPivot.matrixWorldNeedsUpdate=true;
+  MAIN_SCENE.updateMatrixWorld(true);
+  _origLookAt(C.x,C.y,C.z);                             // re-aim camera at that same centroid → stays screen-centre
+  MAIN_CAMERA.updateMatrixWorld();
 }
 
 /* push background colour + corner radius into every card shader */
