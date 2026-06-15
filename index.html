@@ -372,13 +372,14 @@ function makeTexture(source, key, rPct, aspect=PA){
   return tex;
 }
 /* neutral grey cards used by the animated template previews (arqe-style) */
-function greyCard(tone){
+function greyCard(){
   const c=document.createElement('canvas'); c.width=768; c.height=1024;
   const x=c.getContext('2d');
-  x.fillStyle=tone; x.fillRect(0,0,768,1024); // flat solid grey, no pattern
+  x.fillStyle='#d6d6da'; x.fillRect(0,0,768,1024); // one flat grey, identical on every card
   return c;
 }
-const PREVIEW_CARDS=['#dcdce0','#d4d4d8','#e2e2e6','#cfcfd3','#d8d8dc','#cbcbcf'].map(greyCard);
+// all cards share the SAME single tone so overlapping/stacked cards merge into a clean silhouette (no internal lines)
+const PREVIEW_CARDS=[0,1,2,3,4,5].map(greyCard);
 let previewMode=false;
 function sourceList(){
   if(previewMode) return PREVIEW_CARDS.map((p,i)=>({src:p, key:'pg'+i}));
