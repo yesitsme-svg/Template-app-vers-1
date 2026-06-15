@@ -375,7 +375,7 @@ const clampAspect=a=>Math.max(0.42, Math.min(2.4, a)); // keep extreme panoramas
 function makeTexture(source, key, aspect){
   const ck=key+'|'+aspect.toFixed(3);
   if(texCache.has(ck)) return texCache.get(ck);
-  const LONG=1200; // long side ≈1200px so full-frame cards stay crisp at 1080p export, either orientation
+  const LONG=2048; // long side 2K — matches the upload cap, crisp for full-frame cards / higher-res export
   const W=aspect>=1?LONG:Math.round(LONG*aspect), H=aspect>=1?Math.round(LONG/aspect):LONG;
   const c=document.createElement('canvas'); c.width=W; c.height=H;
   const x=c.getContext('2d');
@@ -1052,7 +1052,9 @@ function refreshCardUniforms(){
   });
 }
 /* arqe-style depth fade: far cards melt toward the background colour.
-   visibility = pow(1 - normalizedDepth, 1 + fade^2 * 20). */
+   The slider scales the AMOUNT (mix from no-fade), so it ramps in smoothly from 0
+   instead of snapping the far card straight to the background. The power curve only
+   shapes how the fade is distributed by depth. */
 const _fadeVec=new THREE.Vector3();
 function applyDepthFade(){
   const f=state.fade;
@@ -1062,10 +1064,11 @@ function applyDepthFade(){
   if(!cards.length) return;
   let near=Infinity, far=-Infinity; const ds=[];
   for(const o of cards){ o.getWorldPosition(_fadeVec); const d=camera.position.distanceTo(_fadeVec); ds.push(d); if(d<near)near=d; if(d>far)far=d; }
-  const range=Math.max(0.0001, far-near), N=1+f*f*20;
+  const range=Math.max(0.0001, far-near), N=1+f*f*6; // gentler curve growth so the whole range is smooth
   for(let i=0;i<cards.length;i++){
-    const t=(ds[i]-near)/range; // 0 near → 1 far
-    cards[i].material.uniforms.uFade.value=Math.pow(1-t,N);
+    const t=(ds[i]-near)/range;            // 0 near → 1 far
+    const curve=Math.pow(1-t,N);           // arqe depth shape (1 near → 0 far)
+    cards[i].material.uniforms.uFade.value=1-f*(1-curve); // mix from 1 by the slider amount → no jump at 0
   }
 }
 
