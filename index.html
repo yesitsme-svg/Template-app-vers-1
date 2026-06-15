@@ -48,8 +48,11 @@
   .pv:hover .pvimg{border-color:#bbb;}
   .pv.active .pvimg{border-color:var(--dark); box-shadow:0 0 0 2px var(--dark);}
   .pv.active span{color:var(--text); font-weight:500;}
-  .linklike{align-self:flex-start; background:none; border:none; padding:1px 0; color:var(--accent); font-size:11px; cursor:pointer; font-family:inherit; text-decoration:underline; text-underline-offset:2px;}
-  .linklike:hover{color:#5a2bb8;}
+  .disclose{align-self:flex-start; display:inline-flex; align-items:center; gap:6px; background:none; border:none; padding:3px 0; color:var(--muted); font-size:11px; cursor:pointer; font-family:inherit;}
+  .disclose:hover{color:var(--text);}
+  .disclose .chev{display:inline-block; transition:transform .18s; font-size:13px; line-height:1; color:#b3b3b8;}
+  .disclose:hover .chev{color:var(--muted);}
+  .disclose.open .chev{transform:rotate(90deg);}
   .chips{display:flex; flex-wrap:wrap; gap:5px;}
   .chip{
     padding:6px 11px; background:var(--panel2); border:1px solid var(--border);
@@ -207,7 +210,7 @@
   <div class="group">
     <div class="label">Easing</div>
     <div class="chips" id="easeChips"></div>
-    <button class="linklike" id="easeToggle">Adjust curve</button>
+    <button class="disclose" id="easeToggle"><span class="chev">›</span><span id="easeToggleLabel">Adjust curve</span></button>
     <div id="easeAdvanced" style="display:none">
       <canvas id="easeCurve"></canvas>
       <div class="bezvals" id="bezVals"></div>
@@ -368,7 +371,19 @@ function makeTexture(source, key, rPct, aspect=PA){
   texCache.set(ck,tex);
   return tex;
 }
+/* neutral grey cards used by the animated template previews (arqe-style) */
+function greyCard(tone){
+  const c=document.createElement('canvas'); c.width=768; c.height=1024;
+  const x=c.getContext('2d');
+  x.fillStyle=tone; x.fillRect(0,0,768,1024);
+  x.fillStyle='rgba(0,0,0,.05)'; x.fillRect(84,128,360,44); x.fillRect(84,200,300,30);
+  x.fillStyle='rgba(0,0,0,.035)'; x.fillRect(84,792,600,150);
+  return c;
+}
+const PREVIEW_CARDS=['#e0e0e3','#d3d3d7','#e7e7ea','#cacace','#dbdbdf','#d0d0d5'].map(greyCard);
+let previewMode=false;
 function sourceList(){
+  if(previewMode) return PREVIEW_CARDS.map((p,i)=>({src:p, key:'pg'+i}));
   return userSources.length
     ? userSources.map(u=>({src:u.src, key:u.uid}))
     : PLACEHOLDERS.map((p,i)=>({src:p, key:'p'+i}));
@@ -388,9 +403,12 @@ const renderer=new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:tr
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.autoClear=false;
 stage.appendChild(renderer.domElement);
-const scene=new THREE.Scene();
-const camera=new THREE.PerspectiveCamera(38,1,.1,500);
-const root=new THREE.Group(); scene.add(root);
+/* scene/camera/root are swappable: the main stage and every live preview
+   share the same engine code, so we point these at whichever is rendering. */
+let scene=new THREE.Scene();
+let camera=new THREE.PerspectiveCamera(38,1,.1,500);
+let root=new THREE.Group(); scene.add(root);
+const MAIN_SCENE=scene, MAIN_CAMERA=camera, MAIN_ROOT=root;
 
 /* grain + vignette overlay */
 const postScene=new THREE.Scene();
@@ -947,8 +965,8 @@ function refreshEaseUI(){
     drawCurve(state.bez);
     $('bezVals').innerHTML=state.bez.map(v=>`<div>${v.toFixed(2)}</div>`).join('');
   }
-  $('easeToggle').textContent = open ? 'Hide curve'
-    : (state.ease==='Custom' ? 'Custom curve ✎' : 'Adjust curve');
+  $('easeToggleLabel').textContent = state.ease==='Custom' ? 'Custom curve' : (open?'Easing curve':'Adjust curve');
+  $('easeToggle').classList.toggle('open',open);
   document.querySelectorAll('#easeChips .chip').forEach(c=>c.classList.toggle('active',c.textContent===state.ease));
 }
 $('easeToggle').addEventListener('click',()=>{
@@ -1076,61 +1094,64 @@ TEMPLATES.forEach(t=>{
   }
   const b=document.createElement('button');
   b.className='pv'; b.dataset.id=t.id;
-  const img=document.createElement('img'); img.className='pvimg'; img.id='pv-'+t.id; img.alt=t.name; img.draggable=false;
+  const cv=document.createElement('canvas'); cv.className='pvimg'; cv.id='pv-'+t.id;
+  cv.width=150; cv.height=200; cv.title=t.name;
   const span=document.createElement('span'); span.textContent=t.name;
-  b.appendChild(img); b.appendChild(span);
+  b.appendChild(cv); b.appendChild(span);
   b.addEventListener('click',()=>applyTemplate(t));
   $('tpls').appendChild(b);
 });
 
-/* ================= template preview thumbnails =================
-   A dedicated small renderer draws a representative frame of every template
-   into its card image, so the left panel mirrors what each animation does. */
-const thumbRenderer=new THREE.WebGLRenderer({antialias:true, alpha:false});
-thumbRenderer.outputColorSpace=THREE.SRGBColorSpace;
-thumbRenderer.setSize(150,200,false);
-function clearRootMeshes(){
-  clearHighlight();
-  while(root.children.length){
-    const ch=root.children[0]; root.remove(ch);
-    ch.traverse?.(o=>{
-      if(o.userData?.disposeMap) o.material?.map?.dispose();
-      o.geometry?.dispose(); o.material?.dispose();
-    });
-  }
-}
-let thumbsScheduled=false;
-function scheduleThumbs(){
-  if(thumbsScheduled) return;
-  thumbsScheduled=true;
-  setTimeout(()=>{ thumbsScheduled=false; generateThumbnails(); },70);
-}
-function generateThumbnails(){
-  const saved={ easeFn:state.easeFn, size:state.size, dir:state.dir, P:state.P,
-                time:animTime, bg:scene.background, aspect:camera.aspect };
-  state.size=1; state.dir=1;
-  camera.aspect=PA; camera.updateProjectionMatrix();
-  scene.background=new THREE.Color('#1b1b1d');
+/* ================= live template previews (arqe-style) =================
+   Each template gets its own scene/camera built once with neutral grey cards;
+   a shared offscreen renderer blits each one into its card canvas every frame,
+   so the left panel shows the real motion of every template, always looping. */
+const pvRenderer=new THREE.WebGLRenderer({antialias:true, alpha:false, preserveDrawingBuffer:true});
+pvRenderer.outputColorSpace=THREE.SRGBColorSpace;
+pvRenderer.setSize(150,200,false);
+const previews=[];
+let pvClock=0;
+const pvObserver=('IntersectionObserver'in window)
+  ? new IntersectionObserver(es=>es.forEach(en=>{
+      const pv=previews.find(p=>p.el===en.target); if(pv) pv.onScreen=en.isIntersecting;
+    }),{root:document.getElementById('previews'), rootMargin:'80px'})
+  : null;
+function buildPreviews(){
+  const sR=root,sC=camera,sS=scene,sE=state.easeFn,sSize=state.size,sDir=state.dir;
+  previewMode=true; state.size=1; state.dir=1;
   for(const t of TEMPLATES){
     if(!t.id) continue;
-    clearRootMeshes(); root.rotation.set(0,0,0);
-    const e=EASINGS.find(x=>x.name===t.ease)||EASINGS[1];
-    state.easeFn=cubicBezier(...e.b);
-    let built;
-    try{ built=SCENES[t.scene]({...t.P}); built.update(built.loopSeconds*0.4); }
-    catch(err){ console.warn('thumb',t.id,err); continue; }
-    thumbRenderer.render(scene,camera);
-    const img=document.getElementById('pv-'+t.id);
-    if(img) img.src=thumbRenderer.domElement.toDataURL('image/jpeg',0.82);
+    const sc=new THREE.Scene(); sc.background=new THREE.Color('#1b1b1d');
+    const cam=new THREE.PerspectiveCamera(38,PA,.1,500);
+    const rt=new THREE.Group(); sc.add(rt);
+    root=rt; camera=cam; scene=sc;
+    const e=EASINGS.find(x=>x.name===t.ease)||EASINGS[1]; const ef=cubicBezier(...e.b); state.easeFn=ef;
+    let api=null; try{ api=SCENES[t.scene]({...t.P}); }catch(err){ console.warn('preview',t.id,err); }
+    const el=document.getElementById('pv-'+t.id);
+    const pv={scene:sc, camera:cam, root:rt, api, ease:ef, loop:api?api.loopSeconds:1,
+              el, ctx:el?el.getContext('2d'):null, onScreen:true};
+    previews.push(pv);
+    if(el && pvObserver) pvObserver.observe(el);
   }
-  // restore live state and rebuild the active template
-  clearRootMeshes();
-  state.easeFn=saved.easeFn; state.size=saved.size; state.dir=saved.dir; state.P=saved.P;
-  animTime=saved.time; camera.aspect=saved.aspect; camera.updateProjectionMatrix();
-  scene.background=saved.bg;
-  root.rotation.set(0,0,0);
-  active=SCENES[state.template.scene](state.P);
-  updateLoopInfo();
+  root=sR; camera=sC; scene=sS; state.easeFn=sE; state.size=sSize; state.dir=sDir; previewMode=false;
+}
+let pvAccum=0;
+function tickPreviews(dt){
+  pvClock+=dt;
+  pvAccum+=dt; if(pvAccum<1/30) return; pvAccum=0; // previews run at ~30fps
+  const sR=root,sC=camera,sS=scene,sE=state.easeFn,sSize=state.size,sDir=state.dir;
+  previewMode=true; state.size=1; state.dir=1;
+  try{
+    for(const pv of previews){
+      if(!pv.api||!pv.ctx||!pv.onScreen) continue;
+      root=pv.root; camera=pv.camera; scene=pv.scene; state.easeFn=pv.ease;
+      try{ pv.api.update(pvClock % pv.loop); }catch(err){}
+      pvRenderer.render(pv.scene,pv.camera);
+      pv.ctx.drawImage(pvRenderer.domElement,0,0,pv.el.width,pv.el.height);
+    }
+  } finally {
+    root=sR; camera=sC; scene=sS; state.easeFn=sE; state.size=sSize; state.dir=sDir; previewMode=false;
+  }
 }
 
 /* ================= render loop ================= */
@@ -1150,6 +1171,7 @@ function tickFrame(now){
   if(state.playing) animTime+=dt*state.speed;
   renderFrame();
   updateTimeline();
+  tickPreviews(dt);
   if(rec && rec.state==='recording' && animTime>=recUntil) rec.stop();
 }
 requestAnimationFrame(tickFrame);
@@ -1336,7 +1358,7 @@ $('speed').addEventListener('input',e=>{
   updateLoopInfo();
 });
 $('corner').addEventListener('input',e=>{ $('cornerVal').textContent=parseFloat(e.target.value).toFixed(1); });
-$('corner').addEventListener('change',e=>{ state.P.corner=parseFloat(e.target.value); rebuild(); scheduleThumbs(); });
+$('corner').addEventListener('change',e=>{ state.P.corner=parseFloat(e.target.value); rebuild(); });
 $('cardSize').addEventListener('input',e=>{ $('sizeVal').textContent='×'+parseFloat(e.target.value).toFixed(2); });
 $('cardSize').addEventListener('change',e=>{ state.size=parseFloat(e.target.value); rebuild(); });
 
@@ -1360,7 +1382,8 @@ let scrubbing=false;
 function scrubTo(e){
   if(!active) return;
   const r=tlTrack.getBoundingClientRect();
-  animTime=clamp01((e.clientX-r.left)/r.width)*active.loopSeconds;
+  // cap just below the loop length so the playhead can't wrap back to 0 at the far end
+  animTime=Math.min(clamp01((e.clientX-r.left)/r.width),0.9995)*active.loopSeconds;
   renderFrame(); updateTimeline();
 }
 tlTrack.addEventListener('pointerdown',e=>{
@@ -1397,7 +1420,7 @@ replaceInput.addEventListener('change',async()=>{
   const old=userSources[replaceIdx];
   dropCachedTextures(old.uid); old.src.close?.();
   userSources[replaceIdx]=src;
-  clearHighlight(); renderThumbs(); rebuild(); scheduleThumbs();
+  clearHighlight(); renderThumbs(); rebuild();
   toast('Image replaced.');
 });
 
@@ -1431,7 +1454,7 @@ async function addFiles(files){
     if(src){ userSources.push(src); added++; }
   }
   drop.classList.remove('busy'); drop.innerHTML=DROP_HTML;
-  if(added){ renderThumbs(); rebuild(true); scheduleThumbs(); }
+  if(added){ renderThumbs(); rebuild(true); }
 }
 
 let dragIdx=-1;
@@ -1449,13 +1472,13 @@ function renderThumbs(){
       if(dragIdx<0||dragIdx===i) return;
       const [it]=userSources.splice(dragIdx,1);
       userSources.splice(i,0,it);
-      dragIdx=-1; renderThumbs(); rebuild(); scheduleThumbs();
+      dragIdx=-1; renderThumbs(); rebuild();
     });
     const x=document.createElement('button'); x.className='x'; x.textContent='✕'; x.title='Remove';
     x.addEventListener('click',()=>{
       dropCachedTextures(u.uid); u.src.close?.();
       userSources.splice(i,1);
-      renderThumbs(); rebuild(); scheduleThumbs();
+      renderThumbs(); rebuild();
     });
     d.appendChild(img); d.appendChild(x); thumbs.appendChild(d);
   });
@@ -1468,12 +1491,12 @@ $('shuffleBtn').addEventListener('click',()=>{
     const j=Math.floor(Math.random()*(i+1));
     [userSources[i],userSources[j]]=[userSources[j],userSources[i]];
   }
-  renderThumbs(); rebuild(); scheduleThumbs();
+  renderThumbs(); rebuild();
 });
 $('clearBtn').addEventListener('click',()=>{
   userSources.forEach(u=>{ dropCachedTextures(u.uid); u.src.close?.(); });
   userSources=[];
-  renderThumbs(); rebuild(true); scheduleThumbs();
+  renderThumbs(); rebuild(true);
 });
 
 /* ================= init ================= */
@@ -1493,16 +1516,15 @@ window.__app={
       x.fillText(String(i+1),240,400);
       return {src:c, thumb:c.toDataURL('image/jpeg',.5), name:'test-'+(i+1), uid:'u'+(uidSeq++)};
     });
-    renderThumbs(); rebuild(true); generateThumbnails();
+    renderThumbs(); rebuild(true);
   },
-  regenThumbs:()=>generateThumbnails(),
 };
 window.addEventListener('error',e=>console.error('PAGE ERROR:',e.message,e.filename,e.lineno));
 resize();
 applyTemplate(TEMPLATES.find(t=>!t.cat));
 renderThumbs();
 updatePlayBtn();
-generateThumbnails();
+buildPreviews();
 </script>
 </body>
 </html>
