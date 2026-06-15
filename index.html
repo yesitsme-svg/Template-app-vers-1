@@ -999,7 +999,7 @@ const TEMPLATES = [
   {id:'grid-pop',     name:'Grid Pop',              scene:'gridPop',      ease:'Snappy Pop',     P:{dur:.55,  hold:1.7, corner:2}},
   {id:'marquee',      name:'Marquee Lanes',         scene:'marquee',      ease:'Linear',         P:{dur:14,   hold:0,   corner:1, tiltZ:-6}},
   {cat:'Space'},
-  {id:'field',        name:'Field Flight',          scene:'field',        ease:'Soft In-Out',    P:{dur:1.3,  hold:.2,  drift:.35, corner:0, minN:18}},
+  {id:'field',        name:'Field Flight',          scene:'field',        ease:'Soft In-Out',    spacing:0.5, P:{dur:1.3,  hold:.2,  drift:.35, corner:0, minN:18}},
   {id:'globe',        name:'Globe',                 scene:'globe',        ease:'Linear',         P:{dur:9,    hold:0,   corner:1, minN:24}},
   {cat:'Cuts'},
   {id:'zoom-gallery', name:'Zoom Gallery',          scene:'zoomGallery',  ease:'Slow Cinematic', P:{dur:.9,   hold:2.1, corner:0}},
@@ -1228,6 +1228,8 @@ function applyTemplate(t){
   state.template=t;
   state.P={...t.P};
   setEase(t.ease);
+  state.spacing=t.spacing??1;                 // per-preset default spacing (Field Flight = 0.5)
+  $('spacing').value=state.spacing; $('spacingVal').textContent='×'+state.spacing.toFixed(2);
   $('corner').value=state.P.corner??0;
   $('cornerVal').textContent=(state.P.corner??0).toFixed(1);
   rebuild(true);
