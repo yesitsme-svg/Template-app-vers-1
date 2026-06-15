@@ -40,9 +40,22 @@
   .group{display:flex; flex-direction:column; gap:8px;}
   .label{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted);}
   .label small{color:#aaa; letter-spacing:.05em; text-transform:none;}
-  .pvGrid{display:grid; grid-template-columns:1fr 1fr; gap:9px 8px;}
-  .pvGrid .cat{grid-column:1/-1; font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:#b3b3b8; margin-top:6px;}
-  .pv{display:flex; flex-direction:column; gap:5px; cursor:pointer; background:none; border:none; padding:0; font-family:inherit;}
+  .pvGrid{display:flex; flex-direction:column; gap:15px;}
+  .catSec{display:flex; flex-direction:column; gap:7px;}
+  .catHead{display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none;}
+  .catName{font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:#b3b3b8;}
+  .catHead:hover .catName{color:#888;}
+  .seeAll{background:none; border:none; color:var(--accent); font-size:10px; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:3px; padding:0;}
+  .seeAll:hover{color:#5a2bb8;}
+  .seeAll .av{display:inline-block; transition:transform .18s; font-size:12px; line-height:1;}
+  .catSec.expanded .seeAll .av{transform:rotate(90deg);}
+  .catStrip{display:flex; gap:8px; overflow-x:auto; padding-bottom:5px; scrollbar-width:thin;}
+  .catStrip::-webkit-scrollbar{height:5px;} .catStrip::-webkit-scrollbar-thumb{background:#dcdce0; border-radius:3px;}
+  .catStrip .pv{flex:0 0 82px;}
+  .catSec.expanded .catStrip{flex-wrap:wrap; overflow-x:visible; padding-bottom:0;}
+  .catSec.expanded .catStrip .pv{flex:0 0 calc(50% - 4px);}
+  .catSec.collapsed .catStrip{display:none;}
+  .pv{display:flex; flex-direction:column; gap:5px; cursor:pointer; background:none; border:none; padding:0; font-family:inherit; min-width:0;}
   .pv .pvimg{width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:9px; border:1px solid var(--border); background:#1b1b1d; display:block; transition:border-color .15s,box-shadow .15s;}
   .pv span{font-size:10px; color:var(--muted); text-align:center; line-height:1.2;}
   .pv:hover .pvimg{border-color:#bbb;}
@@ -1235,10 +1248,31 @@ function applyTemplate(t){
   rebuild(true);
   document.querySelectorAll('#tpls .pv').forEach(c=>c.classList.toggle('active',c.dataset.id===t.id));
 }
+/* Left column: one horizontally-scrollable strip per category, so you see what's
+   inside each at a glance. "See all" expands that category to a full grid and
+   collapses the others (keeps it from getting busy / мельтешить). */
+function toggleExpand(sec){
+  const wasExp=sec.classList.contains('expanded');
+  document.querySelectorAll('.catSec').forEach(s=>{ s.classList.remove('expanded','collapsed'); s.querySelector('.seeAll .lbl').textContent='See all'; });
+  if(!wasExp){
+    sec.classList.add('expanded'); sec.querySelector('.seeAll .lbl').textContent='Show less';
+    document.querySelectorAll('.catSec').forEach(s=>{ if(s!==sec) s.classList.add('collapsed'); });
+  }
+}
+let curStrip=null;
 TEMPLATES.forEach(t=>{
   if(t.cat){
-    const d=document.createElement('div'); d.className='cat'; d.textContent=t.cat;
-    $('tpls').appendChild(d); return;
+    const sec=document.createElement('div'); sec.className='catSec';
+    const head=document.createElement('div'); head.className='catHead';
+    const name=document.createElement('span'); name.className='catName'; name.textContent=t.cat;
+    const see=document.createElement('button'); see.className='seeAll';
+    see.innerHTML='<span class="lbl">See all</span><span class="av">›</span>';
+    head.appendChild(name); head.appendChild(see);
+    const strip=document.createElement('div'); strip.className='catStrip';
+    sec.appendChild(head); sec.appendChild(strip); $('tpls').appendChild(sec);
+    head.addEventListener('click',()=>toggleExpand(sec));
+    see.addEventListener('click',e=>{ e.stopPropagation(); toggleExpand(sec); });
+    curStrip=strip; return;
   }
   const b=document.createElement('button');
   b.className='pv'; b.dataset.id=t.id;
@@ -1247,7 +1281,7 @@ TEMPLATES.forEach(t=>{
   const span=document.createElement('span'); span.textContent=t.name;
   b.appendChild(cv); b.appendChild(span);
   b.addEventListener('click',()=>applyTemplate(t));
-  $('tpls').appendChild(b);
+  curStrip.appendChild(b);
 });
 
 /* ================= live template previews (arqe-style) =================
