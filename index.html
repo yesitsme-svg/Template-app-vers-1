@@ -375,12 +375,10 @@ function makeTexture(source, key, rPct, aspect=PA){
 function greyCard(tone){
   const c=document.createElement('canvas'); c.width=768; c.height=1024;
   const x=c.getContext('2d');
-  x.fillStyle=tone; x.fillRect(0,0,768,1024);
-  x.fillStyle='rgba(0,0,0,.05)'; x.fillRect(84,128,360,44); x.fillRect(84,200,300,30);
-  x.fillStyle='rgba(0,0,0,.035)'; x.fillRect(84,792,600,150);
+  x.fillStyle=tone; x.fillRect(0,0,768,1024); // flat solid grey, no pattern
   return c;
 }
-const PREVIEW_CARDS=['#e0e0e3','#d3d3d7','#e7e7ea','#cacace','#dbdbdf','#d0d0d5'].map(greyCard);
+const PREVIEW_CARDS=['#dcdce0','#d4d4d8','#e2e2e6','#cfcfd3','#d8d8dc','#cbcbcf'].map(greyCard);
 let previewMode=false;
 function sourceList(){
   if(previewMode) return PREVIEW_CARDS.map((p,i)=>({src:p, key:'pg'+i}));
