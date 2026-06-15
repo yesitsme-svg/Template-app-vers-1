@@ -45,9 +45,10 @@
   .catHead{display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none;}
   .catName{font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:#b3b3b8;}
   .catHead:hover .catName{color:#888;}
-  .seeAll{background:none; border:none; color:var(--accent); font-size:10px; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:3px; padding:0;}
-  .seeAll:hover{color:#5a2bb8;}
-  .seeAll .av{display:inline-block; transition:transform .18s; font-size:12px; line-height:1;}
+  .seeAll{background:none; border:none; color:#b3b3b8; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:4px; padding:0; transition:color .15s;}
+  .catHead:hover .seeAll, .seeAll:hover{color:var(--text);}
+  .seeAll .av{display:inline-block; transition:transform .18s; font-size:11px; line-height:1; color:#c8c8cc;}
+  .seeAll:hover .av{color:var(--muted);}
   .catSec.expanded .seeAll .av{transform:rotate(90deg);}
   .catStrip{display:flex; gap:8px; overflow-x:auto; padding-bottom:5px; scrollbar-width:thin;}
   .catStrip::-webkit-scrollbar{height:5px;} .catStrip::-webkit-scrollbar-thumb{background:#dcdce0; border-radius:3px;}
