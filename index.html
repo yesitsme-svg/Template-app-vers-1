@@ -509,7 +509,7 @@ const SCENES = {
   /* Smooth Stack Reveal — deck; front card drops away, resurfaces at the back */
   stackReveal(P){
     const N0=sourceList().length, n=N0>=3?N0:N0*Math.ceil(3/N0);
-    const H=1.55*state.size;
+    const H=1.55;
     const gz=Math.min(.42,2.6/n), gy=Math.min(.16,.9/n), shrink=Math.min(.06,.38/n);
     const meshes=[];
     for(let i=0;i<n;i++){ const e=entryForSlot(i); const m=plane(e.tex,H*e.asp,H,true); m.userData.slot=i; root.add(m); meshes.push(m); }
@@ -554,7 +554,7 @@ const SCENES = {
     for(let cols=1;cols<=Math.min(N,6);cols++){
       const rows=Math.ceil(N/cols);
       const cellW=fr.w*.94/cols, cellH=fr.h*.94/rows;
-      const w=Math.min(cellW*.9*state.size, cellH*.9*PA*state.size, cellW*.98, cellH*.98*PA);
+      const w=Math.min(cellW*.9, cellH*.9*PA);
       if(!best||w>best.w) best={cols,rows,w,cellW,cellH};
     }
     const {cols,rows,w,cellW,cellH}=best; const boxH=w/PA; // each image is contained inside this box, keeping its own aspect
@@ -595,7 +595,7 @@ const SCENES = {
     const N0=sourceList().length;
     const minN=P.minN||8;
     const n=N0>=minN?N0:N0*Math.ceil(minN/N0); // images repeat evenly
-    const H=(n>10?1.5*Math.sqrt(10/n):1.5)*(P.sizeMul||1)*state.size;
+    const H=(n>10?1.5*Math.sqrt(10/n):1.5)*(P.sizeMul||1);
     const entries=[]; let maxW=0;
     for(let i=0;i<n;i++){ const e=entryForSlot(i); entries.push(e); maxW=Math.max(maxW,H*e.asp); }
     // radius sized for the widest card so mixed aspects never intersect; even angular spacing
@@ -646,7 +646,7 @@ const SCENES = {
     const sp=state.spacing||1;
     const meshes=[];
     for(let i=0;i<n;i++){
-      const e=entryForSlot(i); const h=fr.h*(.26+rnd()*.10)*state.size, w=h*e.asp;
+      const e=entryForSlot(i); const h=fr.h*(.26+rnd()*.10), w=h*e.asp;
       const m=plane(e.tex,w,h); m.userData={slot:i};
       const a=i*2.39996+rnd()*.5, r=Math.sqrt((i+.5)/n);
       Object.assign(m.userData,{
@@ -681,7 +681,7 @@ const SCENES = {
     const N=sourceList().length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const maxH=Math.min(fr.h*.84*state.size, fr.h*.96), maxW=fr.w*.96;
+    const maxH=fr.h*.84, maxW=fr.w*.96;
     const meshes=[];
     for(let i=0;i<N;i++){
       const e=entryForSlot(i);
@@ -722,7 +722,7 @@ const SCENES = {
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
     // bigger cards → fewer columns; spacing stays proportional, no collisions
-    const cols=Math.max(1,Math.min(6,Math.round((N>=9?4:N>=4?3:2)/state.size)));
+    const cols=Math.max(1,Math.min(6,(N>=9?4:N>=4?3:2)));
     const cw=fr.w*1.04/cols, gap=cw*.10*(state.spacing||1);
     const w=cw-gap, boxH=w/PA, rowH=boxH+gap;
     let rows=Math.max(Math.ceil(N/cols), Math.ceil(fr.h/rowH)+2);
@@ -752,7 +752,7 @@ const SCENES = {
     const N=sourceList().length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const H=Math.min(fr.h*.52*state.size, fr.h*.92);
+    const H=fr.h*.52;
     const gap=H*PA*.26*(state.spacing||1); // uniform gap; widths vary per image
     let n=Math.max(N, Math.ceil(fr.w/(H*PA+gap))+2);
     while(n%N) n++; // no duplicate neighbours at the loop seam
@@ -779,7 +779,7 @@ const SCENES = {
   /* Shuffle Cards — jittered deck, top card arcs over to the back */
   shuffleCards(P){
     const N0=sourceList().length, n=N0>=3?N0:N0*Math.ceil(3/N0);
-    const H=1.6*state.size;
+    const H=1.6;
     const rnd=mulberry32(5);
     const jr=[...Array(n)].map(()=>(rnd()-.5)*.12);
     const jx=[...Array(n)].map(()=>(rnd()-.5)*.06);
@@ -821,7 +821,7 @@ const SCENES = {
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
     // bigger cards → fewer lanes; lane height stays proportional, no collisions
-    const lanes=Math.max(2,Math.min(6,Math.round((N0>=10?4:3)/state.size)));
+    const lanes=Math.max(2,Math.min(6,(N0>=10?4:3)));
     const laneH=(fr.h*1.15)/lanes;
     const boxH=laneH*.86, w=boxH*PA, gap=w*.18*(state.spacing||1), step=w+gap;
     let perLane=Math.ceil(fr.w*1.4/step)+1;
@@ -854,8 +854,8 @@ const SCENES = {
     const N0=sourceList().length;
     const minN=P.minN||12;
     const n=N0>=minN?N0:N0*Math.ceil(minN/N0);
-    const H=1.2*state.size;
-    const spread=1.4*Math.max(1,state.size)*(state.spacing||1), depth=spread*6, rnd=mulberry32(7); // field widens with cards
+    const H=1.2;
+    const spread=1.4*(state.spacing||1), depth=spread*6, rnd=mulberry32(7); // field widens with cards
     const meshes=[];
     for(let i=0;i<n;i++){
       const e=entryForSlot(i);
@@ -884,7 +884,7 @@ const SCENES = {
     const N0=sourceList().length;
     const minN=P.minN||24;
     const n=N0>=minN?N0:N0*Math.ceil(minN/N0);
-    const H=.55*state.size, R=1.65*Math.max(1,state.size)*(state.spacing||1); // sphere grows with cards/spacing
+    const H=.55, R=1.65*(state.spacing||1); // sphere grows with cards/spacing
     const inner=new THREE.Group(); root.add(inner);
     const meshes=[];
     const ga=Math.PI*(3-Math.sqrt(5));
@@ -910,7 +910,7 @@ const SCENES = {
     const N=sourceList().length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const H=Math.min(fr.h*.86*state.size, fr.h*.97); // fixed height; width follows each image
+    const H=fr.h*.86; // fixed height; width follows each image
     const e0=entryForSlot(0);
     const m=plane(e0.tex,H*PA,H); m.userData.slot=0; root.add(m); // base geom at PA, scaled per image
     let lastIdx=-1, baseScale=1;
@@ -936,7 +936,7 @@ const SCENES = {
     const N=sourceList().length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const maxH=Math.min(fr.h*.74*state.size, fr.h*.95), maxW=fr.w*.92;
+    const maxH=fr.h*.74, maxW=fr.w*.92;
     const meshes=[], ws=[]; let H0=maxH;
     for(let i=0;i<N;i++){
       const e=entryForSlot(i);
@@ -1296,6 +1296,7 @@ function renderFrame(){
   active?.update(animTime);
   applyUserRot();
   applyDepthFade();
+  if(camera.zoom!==state.size){ camera.zoom=state.size; camera.updateProjectionMatrix(); } // Card size = true camera magnification
   postMat.uniforms.uTime.value=animTime;
   renderer.clear();
   renderer.render(scene,camera);
@@ -1502,7 +1503,7 @@ $('speed').addEventListener('input',e=>{
   updateLoopInfo();
 });
 $('corner').addEventListener('input',e=>{ state.P.corner=parseFloat(e.target.value); $('cornerVal').textContent=state.P.corner.toFixed(1); refreshCardUniforms(); });
-$('cardSize').addEventListener('input',e=>{ state.size=parseFloat(e.target.value); $('sizeVal').textContent='×'+state.size.toFixed(2); scheduleRebuild(); });
+$('cardSize').addEventListener('input',e=>{ state.size=parseFloat(e.target.value); $('sizeVal').textContent='×'+state.size.toFixed(2); }); // pure camera zoom — applied live in renderFrame, no rebuild
 $('spacing').addEventListener('input',e=>{ state.spacing=parseFloat(e.target.value); $('spacingVal').textContent='×'+state.spacing.toFixed(2); scheduleRebuild(); });
 $('fade').addEventListener('input',e=>{ state.fade=parseFloat(e.target.value)/100; $('fadeVal').textContent=Math.round(state.fade*100)+'%'; });
 $('rotY').addEventListener('input',e=>{ state.rotY=parseFloat(e.target.value); $('rotYVal').textContent=state.rotY+'°'; });
