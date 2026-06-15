@@ -199,7 +199,7 @@
 
   <div class="group">
     <div class="slider-row"><div class="label">Card size</div><div class="val" id="sizeVal">×1.00</div></div>
-    <input type="range" id="cardSize" min="0.6" max="2" step="0.05" value="1">
+    <input type="range" id="cardSize" min="0.25" max="4" step="0.05" value="1">
   </div>
 
   <div class="group">
@@ -245,10 +245,12 @@
 
   <div class="group">
     <div class="slider-row"><div class="label">Rotate Y</div><div class="val" id="rotYVal">0°</div></div>
-    <input type="range" id="rotY" min="-60" max="60" step="1" value="0">
+    <input type="range" id="rotY" min="-180" max="180" step="1" value="0">
     <div class="slider-row" style="margin-top:4px"><div class="label">Rotate X</div><div class="val" id="rotXVal">0°</div></div>
-    <input type="range" id="rotX" min="-45" max="45" step="1" value="0">
+    <input type="range" id="rotX" min="-180" max="180" step="1" value="0">
   </div>
+
+  <button class="btn sm" id="resetBtn">↺ Reset settings</button>
 
   <details>
     <summary>Advanced</summary>
@@ -373,7 +375,8 @@ const clampAspect=a=>Math.max(0.42, Math.min(2.4, a)); // keep extreme panoramas
 function makeTexture(source, key, aspect){
   const ck=key+'|'+aspect.toFixed(3);
   if(texCache.has(ck)) return texCache.get(ck);
-  const W=768, H=Math.round(768/aspect);
+  const LONG=1200; // long side ≈1200px so full-frame cards stay crisp at 1080p export, either orientation
+  const W=aspect>=1?LONG:Math.round(LONG*aspect), H=aspect>=1?Math.round(LONG/aspect):LONG;
   const c=document.createElement('canvas'); c.width=W; c.height=H;
   const x=c.getContext('2d');
   const sw=source.width||source.naturalWidth, sh=source.height||source.naturalHeight;
@@ -1010,11 +1013,30 @@ let exporting=false, exportCancelled=false;
 
 const $=id=>document.getElementById(id);
 
-/* userPivot wraps the main root so rotation sliders orbit the whole scene
-   on top of whatever per-template tilt the engine applies to root. */
-const userPivot=new THREE.Group();
-MAIN_SCENE.remove(MAIN_ROOT); userPivot.add(MAIN_ROOT); MAIN_SCENE.add(userPivot);
-function applyUserRot(){ userPivot.rotation.set(THREE.MathUtils.degToRad(state.rotX),THREE.MathUtils.degToRad(state.rotY),0); }
+/* Rotation orbits the camera around the exact point it's looking at, so the
+   cards stay centred in frame and the scene tilts "from the middle" for every
+   template. We capture each engine's lookAt target by patching the main camera. */
+const _UP=new THREE.Vector3(0,1,0), _lookTarget=new THREE.Vector3();
+const _origLookAt=MAIN_CAMERA.lookAt.bind(MAIN_CAMERA);
+MAIN_CAMERA.lookAt=function(x,y,z){ if(x&&x.isVector3) _lookTarget.copy(x); else _lookTarget.set(x,y,z); return _origLookAt(x,y,z); };
+const _off=new THREE.Vector3(), _qy=new THREE.Quaternion(), _qx=new THREE.Quaternion(), _right=new THREE.Vector3(), _pivot=new THREE.Vector3(), _wp=new THREE.Vector3();
+function applyUserRot(){
+  if(!state.rotY && !state.rotX) return;
+  // pivot = centroid of the visible cards, so they stay dead-centre while the scene turns
+  let cx=0,cy=0,cz=0,n=0;
+  forEachCard(o=>{ if(o.visible){ o.getWorldPosition(_wp); cx+=_wp.x; cy+=_wp.y; cz+=_wp.z; n++; } });
+  if(!n) return;
+  _pivot.set(cx/n,cy/n,cz/n);
+  _off.copy(camera.position).sub(_pivot);
+  _qy.setFromAxisAngle(_UP, THREE.MathUtils.degToRad(state.rotY));
+  _off.applyQuaternion(_qy);                                  // yaw around the centre
+  _right.crossVectors(_off,_UP); if(_right.lengthSq()<1e-6) _right.set(1,0,0); _right.normalize();
+  _qx.setFromAxisAngle(_right, THREE.MathUtils.degToRad(state.rotX));
+  _off.applyQuaternion(_qx);                                  // pitch around the centre
+  camera.position.copy(_pivot).add(_off);
+  _origLookAt(_pivot.x,_pivot.y,_pivot.z);
+  camera.updateMatrixWorld();
+}
 
 /* push background colour + corner radius into every card shader */
 function refreshCardUniforms(){
@@ -1277,9 +1299,12 @@ function renderFrame(){
 }
 let last=performance.now();
 let rec=null, recChunks=[], recUntil=0;
+let pendingRebuild=false;
+function scheduleRebuild(){ pendingRebuild=true; } // coalesce live slider drags to one rebuild per frame
 function tickFrame(now){
   requestAnimationFrame(tickFrame);
   if(exporting) return; // export loop drives rendering
+  if(pendingRebuild){ pendingRebuild=false; rebuild(); }
   const dt=Math.min((now-last)/1000,.1); last=now;
   if(state.playing) animTime+=dt*state.speed;
   renderFrame();
@@ -1473,13 +1498,29 @@ $('speed').addEventListener('input',e=>{
   updateLoopInfo();
 });
 $('corner').addEventListener('input',e=>{ state.P.corner=parseFloat(e.target.value); $('cornerVal').textContent=state.P.corner.toFixed(1); refreshCardUniforms(); });
-$('cardSize').addEventListener('input',e=>{ $('sizeVal').textContent='×'+parseFloat(e.target.value).toFixed(2); });
-$('cardSize').addEventListener('change',e=>{ state.size=parseFloat(e.target.value); rebuild(); });
-$('spacing').addEventListener('input',e=>{ $('spacingVal').textContent='×'+parseFloat(e.target.value).toFixed(2); });
-$('spacing').addEventListener('change',e=>{ state.spacing=parseFloat(e.target.value); rebuild(); });
+$('cardSize').addEventListener('input',e=>{ state.size=parseFloat(e.target.value); $('sizeVal').textContent='×'+state.size.toFixed(2); scheduleRebuild(); });
+$('spacing').addEventListener('input',e=>{ state.spacing=parseFloat(e.target.value); $('spacingVal').textContent='×'+state.spacing.toFixed(2); scheduleRebuild(); });
 $('fade').addEventListener('input',e=>{ state.fade=parseFloat(e.target.value)/100; $('fadeVal').textContent=Math.round(state.fade*100)+'%'; });
 $('rotY').addEventListener('input',e=>{ state.rotY=parseFloat(e.target.value); $('rotYVal').textContent=state.rotY+'°'; });
 $('rotX').addEventListener('input',e=>{ state.rotX=parseFloat(e.target.value); $('rotXVal').textContent=state.rotX+'°'; });
+function resetAdjustments(){
+  const t=state.template;
+  state.size=1; state.spacing=1; state.fade=0; state.rotY=0; state.rotX=0; state.dir=1; state.speed=1;
+  state.P={...t.P};            // restores corner/drift to the template's stock defaults
+  setEase(t.ease);             // and the template's ideal easing
+  clearSlotOverrides();        // drop per-card image swaps
+  $('cardSize').value=1; $('sizeVal').textContent='×1.00';
+  $('spacing').value=1; $('spacingVal').textContent='×1.00';
+  $('fade').value=0; $('fadeVal').textContent='0%';
+  $('speed').value=1; $('speedVal').textContent='×1.00';
+  $('rotY').value=0; $('rotYVal').textContent='0°';
+  $('rotX').value=0; $('rotXVal').textContent='0°';
+  $('corner').value=state.P.corner??0; $('cornerVal').textContent=(state.P.corner??0).toFixed(1);
+  document.querySelectorAll('#dirSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v==='1'));
+  rebuild(true);
+  toast('Settings reset to default.');
+}
+$('resetBtn').addEventListener('click',resetAdjustments);
 
 function updatePlayBtn(){ $('tlPlay').textContent=state.playing?'⏸':'▶'; }
 function togglePlay(){ state.playing=!state.playing; updatePlayBtn(); }
