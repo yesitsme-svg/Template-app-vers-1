@@ -951,8 +951,10 @@ const SCENES = {
     const n=N0>=minN?N0:N0*Math.ceil(minN/N0);
     const H=0.8;
     const rnd=mulberry32(7);
-    const sp=state.spacing||1, spreadX=3.6*sp, spreadY=2.5*sp;
+    const sp=state.spacing||1;
     const camZ=5, depth=18*sp;             // long tunnel so cards stay spread in depth
+    const fr=frameAt(camZ-1);              // scatter scales with the frame → fills wide (16:9) and tall (9:16) alike
+    const spreadX=fr.w*0.82*sp, spreadY=fr.h*0.82*sp;
     const meshes=[];
     for(let i=0;i<n;i++){
       const e=entryForSlot(i);
