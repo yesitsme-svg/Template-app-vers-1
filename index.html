@@ -89,6 +89,11 @@
   .seg{display:flex; background:var(--panel2); border:1px solid var(--border); border-radius:100px; overflow:hidden; padding:3px; gap:3px;}
   .seg button{flex:1; padding:6px 0; background:transparent; border:none; border-radius:100px; color:var(--muted); cursor:pointer; font-size:11.5px; font-family:inherit;}
   .seg button.active{background:var(--dark); color:#fff; font-weight:500;}
+  /* easing locked (continuous presets): chips visible but greyed, Linear shown active */
+  #easeGroup.elocked .chips{opacity:.4; pointer-events:none;}
+  #easeGroup.elocked #easeToggle{display:none;}
+  #easeGroup.elocked #easeAdvanced{display:none !important;}
+  #easeGroup.elocked #easeLockHint{display:block !important;}
   .slider-row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
   .slider-row .val{color:var(--muted); font-variant-numeric:tabular-nums; min-width:44px; text-align:right; font-size:11.5px;}
   input[type=range]{-webkit-appearance:none; width:100%; height:3px; background:#e3e2e8; border-radius:2px; outline:none;}
@@ -264,9 +269,10 @@
     <input type="range" id="speed" min="0.25" max="2" step="0.05" value="1">
   </div>
 
-  <div class="group">
+  <div class="group" id="easeGroup">
     <div class="label">Easing</div>
     <div class="chips" id="easeChips"></div>
+    <div class="hint" id="easeLockHint" style="display:none">Continuous loop — runs at a constant speed, so easing is fixed to Linear.</div>
     <button class="disclose" id="easeToggle"><span class="chev">›</span><span id="easeToggleLabel">Adjust curve</span></button>
     <div id="easeAdvanced" style="display:none">
       <canvas id="easeCurve"></canvas>
@@ -351,14 +357,14 @@ import * as THREE from 'three';
 
 /* ================= easing library =================
    7 curated curves; each template ships with its own default. */
+// One clean, non-redundant set (values tuned to arqe's animator). Easing applies to STEPPED
+// presets; continuous-loop presets are flagged noEase and lock to Linear (see applyTemplate).
 const EASINGS = [
-  {name:'Smooth Out',     b:[.16, 1,   .3,  1   ]}, // fast start, long soft landing — reveals
-  {name:'Soft In-Out',    b:[.76, 0,   .24, 1   ]}, // approved carousel default (arqe "Smooth")
-  {name:'Snappy Pop',     b:[.34, 1.45,.64, 1   ]}, // light overshoot — pops & cards
-  {name:'Elastic Soft',   b:[.45,-.28, .22, 1.28]}, // anticipation + gentle overshoot
-  {name:'Fast Reveal',    b:[.19, 1,   .22, 1   ]}, // expo-out — editorial slides
-  {name:'Slow Cinematic', b:[.8,  0,   .2,  1   ]}, // heavy in-out — camera / gallery moves
-  {name:'Linear',         b:[0,   0,   1,   1   ]},
+  {name:'Smooth',   b:[.76, 0,   .24, 1 ]}, // balanced ease-in-out — the default (arqe "Smooth")
+  {name:'Ease Out', b:[.16, 1,   .3,  1 ]}, // fast start, soft landing — reveals & slides
+  {name:'Snappy',   b:[.34, 1.3, .55, 1 ]}, // gentle overshoot — pops & playful cards
+  {name:'Slow',     b:[.87, 0,   .13, 1 ]}, // heavy cinematic in-out — gallery / product (arqe "Ease")
+  {name:'Linear',   b:[0,   0,   1,   1 ]}, // constant speed
 ];
 function cubicBezier(x1,y1,x2,y2){
   if(x1===y1 && x2===y2) return t=>t;
@@ -1262,39 +1268,39 @@ const SCENES = {
 /* ================= templates, grouped like the arqe catalog ================= */
 const TEMPLATES = [
   {cat:'Carousels 3D'},
-  {id:'carousel',     name:'Carousel Slide',        scene:'ring',         ease:'Soft In-Out',    noRot:true, P:{dur:1.0,  hold:.5,  drift:.05, corner:0, axis:'y', tiltX:7,  step:'card', minN:8, chord:1.9}},
-  {id:'wheel',        name:'Vertical Wheel',        scene:'ring',         ease:'Soft In-Out',    noRot:true, P:{dur:1.0,  hold:.5,  drift:.05, corner:0, axis:'x', step:'card', minN:6, chord:2.2}},
-  {id:'tilted-ring',  name:'Tilted Ring',           scene:'ring',         ease:'Linear',         noRot:true, P:{dur:13.5, hold:0,   drift:0,   corner:0, axis:'y', tiltX:14, tiltZ:16, step:'full', minN:9, chord:1.9, sizeMul:.85}},
+  {id:'carousel',     name:'Carousel Slide',        scene:'ring',         ease:'Smooth',   noRot:true, P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'y', tiltX:7,  step:'card', minN:8, chord:1.9}},
+  {id:'wheel',        name:'Vertical Wheel',        scene:'ring',         ease:'Smooth',   noRot:true, P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'x', step:'card', minN:6, chord:2.2}},
+  {id:'tilted-ring',  name:'Tilted Ring',           scene:'ring',         ease:'Linear',   noRot:true, noEase:true, P:{dur:13.5, hold:0,   drift:0,   corner:0, axis:'y', tiltX:14, tiltZ:16, step:'full', minN:9, chord:1.9, sizeMul:.85}},
   {cat:'Cards'},
-  {id:'stack-reveal', name:'Smooth Stack Reveal',   scene:'stackReveal',  ease:'Soft In-Out',    P:{dur:1.2,  hold:.35, corner:2.5}},
-  {id:'shuffle',      name:'Shuffle Cards',         scene:'shuffleCards', ease:'Elastic Soft',   P:{dur:1.0,  hold:.5,  corner:2.5}},
-  {id:'stack-feed',   name:'Stack Feed',            scene:'stackFeed',    ease:'Smooth Out',     P:{dur:1.0,  hold:.5,  corner:2}},
-  {id:'diag-cascade', name:'Diagonal Cascade',      scene:'diagCascade',  ease:'Linear',         P:{corner:2}},
-  {id:'wreath',       name:'Card Wreath',           scene:'wreath',       ease:'Linear',         P:{loop:18,  corner:1.5, minN:12}},
-  {id:'floating',     name:'Floating Cards',        scene:'floating',     ease:'Linear',         noRot:true, P:{loop:9,   corner:1.5}},
-  {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Slow Cinematic', noRot:true, P:{dur:.8,   hold:2.4, corner:1.5}},
+  {id:'stack-reveal', name:'Smooth Stack Reveal',   scene:'stackReveal',  ease:'Smooth',   P:{dur:1.2,  hold:.15, corner:2.5}},
+  {id:'shuffle',      name:'Shuffle Cards',         scene:'shuffleCards', ease:'Snappy',   P:{dur:1.0,  hold:.18, corner:2.5}},
+  {id:'stack-feed',   name:'Stack Feed',            scene:'stackFeed',    ease:'Smooth',   P:{dur:1.4,  hold:0,   drift:.25, corner:2}},
+  {id:'diag-cascade', name:'Diagonal Cascade',      scene:'diagCascade',  ease:'Linear',   noEase:true, P:{corner:2}},
+  {id:'wreath',       name:'Card Wreath',           scene:'wreath',       ease:'Linear',   noEase:true, P:{loop:18,  corner:1.5, minN:12}},
+  {id:'floating',     name:'Floating Cards',        scene:'floating',     ease:'Linear',   noRot:true, noEase:true, P:{loop:9,   corner:1.5}},
+  {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Slow',     noRot:true, P:{dur:.8,   hold:2.4, corner:1.5}},
   {cat:'Raw & Columns'},
-  {id:'scroll-cols',  name:'Scroll Columns',        scene:'scrollCols',   ease:'Linear',         P:{corner:2, cols:3, cellAsp:0.74}},
-  {id:'marquee-rows', name:'Marquee Rows',          scene:'scrollRows',   ease:'Linear',         P:{corner:2, rows:3, cellAsp:1.3}},
-  {id:'grid-drift',   name:'Drifting Wall',         scene:'gridDrift',    ease:'Linear',         P:{corner:2, cols:3, rows:3, dx:1, dy:1}},
+  {id:'scroll-cols',  name:'Scroll Columns',        scene:'scrollCols',   ease:'Linear',   noEase:true, P:{corner:2, cols:3, cellAsp:0.74}},
+  {id:'marquee-rows', name:'Marquee Rows',          scene:'scrollRows',   ease:'Linear',   noEase:true, P:{corner:2, rows:3, cellAsp:1.3}},
+  {id:'grid-drift',   name:'Drifting Wall',         scene:'gridDrift',    ease:'Linear',   noEase:true, P:{corner:2, cols:3, rows:3, dx:1, dy:1}},
   {cat:'Walls & Strips'},
-  {id:'filmstrip',    name:'Horizontal Filmstrip',  scene:'filmstrip',    ease:'Soft In-Out',    P:{dur:1.0,  hold:.5,  drift:.04, corner:1.5}},
-  {id:'v-scroll',     name:'Vertical Scroll',       scene:'vScroll',      ease:'Smooth Out',     P:{dur:1.0,  hold:.5,  drift:.06, corner:0}},
-  {id:'grid-pop',     name:'Grid Pop',              scene:'gridPop',      ease:'Snappy Pop',     P:{dur:.55,  hold:1.7, corner:2}},
-  {id:'marquee',      name:'Marquee Lanes',         scene:'marquee',      ease:'Linear',         P:{dur:13.5, hold:0,   corner:1, tiltZ:-6}},
+  {id:'filmstrip',    name:'Horizontal Filmstrip',  scene:'filmstrip',    ease:'Smooth',   P:{dur:1.4,  hold:0,   drift:.25, corner:1.5}},
+  {id:'v-scroll',     name:'Vertical Scroll',       scene:'vScroll',      ease:'Smooth',   P:{dur:1.4,  hold:0,   drift:.25, corner:0}},
+  {id:'grid-pop',     name:'Grid Pop',              scene:'gridPop',      ease:'Snappy',   P:{dur:.55,  hold:1.7, corner:2}},
+  {id:'marquee',      name:'Marquee Lanes',         scene:'marquee',      ease:'Linear',   noEase:true, P:{dur:13.5, hold:0,   corner:1, tiltZ:-6}},
   {cat:'Space'},
-  {id:'field',        name:'Field Flight',          scene:'field',        ease:'Soft In-Out',    noRot:true, spacing:0.5, P:{dur:1.3,  hold:.2,  drift:.35, corner:0, minN:18}},
-  {id:'spiral',       name:'Spiral Vortex',         scene:'spiral',       ease:'Linear',         P:{corner:1.5, turns:2.2, minN:12}},
-  {id:'globe',        name:'Globe',                 scene:'globe',        ease:'Linear',         noRot:true, P:{dur:9,    hold:0,   corner:1, minN:24}},
+  {id:'field',        name:'Field Flight',          scene:'field',        ease:'Linear',   noRot:true, noEase:true, spacing:0.5, P:{dur:1.3,  hold:.2,  drift:.35, corner:0, minN:18}},
+  {id:'spiral',       name:'Spiral Vortex',         scene:'spiral',       ease:'Linear',   noEase:true, P:{corner:1.5, turns:2.2, minN:12}},
+  {id:'globe',        name:'Globe',                 scene:'globe',        ease:'Linear',   noRot:true, noEase:true, P:{dur:9,    hold:0,   corner:1, minN:24}},
   {cat:'Cuts'},
-  {id:'zoom-gallery', name:'Zoom Gallery',          scene:'zoomGallery',  ease:'Slow Cinematic', noRot:true, P:{dur:.9,   hold:2.1, corner:0}},
-  {id:'flicker',      name:'Flicker',               scene:'flicker',      ease:'Fast Reveal',    noRot:true, P:{dur:.34,  hold:.12, corner:0}},
+  {id:'zoom-gallery', name:'Zoom Gallery',          scene:'zoomGallery',  ease:'Slow',     noRot:true, P:{dur:.9,   hold:2.1, corner:0}},
+  {id:'flicker',      name:'Flicker',               scene:'flicker',      ease:'Ease Out', noRot:true, P:{dur:.34,  hold:.12, corner:0}},
 ];
 
 /* ================= state ================= */
 const RATIOS={'3:4':[3,4],'9:16':[9,16],'1:1':[1,1],'4:3':[4,3],'16:9':[16,9]};
 const state={
-  template:null, P:{}, ease:'Soft In-Out', bez:[.76,0,.24,1], easeFn:null,
+  template:null, P:{}, ease:'Smooth', bez:[.76,0,.24,1], easeFn:null,
   dir:1, bg:'#0d0d0d', bg2:'#2a1a5c', fillMode:'solid', transparent:false, ratio:'3:4',
   playing:true, grain:false, speed:1, size:1,
   spacing:1, rotY:0, rotX:0, fade:0, exportRes:'2k', dark:false,
@@ -1449,7 +1455,7 @@ $('easeToggle').addEventListener('click',()=>{
   refreshEaseUI();
 });
 function setEase(name){
-  const e=EASINGS.find(e=>e.name===name)||EASINGS[1];
+  const e=EASINGS.find(e=>e.name===name)||EASINGS[0];
   state.ease=e.name; state.bez=[...e.b]; state.easeFn=cubicBezier(...e.b);
   refreshEaseUI();
 }
@@ -1553,7 +1559,11 @@ function updateLoopInfo(){
 function applyTemplate(t){
   state.template=t;
   state.P={...t.P};
-  setEase(t.ease);
+  // easing only applies to stepped (move + pause) presets. Continuous loops are noEase: they
+  // always run Linear (a non-linear ease would stutter the loop). We keep the easing UI VISIBLE
+  // but lock it (greyed, Linear active) so it never looks like the menu vanished.
+  setEase(t.noEase?'Linear':t.ease);
+  $('easeGroup').classList.toggle('elocked', !!t.noEase);
   state.spacing=t.spacing??1;                 // per-preset default spacing (Field Flight = 0.5)
   $('spacing').value=state.spacing; $('spacingVal').textContent='×'+state.spacing.toFixed(2);
   $('corner').value=state.P.corner??0;
@@ -1624,7 +1634,7 @@ function buildPreviews(){
     const cam=new THREE.PerspectiveCamera(38,PA,.1,500);
     const rt=new THREE.Group(); sc.add(rt);
     root=rt; camera=cam; scene=sc;
-    const e=EASINGS.find(x=>x.name===t.ease)||EASINGS[1]; const ef=cubicBezier(...e.b); state.easeFn=ef;
+    const e=(t.noEase?EASINGS.find(x=>x.name==='Linear'):EASINGS.find(x=>x.name===t.ease))||EASINGS[0]; const ef=cubicBezier(...e.b); state.easeFn=ef;
     let api=null; try{ api=SCENES[t.scene]({...t.P}); }catch(err){ console.warn('preview',t.id,err); }
     const el=document.getElementById('pv-'+t.id);
     const pv={scene:sc, camera:cam, root:rt, api, ease:ef, loop:api?api.loopSeconds:1,
