@@ -129,6 +129,10 @@
   #easeGroup.elocked #easeToggle{display:none;}
   #easeGroup.elocked #easeAdvanced{display:none !important;}
   #easeGroup.elocked #easeLockHint{display:block !important;}
+  /* rotation locked (3D / single-card presets): sliders visible but greyed + hint */
+  #rotGroup.rlocked input[type=range]{opacity:.4; pointer-events:none;}
+  #rotGroup.rlocked .slider-row{opacity:.5;}
+  #rotGroup.rlocked #rotLockHint{display:block !important;}
   .slider-row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
   .slider-row .val{color:var(--muted); font-variant-numeric:tabular-nums; min-width:44px; text-align:right; font-size:11.5px;}
   input[type=range]{-webkit-appearance:none; width:100%; height:3px; background:#e3e2e8; border-radius:2px; outline:none;}
@@ -373,6 +377,7 @@
     <input type="range" id="rotY" min="-45" max="45" step="1" value="0">
     <div class="slider-row" style="margin-top:4px"><div class="label">Rotate X</div><div class="val" id="rotXVal">0°</div></div>
     <input type="range" id="rotX" min="-45" max="45" step="1" value="0">
+    <div class="hint" id="rotLockHint" style="display:none">This template controls its own 3D camera, so manual rotation is off.</div>
   </div>
 
   <button class="btn sm" id="resetBtn">↺ Reset settings</button>
@@ -1632,10 +1637,11 @@ function applyTemplate(t){
   $('spacing').value=state.spacing; $('spacingVal').textContent='×'+state.spacing.toFixed(2);
   $('corner').value=state.P.corner??0;
   $('cornerVal').textContent=(state.P.corner??0).toFixed(1);
-  // rotation only makes sense for flat poster layouts — hide it (and zero it) where the engine
-  // drives its own camera / is inherently 3D / is a single full-frame card.
+  // rotation only makes sense for flat poster layouts. Where the engine drives its own camera /
+  // is inherently 3D / a single full-frame card, we keep the control VISIBLE but lock it (greyed +
+  // hint) so it never looks like it vanished.
   if(t.noRot){ state.rotY=0; state.rotX=0; $('rotY').value=0; $('rotYVal').textContent='0°'; $('rotX').value=0; $('rotXVal').textContent='0°'; }
-  $('rotGroup').style.display=t.noRot?'none':'';
+  $('rotGroup').classList.toggle('rlocked', !!t.noRot);
   rebuild(true);
   document.querySelectorAll('#tpls .pv').forEach(c=>c.classList.toggle('active',c.dataset.id===t.id));
 }
