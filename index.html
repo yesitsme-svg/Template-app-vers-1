@@ -34,10 +34,45 @@
   body{
     background:var(--bg); color:var(--text);
     font-family:'Euclid Circular B','Inter','Segoe UI',system-ui,sans-serif; font-size:13px;
-    display:flex; overflow:hidden;
+    display:flex; flex-direction:column; overflow:hidden;
   }
+  /* wannathis.one top navigation, ported in */
+  #topnav{
+    flex:0 0 56px; height:56px; display:flex; align-items:center; gap:24px;
+    padding:0 22px; background:var(--panel); border-bottom:1px solid var(--border);
+    position:relative; z-index:200; font-size:13px;
+  }
+  #topnav .navleft{display:flex; align-items:center; gap:22px;}
+  #topnav .navlogo{display:inline-flex; width:38px; height:38px; flex:0 0 auto;}
+  #topnav .navlogo svg{width:100%; height:100%; display:block;}
+  body.dark #topnav .navlogo{filter:invert(1);}            /* white-on-dark in dark theme */
+  #topnav a{color:var(--text); text-decoration:none; font-weight:500; white-space:nowrap; transition:color .15s;}
+  #topnav .navleft > a:hover, #topnav .navdrop > .navlink:hover{color:var(--accent);}
+  #topnav .navdrop{position:relative; display:inline-flex; align-items:center;}
+  #topnav .navdrop::after{content:''; position:absolute; top:100%; left:0; right:0; height:14px;} /* hover bridge to the menu */
+  #topnav .navlink{display:inline-flex; align-items:center; gap:6px; cursor:pointer;}
+  #topnav .navcaret{width:9px; height:11px; color:var(--muted); display:inline-block; transform:rotate(90deg); transition:transform .18s;}
+  #topnav .navcaret svg{width:100%; height:100%; display:block;}
+  #topnav .navcaret path{fill:currentColor;}
+  #topnav .navdrop:hover .navcaret{transform:rotate(-90deg);}
+  #topnav .navmenu{
+    position:absolute; top:calc(100% + 10px); left:-10px; min-width:212px; background:var(--panel);
+    border:1px solid var(--border); border-radius:16px; box-shadow:0 16px 40px rgba(0,0,0,.13);
+    padding:8px; flex-direction:column; gap:1px; display:none;
+  }
+  #topnav .navdrop:hover .navmenu{display:flex;}
+  #topnav .navmenu a{padding:10px 14px; border-radius:10px; font-weight:500; font-size:13.5px; color:var(--text);}
+  #topnav .navmenu a:hover{background:var(--panel2); color:var(--accent);}
+  #topnav .navtitle{position:absolute; left:50%; transform:translateX(-50%); font-weight:500; color:var(--text); pointer-events:none;}
+  #topnav .navpro{
+    margin-left:auto; display:inline-flex; align-items:center; gap:7px; padding:8px 17px;
+    border:1px solid var(--border); border-radius:100px; font-weight:500; color:var(--text); transition:border-color .15s,background .15s;
+  }
+  #topnav .navpro:hover{border-color:var(--text); background:var(--panel2);}
+  #topnav .navpro .bolt{color:#f5b50a;}
+  #content{flex:1; display:flex; min-height:0; overflow:hidden;}
   aside{
-    height:100vh; overflow-y:auto;
+    height:100%; overflow-y:auto;
     background:var(--panel);
     padding:18px 16px 40px; display:flex; flex-direction:column; gap:16px;
     transition:opacity .2s;
@@ -200,6 +235,28 @@
 </head>
 <body>
 
+<nav id="topnav">
+  <div class="navleft">
+    <a class="navlogo" href="https://wannathis.one/" title="wannathis.one"><svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M22 44C34.1503 44 44 34.1503 44 22C44 9.84974 34.1503 0 22 0C9.84974 0 0 9.84974 0 22C0 34.1503 9.84974 44 22 44Z" fill="white"/><path fill-rule="evenodd" clip-rule="evenodd" d="M22 43.0833C33.644 43.0833 43.0833 33.644 43.0833 22C43.0833 10.356 33.644 0.916667 22 0.916667C10.356 0.916667 0.916667 10.356 0.916667 22C0.916667 33.644 10.356 43.0833 22 43.0833ZM22 44C34.1503 44 44 34.1503 44 22C44 9.84974 34.1503 0 22 0C9.84974 0 0 9.84974 0 22C0 34.1503 9.84974 44 22 44Z" fill="black"/><path fill-rule="evenodd" clip-rule="evenodd" d="M19.6198 16.8747V26.2086C19.6198 27.9343 18.1834 29.3333 16.4115 29.3333C14.6395 29.3333 13.2031 27.9343 13.2031 26.2086V16.8747C13.2031 15.149 14.6395 13.75 16.4115 13.75C18.1834 13.75 19.6198 15.149 19.6198 16.8747ZM30.6198 16.8747V26.2086C30.6198 27.9343 29.1834 29.3333 27.4115 29.3333C25.6395 29.3333 24.2031 27.9343 24.2031 26.2086V16.8747C24.2031 15.149 25.6395 13.75 27.4115 13.75C29.1834 13.75 30.6198 15.149 30.6198 16.8747Z" fill="white"/><path fill-rule="evenodd" clip-rule="evenodd" d="M30.6193 25.9321V17.2685C30.6193 15.6667 29.3208 14.3682 27.7189 14.3682C26.1171 14.3682 24.8186 15.6667 24.8186 17.2685V25.9321C24.8186 27.5339 26.1171 28.8325 27.7189 28.8325C29.3208 28.8325 30.6193 27.5339 30.6193 25.9321ZM27.7189 13.2917C25.5226 13.2917 23.7422 15.0722 23.7422 17.2685V25.9321C23.7422 28.1284 25.5226 29.9089 27.7189 29.9089C29.9152 29.9089 31.6957 28.1284 31.6957 25.9321V17.2685C31.6957 15.0722 29.9152 13.2917 27.7189 13.2917Z" fill="black"/><path d="M23.7422 26.4352C23.7422 24.2389 25.5226 22.4585 27.7189 22.4585C29.9152 22.4585 31.6957 24.2389 31.6957 26.4352C31.6957 28.6315 29.9152 30.412 27.7189 30.412C25.5226 30.412 23.7422 28.6315 23.7422 26.4352Z" fill="black"/><path fill-rule="evenodd" clip-rule="evenodd" d="M19.1622 25.9321V17.2685C19.1622 15.6667 17.8637 14.3682 16.2619 14.3682C14.6601 14.3682 13.3616 15.6667 13.3616 17.2685V25.9321C13.3616 27.5339 14.6601 28.8325 16.2619 28.8325C17.8637 28.8325 19.1622 27.5339 19.1622 25.9321ZM16.2619 13.2917C14.0656 13.2917 12.2852 15.0722 12.2852 17.2685V25.9321C12.2852 28.1284 14.0656 29.9089 16.2619 29.9089C18.4582 29.9089 20.2387 28.1284 20.2387 25.9321V17.2685C20.2387 15.0722 18.4582 13.2917 16.2619 13.2917Z" fill="black"/><path d="M12.2852 26.4352C12.2852 24.2389 14.0656 22.4585 16.2619 22.4585C18.4582 22.4585 20.2387 24.2389 20.2387 26.4352C20.2387 28.6315 18.4582 30.412 16.2619 30.412C14.0656 30.412 12.2852 28.6315 12.2852 26.4352Z" fill="black"/></svg></a>
+    <div class="navdrop">
+      <a class="navlink" href="https://wannathis.one/mockups">Mockup catalog <span class="navcaret"><svg viewBox="0 0 10 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.46967 2.53033C2.17678 2.23744 2.17678 1.76268 2.46967 1.46978C2.76256 1.17689 3.23732 1.17689 3.53022 1.46978L8.06049 6.00006L3.53022 10.5303C3.23732 10.8232 2.76256 10.8232 2.46967 10.5303C2.17678 10.2374 2.17678 9.76268 2.46967 9.46978L5.9394 6.00006L2.46967 2.53033Z" fill="black"/></svg></span></a>
+      <div class="navmenu">
+        <a href="https://wannathis.one/mockups/free">Free mockups</a>
+        <a href="https://wannathis.one/mockups/iphone-mockups">iPhone mockups</a>
+        <a href="https://wannathis.one/mockups/macbook-mockups">Macbook mockups</a>
+        <a href="https://wannathis.one/mockups/device-mockups">Device mockups</a>
+        <a href="https://wannathis.one/mockups/branding-mockups">Branding mockups</a>
+        <a href="https://wannathis.one/mockups/billboard-mockups">Billboard mockups</a>
+      </div>
+    </div>
+    <a href="https://wannathis.one/mockups/free">Free mockups</a>
+    <a href="https://wannathis.one/online-tools">Online tools</a>
+  </div>
+  <div class="navtitle">Motion Grid</div>
+  <a class="navpro" href="https://wannathis.one/pro-access"><span class="bolt">⚡</span> Pro Access</a>
+</nav>
+
+<div id="content">
 <aside id="previews">
   <h1>WANNATHIS <span>ANIMATOR</span></h1>
   <div class="group">
@@ -348,6 +405,7 @@
     <div class="hint">Preview runs at 1K for speed; export at 1K (1080) or 2K (2160) — long side. MP4 — one seamless loop at 30 fps. PNG — the frame you're parked on.</div>
   </div>
 </aside>
+</div>
 
 <script type="importmap">
 {"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}
@@ -1889,7 +1947,7 @@ function resize(){
   W&=~1; H&=~1; // H.264 needs even dimensions
   renderer.setSize(W,H,false);
   camera.aspect=W/H; camera.updateProjectionMatrix();
-  const availW=window.innerWidth-222-312-72, availH=window.innerHeight-150;
+  const availW=window.innerWidth-222-312-72, availH=window.innerHeight-150-56; // -56 for the top nav bar
   const s=Math.min(availW/W,availH/H,1);
   stage.style.width=Math.round(W*s)+'px';
   stage.style.height=Math.round(H*s)+'px';
