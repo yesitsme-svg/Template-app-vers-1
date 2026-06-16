@@ -16,8 +16,19 @@
   }
   :root{
     --bg:#f4f4f6; --panel:#fff; --panel2:#f8f8f8; --border:#e3e2e8;
-    --text:#1c1c1c; --muted:#888; --dark:#2e2e2e; --accent:#713ade;
+    --text:#1c1c1c; --muted:#888; --dark:#000; --accent:#713ade;
   }
+  body.dark{
+    --bg:#0f0f11; --panel:#161618; --panel2:#202024; --border:#2b2b31;
+    --text:#ececee; --muted:#8c8c94; --dark:#f1f1f4; --accent:#9b6cff;
+  }
+  /* in dark mode the "black" active surfaces invert to light, so their text must go dark */
+  body.dark .btn.primary, body.dark .seg button.active, body.dark .chip.active,
+  body.dark .ratios button.active, body.dark #tlPlay, body.dark .toast{ color:#141416; }
+  body.dark .btn.primary:hover{ background:#fff; }
+  body.dark input[type=range]::-webkit-slider-thumb{ border-color:var(--panel); }
+  body.dark #easeCurve{ background:#1b1b1f; }
+  body.dark #stage{ box-shadow:0 18px 60px rgba(0,0,0,.55), 0 4px 14px rgba(0,0,0,.4); }
   *{box-sizing:border-box; margin:0; padding:0;}
   html,body{height:100%;}
   body{
@@ -38,14 +49,14 @@
   h1{font-size:13px; font-weight:500; letter-spacing:.08em; text-transform:uppercase;}
   h1 span{color:var(--muted); font-weight:400;}
   .group{display:flex; flex-direction:column; gap:8px;}
-  .label{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted);}
-  .label small{color:#aaa; letter-spacing:.05em; text-transform:none;}
+  .label{font-size:11.5px; letter-spacing:0; text-transform:none; color:var(--text); font-weight:500;}
+  .label small{color:var(--muted); letter-spacing:0; text-transform:none; font-weight:400;}
   .pvGrid{display:flex; flex-direction:column; gap:15px;}
   .catSec{display:flex; flex-direction:column; gap:7px;}
   .catHead{display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none;}
-  .catName{font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:#b3b3b8;}
+  .catName{font-size:11px; letter-spacing:0; text-transform:none; color:var(--muted); font-weight:500;}
   .catHead:hover .catName{color:#888;}
-  .seeAll{background:none; border:none; color:#b3b3b8; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:4px; padding:0; transition:color .15s;}
+  .seeAll{background:none; border:none; color:#b3b3b8; font-size:10.5px; letter-spacing:0; text-transform:none; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:4px; padding:0; transition:color .15s;}
   .catHead:hover .seeAll, .seeAll:hover{color:var(--text);}
   .seeAll .av{display:inline-block; transition:transform .18s; font-size:11px; line-height:1; color:#c8c8cc;}
   .seeAll:hover .av{color:var(--muted);}
@@ -83,6 +94,24 @@
   input[type=range]{-webkit-appearance:none; width:100%; height:3px; background:#e3e2e8; border-radius:2px; outline:none;}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:15px; height:15px; border-radius:50%; background:var(--dark); cursor:pointer; border:2.5px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.25);}
   input[type=color]{width:100%; height:32px; border:1px solid var(--border); border-radius:10px; background:var(--panel2); cursor:pointer; padding:3px 5px;}
+  /* block separators so the panel sections read as distinct cards (Figma/Framer style) */
+  #settings > * + *{border-top:1px solid var(--border); padding-top:16px;}
+  #settings > details{padding-top:16px;}
+  /* classic color control: clickable swatch + hex field */
+  .colorField{display:flex; align-items:center; gap:8px;}
+  .colorRow{display:flex; align-items:center; gap:8px;}
+  .colorRow .clbl{font-size:11px; color:var(--muted); min-width:14px;}
+  .swatch{width:32px; height:32px; flex:0 0 auto; border-radius:8px; border:1px solid var(--border); cursor:pointer; padding:0; box-shadow:inset 0 0 0 2px var(--panel);}
+  .swatch:hover{border-color:#bbb;}
+  .hexInput{flex:1; height:32px; border:1px solid var(--border); border-radius:8px; background:var(--panel2); color:var(--text); font-family:inherit; font-size:12px; padding:0 10px; outline:none; text-transform:uppercase; font-variant-numeric:tabular-nums;}
+  .hexInput:focus{border-color:var(--accent);}
+  .nativeColor{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;}
+  /* stylish on/off switch (dark theme toggle) */
+  .switch{width:42px; height:24px; flex:0 0 auto; border-radius:100px; background:var(--panel2); border:1px solid var(--border); position:relative; cursor:pointer; padding:0; transition:background .2s,border-color .2s;}
+  .switch .knob{position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.3); transition:left .2s;}
+  .switch.on{background:var(--accent); border-color:var(--accent);}
+  .switch.on .knob{left:21px;}
+  .rowBetween{display:flex; align-items:center; justify-content:space-between; gap:10px;}
   .drop{border:1.5px dashed #c8c8c8; border-radius:12px; padding:14px 10px; text-align:center; color:var(--muted); cursor:pointer; font-size:11.5px; line-height:1.5; transition:border-color .15s,color .15s,background .15s;}
   .drop:hover,.drop.over{border-color:var(--accent); color:var(--text); background:#faf8ff;}
   .drop .sub{font-size:10px; color:#b3b3b8;}
@@ -109,7 +138,7 @@
   .bezvals{display:flex; gap:5px;}
   .bezvals div{flex:1; text-align:center; background:var(--panel2); border:1px solid var(--border); border-radius:8px; padding:6px 0; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums;}
   details{border:none;}
-  summary{cursor:pointer; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); list-style:none; user-select:none;}
+  summary{cursor:pointer; font-size:11.5px; letter-spacing:0; text-transform:none; color:var(--muted); list-style:none; user-select:none; font-weight:500;}
   summary::before{content:'▸ ';} details[open] summary::before{content:'▾ ';}
   .loopinfo{font-size:10.5px; color:#999; text-align:center; font-variant-numeric:tabular-nums;}
   main{flex:1; position:relative; display:flex; flex-direction:column; min-width:0;}
@@ -198,6 +227,10 @@
 </main>
 
 <aside id="settings">
+  <div class="rowBetween">
+    <div class="label">Dark theme</div>
+    <button class="switch" id="themeToggle" role="switch" aria-checked="false" title="Toggle dark theme"><span class="knob"></span></button>
+  </div>
   <div class="group">
     <div class="label">Images <small id="imgCount"></small></div>
     <div class="drop" id="drop">Drop images here or click to browse<br><span class="sub">JPG · PNG · WEBP — up to 20 files, 15 MB each</span></div>
@@ -253,15 +286,30 @@
       <button data-v="color" class="active">Color</button>
       <button data-v="transparent">Transparent</button>
     </div>
-    <input type="color" id="bgColor" value="#0d0d0d">
+    <div id="bgFill">
+      <div class="seg" id="fillSeg">
+        <button data-v="solid" class="active">Solid</button>
+        <button data-v="gradient">Gradient</button>
+      </div>
+      <div class="colorField" style="margin-top:8px">
+        <button class="swatch" id="bgSwatch"></button>
+        <input type="text" class="hexInput" id="bgHex" maxlength="7" value="#0D0D0D" spellcheck="false">
+        <input type="color" class="nativeColor" id="bgColor" value="#0d0d0d">
+      </div>
+      <div class="colorField" id="bgField2" style="margin-top:7px; display:none">
+        <button class="swatch" id="bgSwatch2"></button>
+        <input type="text" class="hexInput" id="bgHex2" maxlength="7" value="#2A1A5C" spellcheck="false">
+        <input type="color" class="nativeColor" id="bgColor2" value="#2a1a5c">
+      </div>
+    </div>
     <div class="hint" id="bgHint" style="display:none">Transparency is kept in PNG export. MP4 has no alpha — video is rendered on the chosen color.</div>
   </div>
 
-  <div class="group">
+  <div class="group" id="rotGroup">
     <div class="slider-row"><div class="label">Rotate Y</div><div class="val" id="rotYVal">0°</div></div>
-    <input type="range" id="rotY" min="-180" max="180" step="1" value="0">
+    <input type="range" id="rotY" min="-45" max="45" step="1" value="0">
     <div class="slider-row" style="margin-top:4px"><div class="label">Rotate X</div><div class="val" id="rotXVal">0°</div></div>
-    <input type="range" id="rotX" min="-180" max="180" step="1" value="0">
+    <input type="range" id="rotX" min="-45" max="45" step="1" value="0">
   </div>
 
   <button class="btn sm" id="resetBtn">↺ Reset settings</button>
@@ -276,17 +324,22 @@
       </div>
       <div class="label" style="margin-top:4px">Film grain</div>
       <div class="seg" id="grainSeg">
-        <button data-v="on" class="active">On</button>
-        <button data-v="off">Off</button>
+        <button data-v="on">On</button>
+        <button data-v="off" class="active">Off</button>
       </div>
     </div>
   </details>
 
   <div class="group">
     <div class="loopinfo" id="loopInfo"></div>
+    <div class="label">Export quality</div>
+    <div class="seg" id="resSeg">
+      <button data-v="1k">1K</button>
+      <button data-v="2k" class="active">2K</button>
+    </div>
     <button class="btn primary" id="mp4Btn">⬇ Export MP4</button>
     <button class="btn" id="pngBtn">Export PNG frame</button>
-    <div class="hint">MP4 — one seamless loop at 30 fps. PNG — the frame you're parked on (scrub the timeline to pick it).</div>
+    <div class="hint">Preview runs at 1K for speed; export at 1K (1080) or 2K (2160) — long side. MP4 — one seamless loop at 30 fps. PNG — the frame you're parked on.</div>
   </div>
 </aside>
 
@@ -457,14 +510,14 @@ const postScene=new THREE.Scene();
 const postCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
 const postMat=new THREE.ShaderMaterial({
   transparent:true, depthTest:false,
-  uniforms:{uTime:{value:0},uGrain:{value:.12}},
+  uniforms:{uTime:{value:0},uGrain:{value:.05}},
   vertexShader:`varying vec2 vUv; void main(){vUv=uv; gl_Position=vec4(position.xy,0.,1.);}`,
-  fragmentShader:` // fine full-frame film grain, no vignette
+  fragmentShader:` // subtle soft-grey film grain (no harsh salt-and-pepper / ragged edges)
     varying vec2 vUv; uniform float uTime,uGrain;
     float rnd(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
     void main(){
-      float g=(rnd(vUv*vec2(1317.,733.)+fract(uTime*7.)) - .5)*uGrain;
-      gl_FragColor=vec4(vec3(step(0.,g)), abs(g));
+      float n=rnd(vUv*vec2(1317.,733.)+fract(uTime*7.))-.5;   // -0.5..0.5
+      gl_FragColor=vec4(vec3(.5+n), abs(n)*uGrain*1.4);        // soft grey overlay, low opacity
     }`
 });
 postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2), postMat));
@@ -480,31 +533,42 @@ let curBg=[0.05,0.05,0.05];       // sRGB background fed to every card shader
 let cornerNorm=0;                  // corner radius in 0..0.5 uv units
 const CARD_VERT=`varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`;
 const CARD_FRAG=`
-  uniform sampler2D map; uniform vec3 bgColor; uniform float uFade,uOpacity,cornerRadius,aspect;
+  uniform sampler2D map; uniform vec3 bgColor; uniform float uFade,uOpacity,cornerRadius,aspect,uPremul;
   varying vec2 vUv;
   vec3 lin2srgb(vec3 c){ bvec3 co=lessThan(c,vec3(0.0031308)); return mix(1.055*pow(max(c,vec3(0.0)),vec3(1.0/2.4))-0.055, c*12.92, vec3(co)); }
   void main(){
+    float mask=1.0;
     if(cornerRadius>0.001){
       vec2 p=vUv-0.5; p.y*=aspect;
       vec2 hs=vec2(0.5, aspect*0.5);
       float cr=min(cornerRadius, min(0.5, aspect*0.5));
       vec2 d=max(abs(p)-(hs-cr),0.0);
-      if(length(d)>cr) discard;
+      float dist=length(d)-cr;              // signed distance to the rounded edge (>0 outside)
+      float aa=max(fwidth(dist),1e-5);      // ~1px in screen space (works at any export resolution)
+      mask=1.0-smoothstep(-aa,aa,dist);     // anti-aliased coverage instead of a hard discard
+      if(mask<=0.0) discard;
     }
     vec4 tex=texture2D(map,vUv);
     vec3 texS=lin2srgb(tex.rgb);          // CanvasTexture is SRGB → GPU gives linear; back to sRGB to mix
     vec3 res=mix(bgColor, texS, clamp(uFade,0.0,1.0));
-    gl_FragColor=vec4(res, tex.a*uOpacity);
+    float a=tex.a*uOpacity*mask;
+    // transparent (blended) cards output PREMULTIPLIED colour → no bright/white halo at AA edges
+    gl_FragColor=vec4(mix(res, res*a, uPremul), a);
   }`;
-function makeCardMaterial(tex,aspect,transparent){
+// Every card uses SDF + real alpha blending (premultiplied) → smooth, vector-quality rounded
+// corners on screen AND in export, with no white halo. Depth ordering is by renderOrder/painter's
+// order (depthTest off), so there are no z-fighting / coverage-stepping artifacts.
+function makeCardMaterial(tex,aspect){
   return new THREE.ShaderMaterial({
     uniforms:{ map:{value:tex}, bgColor:{value:new THREE.Vector3(curBg[0],curBg[1],curBg[2])},
-               uFade:{value:1}, uOpacity:{value:1}, cornerRadius:{value:cornerNorm}, aspect:{value:aspect} },
+               uFade:{value:1}, uOpacity:{value:1}, cornerRadius:{value:cornerNorm}, aspect:{value:aspect},
+               uPremul:{value:1} },
     vertexShader:CARD_VERT, fragmentShader:CARD_FRAG,
-    transparent, depthWrite:!transparent, side:THREE.DoubleSide,
+    transparent:true, depthWrite:false, depthTest:false, side:THREE.DoubleSide,
+    premultipliedAlpha:true,
   });
 }
-function plane(tex,w,h,transparent=false){ return new THREE.Mesh(new THREE.PlaneGeometry(w,h), makeCardMaterial(tex,h/w,transparent)); }
+function plane(tex,w,h,_t){ return new THREE.Mesh(new THREE.PlaneGeometry(w,h), makeCardMaterial(tex,h/w)); }
 function setCardOpacity(m,v){ m.material.uniforms.uOpacity.value=v; }     // engines use these instead of material.opacity / .map
 function setCardTex(m,t){ m.material.uniforms.map.value=t; }
 function forEachCard(fn){ root.traverse(o=>{ if(o.material&&o.material.uniforms&&o.material.uniforms.uFade) fn(o); }); }
@@ -530,7 +594,8 @@ const SCENES = {
   stackReveal(P){
     const N0=sourceList().length, n=N0>=3?N0:N0*Math.ceil(3/N0);
     const H=1.55;
-    const gz=Math.min(.42,2.6/n), gy=Math.min(.16,.9/n), shrink=Math.min(.06,.38/n);
+    const sp=state.spacing||1;                          // spacing spreads how much the deck fans back
+    const gz=Math.min(.42,2.6/n)*sp, gy=Math.min(.16,.9/n)*sp, shrink=Math.min(.06,.38/n);
     const meshes=[];
     for(let i=0;i<n;i++){ const e=entryForSlot(i); const m=plane(e.tex,H*e.asp,H,true); m.userData.slot=i; root.add(m); meshes.push(m); }
     camera.position.set(0,.18,4.6); camera.lookAt(0,0,0);
@@ -543,12 +608,12 @@ const SCENES = {
         for(let i=0;i<n;i++){
           const b=(((i-c)%n)+n)%n, m=meshes[i];
           if(b===0){ // the revealing card
-            if(e<.5){ const f=e/.5; // fly down & fade
-              m.position.set(0,-f*1.45*H+bob,.17*f);
-              m.scale.setScalar(1+f*.05);
-              setCardOpacity(m,1-f);
+            if(e<.58){ const f=e/.58, fe=f*f*(3-2*f); // smoothstep → gentle, readable lift-off (no fast drop)
+              m.position.set(0,-fe*.72*H+bob,.6*fe);    // shorter travel + lift toward the viewer
+              m.scale.setScalar(1+fe*.08);
+              setCardOpacity(m, 1-clamp01((f-.58)/.42)); // stays fully visible through the move, then fades
               m.renderOrder=n+1;
-            }else{ const f=(e-.5)/.5; // fade in at the back
+            }else{ const f=(e-.58)/.42; // fade in at the back of the deck
               m.position.set(0,(n-1)*gy+bob,-(n-1)*gz);
               m.scale.setScalar(1-(n-1)*shrink);
               setCardOpacity(m,f);
@@ -573,11 +638,13 @@ const SCENES = {
     let best=null;
     for(let cols=1;cols<=Math.min(N,6);cols++){
       const rows=Math.ceil(N/cols);
-      const cellW=fr.w*.94/cols, cellH=fr.h*.94/rows;
-      const w=Math.min(cellW*.9, cellH*.9*PA);
+      const cellW=fr.w*.99/cols, cellH=fr.h*.99/rows;
+      const w=Math.min(cellW*.95, cellH*.95*PA);        // fuller cells → cards fill the frame
       if(!best||w>best.w) best={cols,rows,w,cellW,cellH};
     }
-    const {cols,rows,w,cellW,cellH}=best; const boxH=w/PA; // each image is contained inside this box, keeping its own aspect
+    const {cols,rows,cellW,cellH}=best;
+    const w=best.w*THREE.MathUtils.clamp(1.3-(state.spacing||1)*0.3,0.45,1); // spacing shrinks cards → bigger gaps
+    const boxH=w/PA; // each image is contained inside this box, keeping its own aspect
     const meshes=[];
     for(let i=0;i<N;i++){
       const r=Math.floor(i/cols), c=i%cols;
@@ -592,7 +659,7 @@ const SCENES = {
     }
     const maxDelay=Math.max(...meshes.map(m=>m.userData.delay));
     const outStart=maxDelay+P.dur+P.hold, outDur=.38;
-    const loop=outStart+maxDelay*.5+outDur+.35;
+    const loop=outStart+maxDelay*.5+outDur+.05;  // tight wrap → next pop-in overlaps the pop-out, no blank flash
     return { loopSeconds:loop,
       update(T){
         const local=((T%loop)+loop)%loop;
@@ -673,7 +740,7 @@ const SCENES = {
         x:Math.cos(a)*r*fr.w*.42*sp, y:Math.sin(a)*r*fr.h*.40*sp,
         z:-((i%5)*.6+rnd()*.3),
         f:1+(i%2), phi:rnd()*Math.PI*2,
-        rA:.02+rnd()*.03, bA:fr.h*(.015+rnd()*.02),
+        rA:.03+rnd()*.05, bA:fr.h*(.04+rnd()*.045),   // more visible drift + sway (was barely moving)
       });
       root.add(m); meshes.push(m);
     }
@@ -752,7 +819,7 @@ const SCENES = {
       const slot=r*cols+c, e=entryForSlot(slot);
       const ch=Math.min(boxH, w/e.asp), cwid=ch*e.asp; // contain image in the cell box
       const m=plane(e.tex,cwid,ch);
-      m.userData={r,c,slot}; root.add(m); meshes.push(m);
+      m.userData={r,c,slot}; m.renderOrder=slot; root.add(m); meshes.push(m); // stable draw order (coplanar)
     }
     const totalH=rows*rowH, phase=makePhase(P);
     return { loopSeconds:(P.dur+P.hold)*rows,
@@ -779,7 +846,7 @@ const SCENES = {
     const meshes=[], cumX=[]; let x0=0;
     for(let i=0;i<n;i++){
       const e=entryForSlot(i), w=H*e.asp;
-      const m=plane(e.tex,w,H); m.userData.slot=i;
+      const m=plane(e.tex,w,H); m.userData.slot=i; m.renderOrder=i; // stable draw order (coplanar strip)
       cumX.push(x0 + w/2); x0 += w + gap; // place by cumulative width so mixed aspects keep even gaps
       root.add(m); meshes.push(m);
     }
@@ -803,7 +870,7 @@ const SCENES = {
     const rnd=mulberry32(5);
     const jr=[...Array(n)].map(()=>(rnd()-.5)*.12);
     const jx=[...Array(n)].map(()=>(rnd()-.5)*.06);
-    const gz=Math.min(.075,.55/n);
+    const gz=Math.min(.075,.55/n)*(state.spacing||1);   // spacing spreads the stacked deck
     const meshes=[], ws=[];
     for(let i=0;i<n;i++){ const e=entryForSlot(i), wi=H*e.asp; ws.push(wi); const m=plane(e.tex,wi,H); m.userData.slot=i; root.add(m); meshes.push(m); }
     camera.position.set(0,.04,4.7); camera.lookAt(0,0,0);
@@ -852,7 +919,7 @@ const SCENES = {
       const slot=l*perLane+i+l*2;
       const e=entryForSlot(slot);
       const ch=Math.min(boxH, w/e.asp), cw=ch*e.asp; // contain image in the lane cell
-      const m=plane(e.tex,cw,ch); m.userData={l,i,slot};
+      const m=plane(e.tex,cw,ch); m.userData={l,i,slot}; m.renderOrder=slot; // stable draw order (coplanar)
       root.add(m); meshes.push(m);
     }
     root.rotation.z=THREE.MathUtils.degToRad(P.tiltZ||0);
@@ -1007,11 +1074,11 @@ const SCENES = {
     const n=N0>=minN?N0:N0*Math.ceil(minN/N0);
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5), D=Math.min(fr.w,fr.h);
-    const Rmax=D*0.46, Rmin=D*0.05, turns=P.turns||2.2;
+    const Rmax=D*0.5, Rmin=D*0.1, turns=P.turns||2.0;   // shorter shrink range → cards stay big & legible
     const entries=[]; let maxAsp=0.5;
     for(let i=0;i<n;i++){ const e=entryForSlot(i); entries.push(e); maxAsp=Math.max(maxAsp,e.asp); }
     // self-similar: card height ∝ its radius; size set so the spiral arms never collide
-    const sizeK=Math.min(0.58, 1.35/(turns*Math.max(maxAsp,1)))*(state.spacing||1);
+    const sizeK=Math.min(0.78, 1.85/(turns*Math.max(maxAsp,1)))*(state.spacing||1);
     const meshes=[];
     for(let i=0;i<n;i++){ const m=plane(entries[i].tex,entries[i].asp,1,true); m.userData={slot:i}; root.add(m); meshes.push(m); }
     const L=P.loop||(n*0.9);                            // ~0.9s per card slot → calm, matches the other loops
@@ -1090,7 +1157,7 @@ const SCENES = {
     let n=Math.max(N0, Math.ceil(Math.max(fr.w/stepX,fr.h/stepY))+4);
     while(n%N0) n++;
     const meshes=[];
-    for(let i=0;i<n;i++){ const e=entryForSlot(i%N0); const m=plane(e.tex,H*e.asp,H,true); m.userData.slot=i%N0; root.add(m); meshes.push(m); }
+    for(let i=0;i<n;i++){ const e=entryForSlot(i%N0); const m=plane(e.tex,H*e.asp,H); m.userData.slot=i%N0; root.add(m); meshes.push(m); } // opaque → depth-correct under rotation
     const L=P.loop||(n*1.0);                           // ~1s per diagonal step → matches the scrollers' pace
     return { loopSeconds:L,
       update(T){
@@ -1098,7 +1165,7 @@ const SCENES = {
         for(let i=0;i<n;i++){
           let pw=(((i-adv)%n)+n)%n;                     // wraps off-screen at the corners
           meshes[i].position.set((pw-n/2)*stepX,-(pw-n/2)*stepY,0);
-          meshes[i].renderOrder=Math.round((n-pw)*4);   // newer (top-left) cards in front
+          meshes[i].renderOrder=Math.round((n-pw)*4);   // newer (top-left) cards drawn on top (painter's order)
         }
       } };
   },
@@ -1109,20 +1176,20 @@ const SCENES = {
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
     const cols=P.cols||(N>=4?3:2);
-    const gap=fr.w*0.012*(P.gap||1);
+    const gap=fr.w*0.02*(state.spacing||1)*(P.gap||1);   // spacing slider controls the gap between columns
     const cw=(fr.w-gap*(cols+1))/cols;
     const cardH=cw/(P.cellAsp||0.74), ch=cardH+gap;      // row pitch incl gap
-    const perCol=Math.ceil(fr.h/ch)+2;                   // buffer so wrap is off-screen
+    const perCol=Math.ceil(fr.h/ch)+5;                   // deep buffer so the wrap stays hidden even when tilted
     const span=perCol*ch;
     const meshes=[]; let slot=0;
-    for(let c=0;c<cols;c++){
-      const x=-fr.w/2+gap+cw/2+c*(cw+gap), dir=(c%2===0)?1:-1;
+    for(let c=-2;c<=cols+1;c++){                        // two extra columns each side (off-screen) → tilt never bares a corner
+      const x=-fr.w/2+gap+cw/2+c*(cw+gap), dir=(((c%2)+2)%2===0)?1:-1;
       for(let j=0;j<perCol;j++){
-        const m=plane(texAt(slot,cw/cardH),cw,cardH,true); m.userData={slot,x,y0:j*ch,dir};
+        const m=plane(texAt(slot,cw/cardH),cw,cardH); m.userData={slot,x,y0:j*ch,dir}; m.renderOrder=slot; // stable draw order (coplanar)
         m.position.x=x; root.add(m); meshes.push(m); slot++;
       }
     }
-    const L=P.loop||(perCol*(P.sec||1.4));             // ~1.4s per cell-pitch → uniform pace across the column presets
+    const L=P.loop||(perCol*(P.sec||1.5));             // ~1.5s per cell-pitch → uniform pace across the column presets
     return { loopSeconds:L,
       update(T){
         const t=(((T/L)%1)+1)%1;
@@ -1139,20 +1206,20 @@ const SCENES = {
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
     const rows=P.rows||(N>=4?3:2);
-    const gap=fr.h*0.018*(P.gap||1);
+    const gap=fr.h*0.025*(state.spacing||1)*(P.gap||1); // spacing slider controls the gap between rows
     const rh=(fr.h-gap*(rows+1))/rows;
     const cardW=rh*(P.cellAsp||1.3), cwp=cardW+gap;       // column pitch incl gap
-    const perRow=Math.ceil(fr.w/cwp)+2;
+    const perRow=Math.ceil(fr.w/cwp)+5;                   // deep buffer so the wrap stays hidden even when tilted
     const span=perRow*cwp;
     const meshes=[]; let slot=0;
-    for(let r=0;r<rows;r++){
-      const y=fr.h/2-gap-rh/2-r*(rh+gap), dir=(r%2===0)?-1:1;
+    for(let r=-2;r<=rows+1;r++){                        // two extra rows above & below (off-screen) → tilt never bares a corner
+      const y=fr.h/2-gap-rh/2-r*(rh+gap), dir=(((r%2)+2)%2===0)?-1:1;
       for(let j=0;j<perRow;j++){
-        const m=plane(texAt(slot,cardW/rh),cardW,rh,true); m.userData={slot,y,x0:j*cwp,dir};
+        const m=plane(texAt(slot,cardW/rh),cardW,rh); m.userData={slot,y,x0:j*cwp,dir}; m.renderOrder=slot; // stable draw order (coplanar)
         m.position.y=y; root.add(m); meshes.push(m); slot++;
       }
     }
-    const L=P.loop||(perRow*(P.sec||1.4));             // same per-cell pace as Scroll Columns
+    const L=P.loop||(perRow*(P.sec||1.5));             // same per-cell pace as Scroll Columns
     return { loopSeconds:L,
       update(T){
         const t=(((T/L)%1)+1)%1;
@@ -1168,25 +1235,25 @@ const SCENES = {
     const N=sourceList().length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const cols=P.cols||3, rows=P.rows||3;
-    const gap=Math.min(fr.w,fr.h)*0.018*(P.gap||1);
+    const cols=P.cols||3, rows=P.rows||3, M=2;            // M extra cell-ranks beyond every edge → off-screen buffer
+    const gap=Math.min(fr.w,fr.h)*0.025*(state.spacing||1)*(P.gap||1); // spacing slider controls the gap between cells
     const cw=fr.w/cols, ch=fr.h/rows;
-    const spanX=cols*cw, spanY=rows*ch;
+    const GC=cols+2*M, GR=rows+2*M;
+    const spanX=GC*cw, spanY=GR*ch;                       // toroidal period spans the whole extended grid
     const cardW=cw-gap, cardH=ch-gap, asp=cardW/cardH;
-    const GC=cols+1, GR=rows+1;                           // one extra rank so the drift never bares an edge
     const meshes=[]; let slot=0;
     for(let r=0;r<GR;r++) for(let c=0;c<GC;c++){
-      const m=plane(texAt(slot,asp),cardW,cardH,true); m.userData={slot,bx:c*cw,by:r*ch};
+      const m=plane(texAt(slot,asp),cardW,cardH); m.userData={slot,bx:c*cw,by:r*ch}; m.renderOrder=slot; // stable draw order (coplanar)
       root.add(m); meshes.push(m); slot++;
     }
-    const L=P.loop||(cols*(P.sec||1.8)), dx=(P.dx==null?1:P.dx), dy=(P.dy==null?1:P.dy);
+    const L=P.loop||(GC*(P.sec||1.6)), dx=(P.dx==null?1:P.dx), dy=(P.dy==null?1:P.dy);
     return { loopSeconds:L,
       update(T){
         const t=(((T/L)%1)+1)%1;
         meshes.forEach(m=>{ const d=m.userData;
           let x=(d.bx+t*spanX*dx*state.dir)%spanX; if(x<0)x+=spanX;
           let y=(d.by+t*spanY*dy*state.dir)%spanY; if(y<0)y+=spanY;
-          m.position.set(x-spanX/2, y-spanY/2, 0);
+          m.position.set(x-spanX/2, y-spanY/2, 0);        // wraps now happen M cells off-screen, hidden even when tilted
         });
       } };
   },
@@ -1195,42 +1262,42 @@ const SCENES = {
 /* ================= templates, grouped like the arqe catalog ================= */
 const TEMPLATES = [
   {cat:'Carousels 3D'},
-  {id:'carousel',     name:'Carousel Slide',        scene:'ring',         ease:'Soft In-Out',    P:{dur:1.15, hold:.45, drift:.05, corner:0, axis:'y', tiltX:7,  step:'card', minN:8, chord:1.9}},
-  {id:'wheel',        name:'Vertical Wheel',        scene:'ring',         ease:'Soft In-Out',    P:{dur:1.3,  hold:.4,  drift:.05, corner:0, axis:'x', step:'card', minN:6, chord:2.2}},
-  {id:'tilted-ring',  name:'Tilted Ring',           scene:'ring',         ease:'Linear',         P:{dur:14,   hold:0,   drift:0,   corner:0, axis:'y', tiltX:14, tiltZ:16, step:'full', minN:9, chord:1.9, sizeMul:.85}},
+  {id:'carousel',     name:'Carousel Slide',        scene:'ring',         ease:'Soft In-Out',    noRot:true, P:{dur:1.0,  hold:.5,  drift:.05, corner:0, axis:'y', tiltX:7,  step:'card', minN:8, chord:1.9}},
+  {id:'wheel',        name:'Vertical Wheel',        scene:'ring',         ease:'Soft In-Out',    noRot:true, P:{dur:1.0,  hold:.5,  drift:.05, corner:0, axis:'x', step:'card', minN:6, chord:2.2}},
+  {id:'tilted-ring',  name:'Tilted Ring',           scene:'ring',         ease:'Linear',         noRot:true, P:{dur:13.5, hold:0,   drift:0,   corner:0, axis:'y', tiltX:14, tiltZ:16, step:'full', minN:9, chord:1.9, sizeMul:.85}},
   {cat:'Cards'},
-  {id:'stack-reveal', name:'Smooth Stack Reveal',   scene:'stackReveal',  ease:'Smooth Out',     P:{dur:1.0,  hold:.65, corner:2.5}},
-  {id:'shuffle',      name:'Shuffle Cards',         scene:'shuffleCards', ease:'Elastic Soft',   P:{dur:.95,  hold:.55, corner:2.5}},
-  {id:'stack-feed',   name:'Stack Feed',            scene:'stackFeed',    ease:'Smooth Out',     P:{dur:1.0,  hold:.7,  corner:2}},
+  {id:'stack-reveal', name:'Smooth Stack Reveal',   scene:'stackReveal',  ease:'Soft In-Out',    P:{dur:1.2,  hold:.35, corner:2.5}},
+  {id:'shuffle',      name:'Shuffle Cards',         scene:'shuffleCards', ease:'Elastic Soft',   P:{dur:1.0,  hold:.5,  corner:2.5}},
+  {id:'stack-feed',   name:'Stack Feed',            scene:'stackFeed',    ease:'Smooth Out',     P:{dur:1.0,  hold:.5,  corner:2}},
   {id:'diag-cascade', name:'Diagonal Cascade',      scene:'diagCascade',  ease:'Linear',         P:{corner:2}},
-  {id:'wreath',       name:'Card Wreath',           scene:'wreath',       ease:'Linear',         P:{loop:24,  corner:1.5, minN:12}},
-  {id:'floating',     name:'Floating Cards',        scene:'floating',     ease:'Linear',         P:{loop:10,  corner:1.5}},
-  {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Slow Cinematic', P:{dur:.8,   hold:2.4, corner:1.5}},
+  {id:'wreath',       name:'Card Wreath',           scene:'wreath',       ease:'Linear',         P:{loop:18,  corner:1.5, minN:12}},
+  {id:'floating',     name:'Floating Cards',        scene:'floating',     ease:'Linear',         noRot:true, P:{loop:9,   corner:1.5}},
+  {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Slow Cinematic', noRot:true, P:{dur:.8,   hold:2.4, corner:1.5}},
   {cat:'Raw & Columns'},
   {id:'scroll-cols',  name:'Scroll Columns',        scene:'scrollCols',   ease:'Linear',         P:{corner:2, cols:3, cellAsp:0.74}},
   {id:'marquee-rows', name:'Marquee Rows',          scene:'scrollRows',   ease:'Linear',         P:{corner:2, rows:3, cellAsp:1.3}},
   {id:'grid-drift',   name:'Drifting Wall',         scene:'gridDrift',    ease:'Linear',         P:{corner:2, cols:3, rows:3, dx:1, dy:1}},
   {cat:'Walls & Strips'},
-  {id:'filmstrip',    name:'Horizontal Filmstrip',  scene:'filmstrip',    ease:'Soft In-Out',    P:{dur:1.2,  hold:.35, drift:.04, corner:1.5}},
-  {id:'v-scroll',     name:'Vertical Scroll',       scene:'vScroll',      ease:'Smooth Out',     P:{dur:1.1,  hold:.5,  drift:.06, corner:0}},
+  {id:'filmstrip',    name:'Horizontal Filmstrip',  scene:'filmstrip',    ease:'Soft In-Out',    P:{dur:1.0,  hold:.5,  drift:.04, corner:1.5}},
+  {id:'v-scroll',     name:'Vertical Scroll',       scene:'vScroll',      ease:'Smooth Out',     P:{dur:1.0,  hold:.5,  drift:.06, corner:0}},
   {id:'grid-pop',     name:'Grid Pop',              scene:'gridPop',      ease:'Snappy Pop',     P:{dur:.55,  hold:1.7, corner:2}},
-  {id:'marquee',      name:'Marquee Lanes',         scene:'marquee',      ease:'Linear',         P:{dur:14,   hold:0,   corner:1, tiltZ:-6}},
+  {id:'marquee',      name:'Marquee Lanes',         scene:'marquee',      ease:'Linear',         P:{dur:13.5, hold:0,   corner:1, tiltZ:-6}},
   {cat:'Space'},
-  {id:'field',        name:'Field Flight',          scene:'field',        ease:'Soft In-Out',    spacing:0.5, P:{dur:1.3,  hold:.2,  drift:.35, corner:0, minN:18}},
+  {id:'field',        name:'Field Flight',          scene:'field',        ease:'Soft In-Out',    noRot:true, spacing:0.5, P:{dur:1.3,  hold:.2,  drift:.35, corner:0, minN:18}},
   {id:'spiral',       name:'Spiral Vortex',         scene:'spiral',       ease:'Linear',         P:{corner:1.5, turns:2.2, minN:12}},
-  {id:'globe',        name:'Globe',                 scene:'globe',        ease:'Linear',         P:{dur:9,    hold:0,   corner:1, minN:24}},
+  {id:'globe',        name:'Globe',                 scene:'globe',        ease:'Linear',         noRot:true, P:{dur:9,    hold:0,   corner:1, minN:24}},
   {cat:'Cuts'},
-  {id:'zoom-gallery', name:'Zoom Gallery',          scene:'zoomGallery',  ease:'Slow Cinematic', P:{dur:.9,   hold:2.1, corner:0}},
-  {id:'flicker',      name:'Flicker',               scene:'flicker',      ease:'Fast Reveal',    P:{dur:.34,  hold:.12, corner:0}},
+  {id:'zoom-gallery', name:'Zoom Gallery',          scene:'zoomGallery',  ease:'Slow Cinematic', noRot:true, P:{dur:.9,   hold:2.1, corner:0}},
+  {id:'flicker',      name:'Flicker',               scene:'flicker',      ease:'Fast Reveal',    noRot:true, P:{dur:.34,  hold:.12, corner:0}},
 ];
 
 /* ================= state ================= */
 const RATIOS={'3:4':[3,4],'9:16':[9,16],'1:1':[1,1],'4:3':[4,3],'16:9':[16,9]};
 const state={
   template:null, P:{}, ease:'Soft In-Out', bez:[.76,0,.24,1], easeFn:null,
-  dir:1, bg:'#0d0d0d', transparent:false, ratio:'3:4',
-  playing:true, grain:true, speed:1, size:1,
-  spacing:1, rotY:0, rotX:0, fade:0,
+  dir:1, bg:'#0d0d0d', bg2:'#2a1a5c', fillMode:'solid', transparent:false, ratio:'3:4',
+  playing:true, grain:false, speed:1, size:1,
+  spacing:1, rotY:0, rotX:0, fade:0, exportRes:'2k', dark:false,
 };
 let active=null, animTime=0;
 let exporting=false, exportCancelled=false;
@@ -1250,12 +1317,17 @@ function cardCentroid(){
   forEachCard(o=>{ if(o.visible){ o.getWorldPosition(_wp); cx+=_wp.x; cy+=_wp.y; cz+=_wp.z; n++; } });
   return n?_pivot.set(cx/n,cy/n,cz/n):null;
 }
+// The rotation pivot is cached ONCE per template. Recomputing the live centroid every frame
+// made the whole composition jolt whenever a card wrapped/teleported (scrollers, marquees,
+// filmstrip…) — the mean position jumps discretely on each wrap. A fixed pivot kills that jump.
+let _rotPivot=null;
+function invalidateRotPivot(){ _rotPivot=null; }
 function applyUserRot(){
   userPivot.matrix.identity(); userPivot.matrixWorldNeedsUpdate=true;
   if(!state.rotY && !state.rotX) return;
   MAIN_SCENE.updateMatrixWorld(true);
-  if(!cardCentroid()) return;                          // pivot = centroid of the cards
-  const C=_pivot.clone();
+  if(!_rotPivot){ if(!cardCentroid()) return; _rotPivot=_pivot.clone(); } // capture a stable pivot once
+  const C=_rotPivot;
   _quat.setFromEuler(_euler.set(THREE.MathUtils.degToRad(state.rotX),THREE.MathUtils.degToRad(state.rotY),0,'YXZ'));
   _mr.makeRotationFromQuaternion(_quat);
   _mt.makeTranslation(C.x,C.y,C.z); _mti.makeTranslation(-C.x,-C.y,-C.z);
@@ -1266,33 +1338,68 @@ function applyUserRot(){
   MAIN_CAMERA.updateMatrixWorld();
 }
 
+/* the colour far cards melt toward: solid bg, or the blend of the two gradient stops */
+function bgFadeColor(){
+  if(state.fillMode==='gradient'){
+    const a=hex01(state.bg), b=hex01(state.bg2);
+    return [(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2];
+  }
+  return hex01(state.bg);
+}
 /* push background colour + corner radius into every card shader */
 function refreshCardUniforms(){
-  curBg=hex01(state.bg);
+  curBg=bgFadeColor();
   cornerNorm=Math.min(0.5,(state.P.corner||0)/12*0.45);
   forEachCard(o=>{
     o.material.uniforms.bgColor.value.set(curBg[0],curBg[1],curBg[2]);
     o.material.uniforms.cornerRadius.value=cornerNorm;
   });
 }
+/* gradient background → a vertical CanvasTexture (so it's captured by the export too) */
+let _gradTex=null;
+function gradientTexture(){
+  const c=document.createElement('canvas'); c.width=4; c.height=256;
+  const x=c.getContext('2d'); const g=x.createLinearGradient(0,0,0,256);
+  g.addColorStop(0,state.bg2); g.addColorStop(1,state.bg);   // top = colour 2, bottom = colour 1
+  x.fillStyle=g; x.fillRect(0,0,4,256);
+  if(_gradTex) _gradTex.dispose();
+  _gradTex=new THREE.CanvasTexture(c); _gradTex.colorSpace=THREE.SRGBColorSpace;
+  return _gradTex;
+}
+/* apply the chosen background to the live scene + sync the card fade colour */
+function applyBackground(){
+  if(state.transparent){ scene.background=null; }
+  else if(state.fillMode==='gradient'){ scene.background=gradientTexture(); }
+  else { scene.background=new THREE.Color(state.bg); }
+  refreshCardUniforms();
+}
 /* arqe-style depth fade: far cards melt toward the background colour.
    The slider scales the AMOUNT (mix from no-fade), so it ramps in smoothly from 0
    instead of snapping the far card straight to the background. The power curve only
    shapes how the fade is distributed by depth. */
-const _fadeVec=new THREE.Vector3();
+const _fadeVec=new THREE.Vector3(), _fadeFwd=new THREE.Vector3();
 function applyDepthFade(){
   const f=state.fade;
   if(f<=0){ forEachCard(o=>{ o.material.uniforms.uFade.value=1; }); return; }
   const cards=[];
   forEachCard(o=>{ if(o.visible) cards.push(o); });
   if(!cards.length) return;
+  // Use depth ALONG the camera's view axis (how far into the screen a card sits), not raw
+  // euclidean distance. A flat layout (grids/scrollers) is one depth plane → ~no fade, so it
+  // never gets the odd radial vignette; only genuinely 3D scenes (carousel/globe/field) fade.
+  camera.getWorldDirection(_fadeFwd);
   let near=Infinity, far=-Infinity; const ds=[];
-  for(const o of cards){ o.getWorldPosition(_fadeVec); const d=camera.position.distanceTo(_fadeVec); ds.push(d); if(d<near)near=d; if(d>far)far=d; }
-  const range=Math.max(0.0001, far-near), N=1+f*f*6; // gentler curve growth so the whole range is smooth
+  for(const o of cards){ o.getWorldPosition(_fadeVec); _fadeVec.sub(camera.position); const d=_fadeVec.dot(_fadeFwd); ds.push(d); if(d<near)near=d; if(d>far)far=d; }
+  // Normalize by a MINIMUM depth span (DEPTH_FLOOR world units). Without this, a near-coplanar
+  // layout (grids, scrollers) has a tiny far-near and the division blows sub-pixel depth
+  // differences into random per-card banding on overlaps. The floor makes such layouts read as
+  // ~no fade, while genuinely deep 3D scenes (carousel/globe/field) still get the full gradient.
+  const DEPTH_FLOOR=2.2;
+  const range=Math.max(far-near, DEPTH_FLOOR), N=1+f*f*6;
   for(let i=0;i<cards.length;i++){
-    const t=(ds[i]-near)/range;            // 0 near → 1 far
-    const curve=Math.pow(1-t,N);           // arqe depth shape (1 near → 0 far)
-    cards[i].material.uniforms.uFade.value=1-f*(1-curve); // mix from 1 by the slider amount → no jump at 0
+    const t=clamp01((ds[i]-near)/range);   // 0 near → 1 far (true world depth, stable)
+    const curve=Math.pow(1-t,N);           // near stays clear; only genuinely-far cards melt to bg
+    cards[i].material.uniforms.uFade.value=1-f*(1-curve);
   }
 }
 
@@ -1397,8 +1504,9 @@ function rebuild(resetTime=false){
     });
   }
   root.rotation.set(0,0,0);
-  scene.background=state.transparent?null:new THREE.Color(state.bg);
-  curBg=hex01(state.bg); cornerNorm=Math.min(0.5,(state.P.corner||0)/12*0.45); // ready before cards are built
+  invalidateRotPivot();                                  // re-capture the rotation pivot for the new layout
+  scene.background=state.transparent?null:(state.fillMode==='gradient'?gradientTexture():new THREE.Color(state.bg));
+  curBg=bgFadeColor(); cornerNorm=Math.min(0.5,(state.P.corner||0)/12*0.45); // ready before cards are built
   active=SCENES[state.template.scene](state.P);
   if(resetTime) animTime=0;
   updateLoopInfo();
@@ -1450,6 +1558,10 @@ function applyTemplate(t){
   $('spacing').value=state.spacing; $('spacingVal').textContent='×'+state.spacing.toFixed(2);
   $('corner').value=state.P.corner??0;
   $('cornerVal').textContent=(state.P.corner??0).toFixed(1);
+  // rotation only makes sense for flat poster layouts — hide it (and zero it) where the engine
+  // drives its own camera / is inherently 3D / is a single full-frame card.
+  if(t.noRot){ state.rotY=0; state.rotX=0; $('rotY').value=0; $('rotYVal').textContent='0°'; $('rotX').value=0; $('rotXVal').textContent='0°'; }
+  $('rotGroup').style.display=t.noRot?'none':'';
   rebuild(true);
   document.querySelectorAll('#tpls .pv').forEach(c=>c.classList.toggle('active',c.dataset.id===t.id));
 }
@@ -1516,23 +1628,41 @@ function buildPreviews(){
     let api=null; try{ api=SCENES[t.scene]({...t.P}); }catch(err){ console.warn('preview',t.id,err); }
     const el=document.getElementById('pv-'+t.id);
     const pv={scene:sc, camera:cam, root:rt, api, ease:ef, loop:api?api.loopSeconds:1,
-              el, ctx:el?el.getContext('2d'):null, onScreen:true};
+              el, ctx:el?el.getContext('2d'):null, onScreen:true, hover:false, clock:0};
     previews.push(pv);
-    if(el && pvObserver) pvObserver.observe(el);
+    if(el){
+      // render one representative still so the thumbnail isn't blank; motion only plays on hover
+      if(api && pv.ctx){ try{ api.update(pv.loop*0.22); }catch(e){} pvRenderer.render(sc,cam); pv.ctx.drawImage(pvRenderer.domElement,0,0,el.width,el.height); }
+      const card=el.closest('.pv')||el;
+      card.addEventListener('pointerenter',()=>{ pv.hover=true; pv.clock=0; });
+      card.addEventListener('pointerleave',()=>{ pv.hover=false; pvDrawStill(pv); });
+      if(pvObserver) pvObserver.observe(el);
+    }
   }
+  root=sR; camera=sC; scene=sS; state.easeFn=sE; state.size=sSize; state.dir=sDir; previewMode=false;
+}
+// draw a single still frame for one preview (used on hover-out so it settles, not freezes mid-motion)
+function pvDrawStill(pv){
+  if(!pv.api||!pv.ctx) return;
+  const sR=root,sC=camera,sS=scene,sE=state.easeFn,sSize=state.size,sDir=state.dir;
+  previewMode=true; state.size=1; state.dir=1;
+  root=pv.root; camera=pv.camera; scene=pv.scene; state.easeFn=pv.ease;
+  try{ pv.api.update(pv.loop*0.22); }catch(e){}
+  pvRenderer.render(pv.scene,pv.camera); pv.ctx.drawImage(pvRenderer.domElement,0,0,pv.el.width,pv.el.height);
   root=sR; camera=sC; scene=sS; state.easeFn=sE; state.size=sSize; state.dir=sDir; previewMode=false;
 }
 let pvAccum=0;
 function tickPreviews(dt){
   pvClock+=dt;
-  pvAccum+=dt; if(pvAccum<1/30) return; pvAccum=0; // previews run at ~30fps
+  pvAccum+=dt; if(pvAccum<1/30) return; const fdt=pvAccum; pvAccum=0; // previews run at ~30fps
   const sR=root,sC=camera,sS=scene,sE=state.easeFn,sSize=state.size,sDir=state.dir;
   previewMode=true; state.size=1; state.dir=1;
   try{
     for(const pv of previews){
-      if(!pv.api||!pv.ctx||!pv.onScreen) continue;
+      if(!pv.api||!pv.ctx||!pv.onScreen||!pv.hover) continue; // only the hovered preview animates → no мельтешение
+      pv.clock+=fdt;
       root=pv.root; camera=pv.camera; scene=pv.scene; state.easeFn=pv.ease;
-      try{ pv.api.update(pvClock % pv.loop); }catch(err){}
+      try{ pv.api.update(pv.clock % pv.loop); }catch(err){}
       pvRenderer.render(pv.scene,pv.camera);
       pv.ctx.drawImage(pvRenderer.domElement,0,0,pv.el.width,pv.el.height);
     }
@@ -1571,6 +1701,28 @@ requestAnimationFrame(tickFrame);
 
 /* ================= export ================= */
 function fileName(ext){ return `wannathis-${state.template.id}-${state.ratio.replace(':','x')}.${ext}`; }
+/* Export resolution is decoupled from the (small) on-screen canvas. Preview stays at 1K;
+   export renders the chosen long-side (1K=1080 / 2K=2160) and SUPERSAMPLES (render larger,
+   then downscale) so card edges, rounded corners and the photos come out crisp, not pixelated.
+   The supersampled render is capped (~3000px long) so 2K square exports stay within GPU limits. */
+const EXPORT_LONGS={'1k':1080,'2k':2160}, RENDER_CAP=3000;
+function exportDims(){
+  const [rw,rh]=RATIOS[state.ratio];
+  const long=EXPORT_LONGS[state.exportRes]||1080;
+  let W=rw>=rh?long:Math.round(long*rw/rh);
+  let H=rw>=rh?Math.round(long*rh/rw):long;
+  W&=~1; H&=~1;                                         // H.264 needs even dimensions
+  const ss=Math.min(2, RENDER_CAP/long);               // 1K→2×, 2K→~1.39× (render ≤ RENDER_CAP)
+  const RW=(Math.round(W*ss))&~1, RH=(Math.round(H*ss))&~1;
+  return {W,H,RW,RH};
+}
+function beginHiRes(W,H,RW,RH){                          // switch renderer to the supersampled export size
+  renderer.setSize(RW,RH,false);
+  camera.aspect=W/H; camera.updateProjectionMatrix();
+  const ds=document.createElement('canvas'); ds.width=W; ds.height=H;
+  const dx=ds.getContext('2d'); dx.imageSmoothingEnabled=true; dx.imageSmoothingQuality='high';
+  return {ds,dx};
+}
 function downloadBlob(blob,name){
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
@@ -1612,7 +1764,10 @@ async function exportMP4(){
   let encoder=null;
   try{
     const {Muxer,ArrayBufferTarget}=await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5/+esm');
-    const cv=renderer.domElement, W=cv.width, H=cv.height, fps=30;
+    const cv=renderer.domElement, fps=30;
+    const {W,H,RW,RH}=exportDims();                     // 1K/2K output, supersampled render
+    const {ds,dx}=beginHiRes(W,H,RW,RH);
+    const bitrate=Math.min(60_000_000, Math.round(W*H*fps*0.28)); // scale bitrate to resolution
     const loopReal=active.loopSeconds/state.speed;
     if(loopReal>30) toast('Loop is longer than 30 s — export is trimmed to 30 s.');
     const totalFrames=Math.max(fps,Math.min(Math.round(loopReal*fps),fps*30));
@@ -1627,8 +1782,9 @@ async function exportMP4(){
       error:e=>{ encErr=e; },
     });
     let cfg=null;
-    for(const codec of ['avc1.640028','avc1.4d0028','avc1.42e01f']){
-      const c={codec,width:W,height:H,bitrate:10_000_000,framerate:fps};
+    // include High-profile levels 5.2/5.1/5.0 first so 2K frames (which exceed level-4.0 limits) are accepted
+    for(const codec of ['avc1.640034','avc1.640033','avc1.640032','avc1.640028','avc1.4d0034','avc1.42e01f']){
+      const c={codec,width:W,height:H,bitrate,framerate:fps};
       const s=await VideoEncoder.isConfigSupported(c).catch(()=>null);
       if(s?.supported){ cfg=c; break; }
     }
@@ -1638,7 +1794,8 @@ async function exportMP4(){
       if(exportCancelled||encErr) break;
       animTime=i*state.speed/fps;
       renderFrame();
-      const vf=new VideoFrame(cv,{timestamp:Math.round(i*1e6/fps),duration:Math.round(1e6/fps)});
+      dx.clearRect(0,0,W,H); dx.drawImage(cv,0,0,W,H);  // supersample → downscale for clean edges
+      const vf=new VideoFrame(ds,{timestamp:Math.round(i*1e6/fps),duration:Math.round(1e6/fps)});
       encoder.encode(vf,{keyFrame:i%(fps*2)===0});
       vf.close();
       while(encoder.encodeQueueSize>8) await yieldTask();
@@ -1665,6 +1822,7 @@ async function exportMP4(){
     if(wasTransparent) scene.background=null;
     animTime=prevT; state.playing=prevPlay;
     exporting=false; exportingUI(false);
+    resize();                                           // restore on-screen canvas + camera aspect
   }
 }
 
@@ -1693,12 +1851,16 @@ function exportWebM(){ // fallback for browsers without WebCodecs: realtime capt
 
 function exportPNG(){
   if(!active||exporting) return;
+  const cv=renderer.domElement, {W,H,RW,RH}=exportDims();
+  const {ds,dx}=beginHiRes(W,H,RW,RH);                  // full-HD supersampled still
   renderFrame();
-  renderer.domElement.toBlob(b=>{
+  dx.drawImage(cv,0,0,W,H);                             // snapshot into the 2D canvas (independent of renderer)
+  ds.toBlob(b=>{
     downloadBlob(b,fileName('png'));
     window.__app.lastExport={type:'png',size:b.size};
     toast('PNG frame saved.');
   },'image/png');
+  resize();                                             // restore on-screen canvas immediately (ds already holds the pixels)
 }
 $('mp4Btn').addEventListener('click',exportMP4);
 $('pngBtn').addEventListener('click',exportPNG);
@@ -1729,19 +1891,35 @@ function bindSeg(id,fn){
 }
 bindSeg('dirSeg',v=>{ state.dir=parseInt(v); });
 bindSeg('grainSeg',v=>{ state.grain=v==='on'; });
+bindSeg('resSeg',v=>{ state.exportRes=v; });
 bindSeg('bgSeg',v=>{
   state.transparent=v==='transparent';
-  $('bgColor').style.display=state.transparent?'none':'';
+  $('bgFill').style.display=state.transparent?'none':'';
   $('bgHint').style.display=state.transparent?'':'none';
   stage.classList.toggle('checker',state.transparent);
-  scene.background=state.transparent?null:new THREE.Color(state.bg);
-  refreshCardUniforms();
+  applyBackground();
 });
-$('bgColor').addEventListener('input',e=>{
-  state.bg=e.target.value;
-  if(!state.transparent) scene.background=new THREE.Color(state.bg);
-  refreshCardUniforms();
+bindSeg('fillSeg',v=>{
+  state.fillMode=v;
+  $('bgField2').style.display=v==='gradient'?'flex':'none';
+  applyBackground();
 });
+/* classic colour control: swatch opens the native picker, hex field accepts typing; both stay in sync */
+function isHex(s){ return /^#[0-9a-fA-F]{6}$/.test(s); }
+function wireColor(swatchId,hexId,colorId,key){
+  const sw=$(swatchId), hx=$(hexId), col=$(colorId);
+  const paint=()=>{ sw.style.background=state[key]; hx.value=state[key].toUpperCase(); col.value=state[key].toLowerCase(); };
+  sw.addEventListener('click',()=>col.click());
+  col.addEventListener('input',e=>{ state[key]=e.target.value; paint(); applyBackground(); });
+  hx.addEventListener('input',e=>{ let v=e.target.value.trim(); if(!v.startsWith('#'))v='#'+v; if(isHex(v)){ state[key]=v; sw.style.background=v; col.value=v.toLowerCase(); applyBackground(); } });
+  hx.addEventListener('blur',()=>{ if(!isHex(hx.value)) hx.value=state[key].toUpperCase(); });
+  paint();
+}
+wireColor('bgSwatch','bgHex','bgColor','bg');
+wireColor('bgSwatch2','bgHex2','bgColor2','bg2');
+/* dark theme toggle */
+function applyTheme(){ document.body.classList.toggle('dark',state.dark); const t=$('themeToggle'); t.classList.toggle('on',state.dark); t.setAttribute('aria-checked',state.dark?'true':'false'); }
+$('themeToggle').addEventListener('click',()=>{ state.dark=!state.dark; applyTheme(); });
 $('ratios').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
   if(exporting) return;
   $('ratios').querySelectorAll('button').forEach(x=>x.classList.remove('active'));
@@ -1791,7 +1969,8 @@ function updateTimeline(){
   const loop=active.loopSeconds, t=((animTime%loop)+loop)%loop, f=loop>0?t/loop:0;
   $('tlFill').style.width=(f*100)+'%';
   $('tlHead').style.left=(f*100)+'%';
-  $('tlTime').textContent=`${t.toFixed(1)} / ${loop.toFixed(1)}s`;
+  const sp=state.speed||1; // playback time = engine time / speed → reflects the real video duration
+  $('tlTime').textContent=`${(t/sp).toFixed(1)} / ${(loop/sp).toFixed(1)}s`;
 }
 let scrubbing=false;
 function scrubTo(e){
