@@ -1080,17 +1080,19 @@ const SCENES = {
     const n=N0>=minN?N0:N0*Math.ceil(minN/N0);
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5), D=Math.min(fr.w,fr.h);
-    const Rmax=D*0.5, Rmin=D*0.1, turns=P.turns||2.0;   // shorter shrink range → cards stay big & legible
+    const Rmax=D*0.5, Rmin=D*0.1, turns=P.turns||1.6;   // fewer turns → calmer, less dizzying
     const entries=[]; let maxAsp=0.5;
     for(let i=0;i<n;i++){ const e=entryForSlot(i); entries.push(e); maxAsp=Math.max(maxAsp,e.asp); }
     // self-similar: card height ∝ its radius; size set so the spiral arms never collide
     const sizeK=Math.min(0.78, 1.85/(turns*Math.max(maxAsp,1)))*(state.spacing||1);
     const meshes=[];
     for(let i=0;i<n;i++){ const m=plane(entries[i].tex,entries[i].asp,1,true); m.userData={slot:i}; root.add(m); meshes.push(m); }
-    const L=P.loop||(n*0.9);                            // ~0.9s per card slot → calm, matches the other loops
+    const L=P.loop||(n*1.5), dr=P.drift||0;             // slower, calmer vortex; drift keeps eased motion flowing
     return { loopSeconds:L,
       update(T){
-        const base=(T/L)*state.dir;
+        const frac=(((T/L)%1)+1)%1, k=Math.floor(T/L); // easing shapes the per-loop progress (drift = constant floor)
+        const eased=k+state.easeFn(frac);
+        const base=(dr? eased*(1-dr)+(T/L)*dr : eased)*state.dir;
         for(let i=0;i<n;i++){
           let p=((i/n+base)%1+1)%1;                     // 0 rim → 1 core, wraps seamlessly
           const r=Rmax*Math.pow(Rmin/Rmax,p);           // exponential shrink = log spiral
@@ -1121,10 +1123,12 @@ const SCENES = {
     const H=Math.max(0.07, Math.min(fitDim,gapDim)/diagF);
     const meshes=[], baseA=[];
     for(let i=0;i<n;i++){ const m=plane(entries[i].tex,H*entries[i].asp,H,true); m.userData.slot=i; const a=i/n*Math.PI*2; baseA.push(a); m.position.set(Math.sin(a)*R,Math.cos(a)*R,0); m.rotation.z=tilt[i]; m.renderOrder=i; root.add(m); meshes.push(m); }
-    const L=P.loop||20;
+    const L=P.loop||20, dr=P.drift||0;
     return { loopSeconds:L,
       update(T){
-        const spin=((T/L)%1)*Math.PI*2*state.dir;       // the ring revolves; each card keeps its fixed tilt (no self-spin)
+        const frac=(((T/L)%1)+1)%1, k=Math.floor(T/L);  // easing shapes the revolution (drift = constant floor)
+        const prog=dr? (k+state.easeFn(frac))*(1-dr)+(T/L)*dr : k+state.easeFn(frac);
+        const spin=prog*Math.PI*2*state.dir;             // the ring revolves; each card keeps its fixed tilt (no self-spin)
         for(let i=0;i<n;i++){ const a=baseA[i]+spin; meshes[i].position.set(Math.sin(a)*R,Math.cos(a)*R,0); }
       } };
   },
@@ -1270,13 +1274,13 @@ const TEMPLATES = [
   {cat:'Carousels 3D'},
   {id:'carousel',     name:'Carousel Slide',        scene:'ring',         ease:'Smooth',   noRot:true, P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'y', tiltX:7,  step:'card', minN:8, chord:1.9}},
   {id:'wheel',        name:'Vertical Wheel',        scene:'ring',         ease:'Smooth',   noRot:true, P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'x', step:'card', minN:6, chord:2.2}},
-  {id:'tilted-ring',  name:'Tilted Ring',           scene:'ring',         ease:'Linear',   noRot:true, noEase:true, P:{dur:13.5, hold:0,   drift:0,   corner:0, axis:'y', tiltX:14, tiltZ:16, step:'full', minN:9, chord:1.9, sizeMul:.85}},
+  {id:'tilted-ring',  name:'Tilted Ring',           scene:'ring',         ease:'Smooth',   noRot:true, P:{dur:13.5, hold:0,   drift:.3,  corner:0, axis:'y', tiltX:14, tiltZ:16, step:'full', minN:9, chord:1.9, sizeMul:.85}},
   {cat:'Cards'},
   {id:'stack-reveal', name:'Smooth Stack Reveal',   scene:'stackReveal',  ease:'Smooth',   P:{dur:1.2,  hold:.15, corner:2.5}},
   {id:'shuffle',      name:'Shuffle Cards',         scene:'shuffleCards', ease:'Snappy',   P:{dur:1.0,  hold:.18, corner:2.5}},
   {id:'stack-feed',   name:'Stack Feed',            scene:'stackFeed',    ease:'Smooth',   P:{dur:1.4,  hold:0,   drift:.25, corner:2}},
   {id:'diag-cascade', name:'Diagonal Cascade',      scene:'diagCascade',  ease:'Linear',   noEase:true, P:{corner:2}},
-  {id:'wreath',       name:'Card Wreath',           scene:'wreath',       ease:'Linear',   noEase:true, P:{loop:18,  corner:1.5, minN:12}},
+  {id:'wreath',       name:'Card Wreath',           scene:'wreath',       ease:'Smooth',   P:{loop:18,  drift:.3, corner:1.5, minN:12}},
   {id:'floating',     name:'Floating Cards',        scene:'floating',     ease:'Linear',   noRot:true, noEase:true, P:{loop:9,   corner:1.5}},
   {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Slow',     noRot:true, P:{dur:.8,   hold:2.4, corner:1.5}},
   {cat:'Raw & Columns'},
@@ -1289,9 +1293,9 @@ const TEMPLATES = [
   {id:'grid-pop',     name:'Grid Pop',              scene:'gridPop',      ease:'Snappy',   P:{dur:.55,  hold:1.7, corner:2}},
   {id:'marquee',      name:'Marquee Lanes',         scene:'marquee',      ease:'Linear',   noEase:true, P:{dur:13.5, hold:0,   corner:1, tiltZ:-6}},
   {cat:'Space'},
-  {id:'field',        name:'Field Flight',          scene:'field',        ease:'Linear',   noRot:true, noEase:true, spacing:0.5, P:{dur:1.3,  hold:.2,  drift:.35, corner:0, minN:18}},
-  {id:'spiral',       name:'Spiral Vortex',         scene:'spiral',       ease:'Linear',   noEase:true, P:{corner:1.5, turns:2.2, minN:12}},
-  {id:'globe',        name:'Globe',                 scene:'globe',        ease:'Linear',   noRot:true, noEase:true, P:{dur:9,    hold:0,   corner:1, minN:24}},
+  {id:'field',        name:'Field Flight',          scene:'field',        ease:'Smooth',   noRot:true, spacing:0.5, P:{dur:1.3,  hold:.2,  drift:.35, corner:0, minN:18}},
+  {id:'spiral',       name:'Spiral Vortex',         scene:'spiral',       ease:'Smooth',   P:{corner:1.5, turns:1.6, drift:.3, minN:12}},
+  {id:'globe',        name:'Globe',                 scene:'globe',        ease:'Smooth',   noRot:true, P:{dur:9,    hold:0,   drift:.3, corner:1, minN:24}},
   {cat:'Cuts'},
   {id:'zoom-gallery', name:'Zoom Gallery',          scene:'zoomGallery',  ease:'Slow',     noRot:true, P:{dur:.9,   hold:2.1, corner:0}},
   {id:'flicker',      name:'Flicker',               scene:'flicker',      ease:'Ease Out', noRot:true, P:{dur:.34,  hold:.12, corner:0}},
