@@ -488,16 +488,27 @@
       <button class="ddBtn" type="button"><span class="ddVal">MP4 video</span><span class="ddCar">▾</span></button>
       <div class="ddPop">
         <button type="button" data-v="mp4">MP4 video</button>
+        <button type="button" data-v="gif">GIF</button>
         <button type="button" data-v="png">PNG image</button>
         <button type="button" data-v="seq">PNG sequence (ZIP)</button>
       </div>
     </div>
+  </div>
+  <div class="exrow">
     <div class="dd" id="ddQuality" data-value="2k">
       <button class="ddBtn" type="button"><span class="ddVal">2K · 2160</span><span class="ddCar">▾</span></button>
       <div class="ddPop">
         <button type="button" data-v="1k">1K · 1080</button>
         <button type="button" data-v="2k">2K · 2160</button>
         <button type="button" data-v="4k">4K · 3840</button>
+      </div>
+    </div>
+    <div class="dd" id="ddFps" data-value="30">
+      <button class="ddBtn" type="button"><span class="ddVal">30 fps</span><span class="ddCar">▾</span></button>
+      <div class="ddPop">
+        <button type="button" data-v="24">24 fps</button>
+        <button type="button" data-v="30">30 fps</button>
+        <button type="button" data-v="60">60 fps</button>
       </div>
     </div>
   </div>
@@ -1476,7 +1487,7 @@ const TEMPLATES = [
   {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Slow',     P:{dur:.8,   hold:2.4, corner:1.5}},
   {cat:'Raw & Columns'},
   {id:'scroll-cols',  name:'Scroll Columns',        scene:'scrollCols',   ease:'Linear',   noEase:true, P:{corner:2, cols:3, cellAsp:0.74}},
-  {id:'marquee-rows', name:'Marquee Rows',          scene:'scrollRows',   ease:'Linear',   noEase:true, P:{corner:2, rows:3, cellAsp:1.3}},
+  {id:'marquee-rows', name:'Marquee Rows',          scene:'scrollRows',   ease:'Linear',   noEase:true, P:{corner:2, rows:3, cellAsp:0.7}},
   {id:'grid-drift',   name:'Drifting Wall',         scene:'gridDrift',    ease:'Linear',   noEase:true, P:{corner:2, cols:3, rows:3, dx:1, dy:1}},
   {cat:'Walls & Strips'},
   {id:'filmstrip',    name:'Horizontal Filmstrip',  scene:'filmstrip',    ease:'Linear',   noEase:true, P:{dur:1.6, hold:0, drift:1, corner:1.5}},
@@ -1498,7 +1509,7 @@ const state={
   template:null, P:{}, ease:'Smooth', bez:[.76,0,.24,1], easeFn:null,
   dir:1, bg:'#0d0d0d', bg2:'#2a1a5c', fillMode:'solid', transparent:false, ratio:'3:4',
   playing:true, grain:false, speed:1, size:1,
-  spacing:1, rotY:0, rotX:0, fade:0, exportRes:'2k', dark:false, customW:1080, customH:1080, backface:false,
+  spacing:1, rotY:0, rotX:0, fade:0, exportRes:'2k', fps:30, dark:false, customW:1080, customH:1080, backface:false,
 };
 let active=null, animTime=0, builtSpacing=1;
 let exporting=false, exportCancelled=false;
@@ -2006,7 +2017,7 @@ function exportingUI(on){
   $('previews').classList.toggle('locked',on);
   $('settings').classList.toggle('locked',on);
   document.body.classList.toggle('exporting',on);
-  $('exportBtn').disabled=on; $('ddFormat').classList.toggle('disabled',on); $('ddQuality').classList.toggle('disabled',on);
+  $('exportBtn').disabled=on; $('ddFormat').classList.toggle('disabled',on); $('ddQuality').classList.toggle('disabled',on); $('ddFps').classList.toggle('disabled',on);
 }
 function setExportProgress(f,txt){
   $('ebFill').style.width=Math.round(f*100)+'%';
@@ -2030,7 +2041,7 @@ async function exportMP4(){
   let encoder=null;
   try{
     const {Muxer,ArrayBufferTarget}=await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5/+esm');
-    const cv=renderer.domElement, fps=30;
+    const cv=renderer.domElement, fps=state.fps||30;
     const {W,H,RW,RH}=exportDims();                     // 1K/2K output, supersampled render
     const {ds,dx}=beginHiRes(W,H,RW,RH);
     const bitrate=Math.min(60_000_000, Math.round(W*H*fps*0.28)); // scale bitrate to resolution
@@ -2135,7 +2146,7 @@ async function exportPNGSequence(){
   const prevT=animTime, prevPlay=state.playing; state.playing=false;
   try{
     const {zipSync}=await import('https://cdn.jsdelivr.net/npm/fflate@0.8.2/+esm');
-    const cv=renderer.domElement, fps=30;
+    const cv=renderer.domElement, fps=state.fps||30;
     const {W,H,RW,RH}=exportDims();
     const {ds,dx}=beginHiRes(W,H,RW,RH);
     const loopReal=active.loopSeconds/state.speed;
@@ -2161,6 +2172,42 @@ async function exportPNGSequence(){
   }catch(err){ console.error('Sequence export failed:',err); toast('Sequence export failed: '+(err.message||err)); }
   finally{ animTime=prevT; state.playing=prevPlay; exporting=false; exportingUI(false); resize(); }
 }
+// Animated GIF export. GIFs balloon fast, so the long side is capped (≤640) and the duration
+// trimmed; the chosen FPS sets the frame delay. Rendered on the background colour (GIF = 256 colours).
+async function exportGIF(){
+  if(exporting||!active) return;
+  exporting=true; exportCancelled=false; setExportUI(true,'Rendering GIF');
+  const prevT=animTime, prevPlay=state.playing; state.playing=false;
+  try{
+    const {GIFEncoder,quantize,applyPalette}=await import('https://cdn.jsdelivr.net/npm/gifenc@1.0.3/+esm');
+    const cv=renderer.domElement, fps=Math.min(state.fps||30,50);
+    let {W,H}=exportDims(); const GCAP=640, s=Math.min(1,GCAP/Math.max(W,H));
+    const gw=(Math.round(W*s))&~1, gh=(Math.round(H*s))&~1, RW=gw*2, RH=gh*2; // x2 supersample → crisp downscale
+    renderer.setSize(RW,RH,false); camera.aspect=gw/gh; camera.updateProjectionMatrix();
+    const ds=document.createElement('canvas'); ds.width=gw; ds.height=gh;
+    const dx=ds.getContext('2d',{willReadFrequently:true}); dx.imageSmoothingEnabled=true; dx.imageSmoothingQuality='high';
+    const loopReal=active.loopSeconds/state.speed;
+    const totalFrames=Math.max(fps,Math.min(Math.round(loopReal*fps),fps*12)); // ≤12 s of GIF
+    const gif=GIFEncoder(), delay=Math.round(1000/fps);
+    for(let i=0;i<totalFrames;i++){
+      if(exportCancelled) break;
+      animTime=i*state.speed/fps; renderFrame();
+      dx.fillStyle=state.bg; dx.fillRect(0,0,gw,gh); dx.drawImage(cv,0,0,gw,gh); // composite on bg (GIF has no smooth alpha)
+      const {data}=dx.getImageData(0,0,gw,gh);
+      const palette=quantize(data,256), index=applyPalette(data,palette);
+      gif.writeFrame(index,gw,gh,{palette,delay});
+      if(i%2===0){ setExportProgress(i/totalFrames,'Rendering GIF'); await yieldTask(); }
+    }
+    if(!exportCancelled){
+      gif.finish();
+      const blob=new Blob([gif.bytes()],{type:'image/gif'});
+      downloadBlob(blob,fileName('gif'));
+      window.__app.lastExport={type:'gif',size:blob.size,frames:totalFrames};
+      toast(`GIF saved — ${gw}×${gh}, ${totalFrames} frames, ${(blob.size/1048576).toFixed(1)} MB`);
+    } else toast('Export cancelled.');
+  }catch(err){ console.error('GIF export failed:',err); toast('GIF export failed: '+(err.message||err)); }
+  finally{ animTime=prevT; state.playing=prevPlay; exporting=false; exportingUI(false); resize(); }
+}
 // custom dropdown component (replaces native <select> so the open menu matches the app)
 function wireDropdown(id, onChange){
   const dd=$(id), btn=dd.querySelector('.ddBtn'), val=dd.querySelector('.ddVal');
@@ -2173,9 +2220,10 @@ function wireDropdown(id, onChange){
 document.addEventListener('click',()=>document.querySelectorAll('.dd.open').forEach(o=>o.classList.remove('open')));
 wireDropdown('ddFormat');
 wireDropdown('ddQuality', v=>{ state.exportRes=v; refreshRatioTooltips(); });
+wireDropdown('ddFps', v=>{ state.fps=parseInt(v)||30; });
 $('exportBtn').addEventListener('click',()=>{
   const fmt=$('ddFormat').dataset.value;
-  if(fmt==='mp4') exportMP4(); else if(fmt==='png') exportPNG(); else if(fmt==='seq') exportPNGSequence();
+  if(fmt==='mp4') exportMP4(); else if(fmt==='gif') exportGIF(); else if(fmt==='png') exportPNG(); else if(fmt==='seq') exportPNGSequence();
 });
 
 /* ================= sizing ================= */
