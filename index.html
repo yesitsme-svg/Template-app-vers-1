@@ -106,7 +106,7 @@
   .pv .pvimg{width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:9px; border:1px solid var(--border); background:#1b1b1d; display:block; transition:border-color .15s,box-shadow .15s;}
   .pv span{font-size:10px; color:var(--muted); text-align:center; line-height:1.2;}
   .pv:hover .pvimg{border-color:#bbb;}
-  .pv.active .pvimg{border-color:var(--dark); box-shadow:0 0 0 2px var(--dark);}
+  .pv.active .pvimg{border-color:var(--accent); box-shadow:0 0 0 2px var(--accent);}
   .pv.active span{color:var(--text); font-weight:500;}
   .disclose{align-self:flex-start; display:inline-flex; align-items:center; gap:6px; background:none; border:none; padding:3px 0; color:var(--muted); font-size:11px; cursor:pointer; font-family:inherit;}
   .disclose:hover{color:var(--text);}
@@ -133,19 +133,24 @@
   #rotGroup.rlocked input[type=range]{opacity:.4; pointer-events:none;}
   #rotGroup.rlocked .slider-row{opacity:.5;}
   #rotGroup.rlocked #rotLockHint{display:block !important;}
+  /* depth fade locked (flat coplanar presets): slider visible but greyed + hint */
+  #fadeGroup.flocked input[type=range]{opacity:.4; pointer-events:none;}
+  #fadeGroup.flocked .slider-row{opacity:.5;}
+  #fadeGroup.flocked #fadeLockHint{display:block !important;}
   .slider-row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
   .slider-row .val{color:var(--muted); font-variant-numeric:tabular-nums; min-width:44px; text-align:right; font-size:11.5px;}
   input[type=range]{-webkit-appearance:none; width:100%; height:3px; background:#e3e2e8; border-radius:2px; outline:none;}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:15px; height:15px; border-radius:50%; background:var(--dark); cursor:pointer; border:2.5px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.25);}
   input[type=color]{width:100%; height:32px; border:1px solid var(--border); border-radius:10px; background:var(--panel2); cursor:pointer; padding:3px 5px;}
   /* block separators so the panel sections read as distinct cards (Figma/Framer style) */
-  #settings > * + *{border-top:1px solid var(--border); padding-top:16px;}
-  #settings > details{padding-top:16px;}
+  /* full-bleed divider lines with generous breathing room above each section */
+  #settings > * + *{border-top:1px solid var(--border); padding-top:24px; margin-top:8px; margin-left:-16px; margin-right:-16px; padding-left:16px; padding-right:16px;}
+  #settings > details{padding-top:24px; margin-top:8px;}
   /* classic color control: clickable swatch + hex field */
   .colorField{display:flex; align-items:center; gap:8px;}
   .colorRow{display:flex; align-items:center; gap:8px;}
   .colorRow .clbl{font-size:11px; color:var(--muted); min-width:14px;}
-  .swatch{width:32px; height:32px; flex:0 0 auto; border-radius:8px; border:1px solid var(--border); cursor:pointer; padding:0; box-shadow:inset 0 0 0 2px var(--panel);}
+  .swatch{width:34px; height:34px; flex:0 0 auto; border-radius:7px; border:1px solid var(--border); cursor:pointer; padding:0;}
   .swatch:hover{border-color:#bbb;}
   .hexInput{flex:1; height:32px; border:1px solid var(--border); border-radius:8px; background:var(--panel2); color:var(--text); font-family:inherit; font-size:12px; padding:0 10px; outline:none; text-transform:uppercase; font-variant-numeric:tabular-nums;}
   .hexInput:focus{border-color:var(--accent);}
@@ -262,7 +267,6 @@
 
 <div id="content">
 <aside id="previews">
-  <h1>WANNATHIS <span>ANIMATOR</span></h1>
   <div class="group">
     <div class="label">Templates</div>
     <div class="pvGrid" id="tpls"></div>
@@ -320,9 +324,10 @@
     <input type="range" id="spacing" min="0.4" max="2.2" step="0.05" value="1">
   </div>
 
-  <div class="group">
+  <div class="group" id="fadeGroup">
     <div class="slider-row"><div class="label">Depth fade</div><div class="val" id="fadeVal">0%</div></div>
     <input type="range" id="fade" min="0" max="100" step="1" value="0">
+    <div class="hint" id="fadeLockHint" style="display:none">Flat layout — all cards sit on one plane, so there's no depth to fade.</div>
   </div>
 
   <div class="group">
@@ -600,7 +605,7 @@ function frameAt(z){ const h=2*z*Math.tan(THREE.MathUtils.degToRad(camera.fov/2)
 const hex01=hex=>{ const h=hex.replace('#',''); return [parseInt(h.slice(0,2),16)/255,parseInt(h.slice(2,4),16)/255,parseInt(h.slice(4,6),16)/255]; };
 let curBg=[0.05,0.05,0.05];       // sRGB background fed to every card shader
 let cornerNorm=0;                  // corner radius in 0..0.5 uv units
-const CARD_VERT=`varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`;
+const CARD_VERT=`varying vec2 vUv; uniform float uSize; void main(){ vUv=uv; vec3 p=position; p.xy*=uSize; gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0); }`;
 const CARD_FRAG=`
   uniform sampler2D map; uniform vec3 bgColor; uniform float uFade,uOpacity,cornerRadius,aspect,uPremul;
   varying vec2 vUv;
@@ -631,7 +636,7 @@ function makeCardMaterial(tex,aspect){
   return new THREE.ShaderMaterial({
     uniforms:{ map:{value:tex}, bgColor:{value:new THREE.Vector3(curBg[0],curBg[1],curBg[2])},
                uFade:{value:1}, uOpacity:{value:1}, cornerRadius:{value:cornerNorm}, aspect:{value:aspect},
-               uPremul:{value:1} },
+               uPremul:{value:1}, uSize:{value:1} },
     vertexShader:CARD_VERT, fragmentShader:CARD_FRAG,
     transparent:true, depthWrite:false, depthTest:false, side:THREE.DoubleSide,
     premultipliedAlpha:true,
@@ -1453,6 +1458,16 @@ function applyBackground(){
    instead of snapping the far card straight to the background. The power curve only
    shapes how the fade is distributed by depth. */
 const _fadeVec=new THREE.Vector3(), _fadeFwd=new THREE.Vector3();
+// does the active layout span real depth (along the view axis)? flat coplanar grids do not.
+function sceneHasDepth(){
+  if(!active) return false;
+  try{ active.update(animTime); }catch(e){}
+  MAIN_SCENE.updateMatrixWorld(true);
+  MAIN_CAMERA.getWorldDirection(_fadeFwd);
+  let near=Infinity, far=-Infinity, n=0;
+  forEachCard(o=>{ if(o.visible){ o.getWorldPosition(_fadeVec); _fadeVec.sub(MAIN_CAMERA.position); const d=_fadeVec.dot(_fadeFwd); if(d<near)near=d; if(d>far)far=d; n++; } });
+  return n>0 && (far-near)>0.3;
+}
 function applyDepthFade(){
   const f=state.fade;
   if(f<=0){ forEachCard(o=>{ o.material.uniforms.uFade.value=1; }); return; }
@@ -1589,7 +1604,7 @@ function rebuild(resetTime=false){
 
 /* ================= click a card on the canvas to replace ONLY that card ================= */
 const raycaster=new THREE.Raycaster();
-let outline=null, highlightTO=null, replaceSlot=null;
+let outline=null, highlightTO=null, replaceSlot=null, thumbReplaceIdx=-1;
 function clearHighlight(){
   clearTimeout(highlightTO);
   if(outline){ outline.parent?.remove(outline); outline.geometry.dispose(); outline.material.dispose(); outline=null; }
@@ -1628,21 +1643,27 @@ function updateLoopInfo(){
 function applyTemplate(t){
   state.template=t;
   state.P={...t.P};
-  // easing only applies to stepped (move + pause) presets. Continuous loops are noEase: they
-  // always run Linear (a non-linear ease would stutter the loop). We keep the easing UI VISIBLE
-  // but lock it (greyed, Linear active) so it never looks like the menu vanished.
-  setEase(t.noEase?'Linear':t.ease);
-  $('easeGroup').classList.toggle('elocked', !!t.noEase);
+  // #7 full reset of per-preset adjustments. Uploaded images and workspace settings
+  // (background, aspect ratio, dark theme, export quality) are intentionally KEPT.
+  state.size=1; state.fade=0; state.speed=1; state.rotY=0; state.rotX=0; state.dir=1; state.grain=false;
   state.spacing=t.spacing??1;                 // per-preset default spacing (Field Flight = 0.5)
+  setEase(t.noEase?'Linear':t.ease);
+  $('cardSize').value=1; $('sizeVal').textContent='×1.00';
   $('spacing').value=state.spacing; $('spacingVal').textContent='×'+state.spacing.toFixed(2);
-  $('corner').value=state.P.corner??0;
-  $('cornerVal').textContent=(state.P.corner??0).toFixed(1);
-  // rotation only makes sense for flat poster layouts. Where the engine drives its own camera /
-  // is inherently 3D / a single full-frame card, we keep the control VISIBLE but lock it (greyed +
-  // hint) so it never looks like it vanished.
-  if(t.noRot){ state.rotY=0; state.rotX=0; $('rotY').value=0; $('rotYVal').textContent='0°'; $('rotX').value=0; $('rotXVal').textContent='0°'; }
+  $('fade').value=0; $('fadeVal').textContent='0%';
+  $('speed').value=1; $('speedVal').textContent='×1.00';
+  $('rotY').value=0; $('rotYVal').textContent='0°'; $('rotX').value=0; $('rotXVal').textContent='0°';
+  $('corner').value=state.P.corner??0; $('cornerVal').textContent=(state.P.corner??0).toFixed(1);
+  document.querySelectorAll('#dirSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v==='1'));
+  document.querySelectorAll('#grainSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v==='off'));
+  // #1 locks: easing for continuous loops; rotation for 3D/camera-driven presets. Controls stay
+  // VISIBLE but greyed so nothing ever looks like it vanished.
+  $('easeGroup').classList.toggle('elocked', !!t.noEase);
   $('rotGroup').classList.toggle('rlocked', !!t.noRot);
   rebuild(true);
+  // depth fade is meaningful only when the layout has real depth → lock it on flat coplanar presets
+  $('fadeGroup').classList.toggle('flocked', !sceneHasDepth());
+  updateLoopInfo();
   document.querySelectorAll('#tpls .pv').forEach(c=>c.classList.toggle('active',c.dataset.id===t.id));
 }
 /* Left column: one horizontally-scrollable strip per category, so you see what's
@@ -1754,9 +1775,12 @@ function tickPreviews(dt){
 /* ================= render loop ================= */
 function renderFrame(){
   active?.update(animTime);
+  // #16 Card size = a per-card scale (each card grows from its OWN centre, so big cards can
+  // overlap neighbours). It is NOT a camera zoom and is fully independent of Spacing (position).
+  if(camera.zoom!==1){ camera.zoom=1; camera.updateProjectionMatrix(); }
+  forEachCard(o=>{ const u=o.material.uniforms.uSize; if(u) u.value=state.size; }); // per-card scale in the vertex shader (no accumulation)
   applyUserRot();
   applyDepthFade();
-  if(camera.zoom!==state.size){ camera.zoom=state.size; camera.updateProjectionMatrix(); } // Card size = true camera magnification
   postMat.uniforms.uTime.value=animTime;
   renderer.clear();
   renderer.render(scene,camera);
@@ -2039,7 +2063,13 @@ function updatePlayBtn(){ $('tlPlay').textContent=state.playing?'⏸':'▶'; }
 function togglePlay(){ state.playing=!state.playing; updatePlayBtn(); }
 $('tlPlay').addEventListener('click',togglePlay);
 window.addEventListener('keydown',e=>{
-  if(e.code==='Space' && (e.target===document.body || e.target.id==='tlPlay')){ e.preventDefault(); togglePlay(); }
+  // spacebar toggles play/pause anywhere, unless the user is typing in a field
+  if(e.code==='Space' && !exporting){
+    const t=e.target, tag=(t.tagName||'').toLowerCase();
+    if(tag==='input' && t.type==='text') return;
+    if(tag==='textarea' || t.isContentEditable) return;
+    e.preventDefault(); togglePlay();
+  }
 });
 
 /* ================= timeline scrubber ================= */
@@ -2088,14 +2118,21 @@ drop.addEventListener('drop',e=>{e.preventDefault(); drop.classList.remove('over
 fileInput.addEventListener('change',()=>{addFiles(fileInput.files); fileInput.value='';});
 replaceInput.addEventListener('change',async()=>{
   const f=replaceInput.files[0]; replaceInput.value='';
-  if(!f || replaceSlot==null) return;
+  if(!f) return;
   const src=await processFile(f);
   if(!src) return;
-  const prev=slotOverrides.get(replaceSlot); // free a previous override on this slot
-  if(prev){ dropCachedTextures(prev.key); prev.src.close?.(); }
-  slotOverrides.set(replaceSlot,{src:src.src, key:src.uid, aspect:src.aspect}); // overrides ONLY this card
-  clearHighlight(); rebuild();
-  toast('Card replaced.');
+  if(thumbReplaceIdx>=0 && thumbReplaceIdx<userSources.length){ // #2 swap an uploaded image in place
+    const old=userSources[thumbReplaceIdx]; dropCachedTextures(old.uid); old.src.close?.();
+    userSources[thumbReplaceIdx]=src; thumbReplaceIdx=-1;
+    renderThumbs(); rebuild();
+    toast('Image replaced.');
+  }else if(replaceSlot!=null){       // per-card override (clicked a card on the canvas)
+    const prev=slotOverrides.get(replaceSlot);
+    if(prev){ dropCachedTextures(prev.key); prev.src.close?.(); }
+    slotOverrides.set(replaceSlot,{src:src.src, key:src.uid, aspect:src.aspect});
+    clearHighlight(); rebuild();
+    toast('Card replaced.');
+  }
 });
 
 async function processFile(f){ // validate + downscale + build a source object (or null)
@@ -2137,8 +2174,9 @@ function renderThumbs(){
   userSources.forEach((u,i)=>{
     const d=document.createElement('div'); d.className='thumb';
     const img=document.createElement('img');
-    img.src=u.thumb; img.title=u.name+' — drag to reorder'; img.draggable=true;
+    img.src=u.thumb; img.title='Click to replace · drag to reorder'; img.draggable=true;
     img.addEventListener('dragstart',e=>{ dragIdx=i; e.dataTransfer.effectAllowed='move'; });
+    img.addEventListener('click',()=>{ thumbReplaceIdx=i; replaceSlot=null; replaceInput.click(); }); // #2 click to swap this image
     d.addEventListener('dragover',e=>{ e.preventDefault(); d.classList.add('dragover'); });
     d.addEventListener('dragleave',()=>d.classList.remove('dragover'));
     d.addEventListener('drop',e=>{
