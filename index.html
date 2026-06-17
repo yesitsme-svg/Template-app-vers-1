@@ -161,6 +161,27 @@
   .switch.on{background:var(--accent); border-color:var(--accent);}
   .switch.on .knob{left:21px;}
   .rowBetween{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  /* settings panel = scrollable content + a fixed export footer */
+  #settings{padding:0; gap:0; overflow:hidden;}
+  #setScroll{flex:1; overflow-y:auto; padding:18px 16px 22px; display:flex; flex-direction:column; gap:16px;}
+  #setScroll::-webkit-scrollbar{width:6px;} #setScroll::-webkit-scrollbar-thumb{background:#ddd; border-radius:3px;}
+  #exportBar{flex:0 0 auto; border-top:1px solid var(--border); background:var(--panel); padding:13px 16px 15px; display:flex; flex-direction:column; gap:9px;}
+  #exportBar .exrow{display:flex; gap:8px;}
+  /* Figma-style dropdowns */
+  .selwrap{position:relative; flex:1;}
+  .selwrap::after{content:'▾'; position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:9px; color:var(--muted); pointer-events:none;}
+  .sel{appearance:none; -webkit-appearance:none; width:100%; height:34px; padding:0 26px 0 11px; border:1px solid var(--border); border-radius:9px; background:var(--panel2); color:var(--text); font-family:inherit; font-size:12px; cursor:pointer; outline:none;}
+  .sel:focus{border-color:var(--accent);}
+  /* aspect-ratio selector inside the panel */
+  .ratioGrid{display:flex; flex-wrap:wrap; gap:5px;}
+  .ratioGrid button{padding:7px 11px; border:1px solid var(--border); background:var(--panel2); border-radius:8px; color:var(--muted); cursor:pointer; font-size:11.5px; font-family:inherit;}
+  .ratioGrid button:hover{border-color:#bbb;}
+  .ratioGrid button.active{background:var(--dark); color:#fff; border-color:var(--dark); font-weight:500;}
+  body.dark .ratioGrid button.active{color:#141416;}
+  .customRes{display:flex; align-items:center; gap:6px; margin-top:8px;}
+  .customRes input{width:64px; height:30px; border:1px solid var(--border); border-radius:7px; background:var(--panel2); color:var(--text); font-family:inherit; font-size:12px; text-align:center; outline:none;}
+  .customRes input:focus{border-color:var(--accent);}
+  .customRes span{color:var(--muted); font-size:12px;}
   .drop{border:1.5px dashed #c8c8c8; border-radius:12px; padding:14px 10px; text-align:center; color:var(--muted); cursor:pointer; font-size:11.5px; line-height:1.5; transition:border-color .15s,color .15s,background .15s;}
   .drop:hover,.drop.over{border-color:var(--accent); color:var(--text); background:#faf8ff;}
   .drop .sub{font-size:10px; color:#b3b3b8;}
@@ -276,13 +297,6 @@
 <main>
   <div class="stageWrap">
     <div id="stage"></div>
-    <div class="ratios" id="ratios">
-      <button data-r="3:4" class="active">3:4</button>
-      <button data-r="9:16">9:16</button>
-      <button data-r="1:1">1:1</button>
-      <button data-r="4:3">4:3</button>
-      <button data-r="16:9">16:9</button>
-    </div>
     <div id="exportBadge">
       <div class="ebrow"><span class="dot"></span><span id="ebText">Exporting…</span><button id="ebCancel">Cancel</button></div>
       <div class="ebTrack"><div class="ebFill" id="ebFill"></div></div>
@@ -297,9 +311,27 @@
 </main>
 
 <aside id="settings">
+<div id="setScroll">
   <div class="rowBetween">
     <div class="label">Dark theme</div>
     <button class="switch" id="themeToggle" role="switch" aria-checked="false" title="Toggle dark theme"><span class="knob"></span></button>
+  </div>
+  <div class="group">
+    <div class="label">Canvas</div>
+    <div class="ratioGrid" id="ratios">
+      <button data-r="3:4" class="active">3:4</button>
+      <button data-r="9:16">9:16</button>
+      <button data-r="1:1">1:1</button>
+      <button data-r="4:3">4:3</button>
+      <button data-r="16:9">16:9</button>
+      <button data-r="custom">Custom</button>
+    </div>
+    <div class="customRes" id="customRes" style="display:none">
+      <input type="number" id="customW" min="120" max="4096" step="2" value="1080">
+      <span>×</span>
+      <input type="number" id="customH" min="120" max="4096" step="2" value="1080">
+      <span style="font-size:11px">px</span>
+    </div>
   </div>
   <div class="group">
     <div class="label">Images <small id="imgCount"></small></div>
@@ -405,15 +437,22 @@
 
   <div class="group">
     <div class="loopinfo" id="loopInfo"></div>
-    <div class="label">Export quality</div>
-    <div class="seg" id="resSeg">
-      <button data-v="1k">1K</button>
-      <button data-v="2k" class="active">2K</button>
-    </div>
-    <button class="btn primary" id="mp4Btn">⬇ Export MP4</button>
-    <button class="btn" id="pngBtn">Export PNG frame</button>
-    <div class="hint">Preview runs at 1K for speed; export at 1K (1080) or 2K (2160) — long side. MP4 — one seamless loop at 30 fps. PNG — the frame you're parked on.</div>
   </div>
+</div><!-- /setScroll -->
+<div id="exportBar">
+  <div class="exrow">
+    <div class="selwrap"><select class="sel" id="exFormat" title="Export format">
+      <option value="mp4">MP4 video</option>
+      <option value="png">PNG image</option>
+      <option value="seq">PNG sequence · .zip</option>
+    </select></div>
+    <div class="selwrap"><select class="sel" id="exQuality" title="Export quality (long side)">
+      <option value="1k">1K · 1080</option>
+      <option value="2k" selected>2K · 2160</option>
+    </select></div>
+  </div>
+  <button class="btn primary" id="exportBtn">⬇ Export</button>
+</div>
 </aside>
 </div>
 
@@ -1377,7 +1416,7 @@ const state={
   template:null, P:{}, ease:'Smooth', bez:[.76,0,.24,1], easeFn:null,
   dir:1, bg:'#0d0d0d', bg2:'#2a1a5c', fillMode:'solid', transparent:false, ratio:'3:4',
   playing:true, grain:false, speed:1, size:1,
-  spacing:1, rotY:0, rotX:0, fade:0, exportRes:'2k', dark:false,
+  spacing:1, rotY:0, rotX:0, fade:0, exportRes:'2k', dark:false, customW:1080, customH:1080,
 };
 let active=null, animTime=0;
 let exporting=false, exportCancelled=false;
@@ -1810,13 +1849,17 @@ function fileName(ext){ return `wannathis-${state.template.id}-${state.ratio.rep
    then downscale) so card edges, rounded corners and the photos come out crisp, not pixelated.
    The supersampled render is capped (~3000px long) so 2K square exports stay within GPU limits. */
 const EXPORT_LONGS={'1k':1080,'2k':2160}, RENDER_CAP=3000;
+function ratioWH(){ // [w,h] aspect for the current canvas (custom → the typed pixel size)
+  if(state.ratio==='custom') return [state.customW||1080, state.customH||1080];
+  return RATIOS[state.ratio];
+}
 function exportDims(){
-  const [rw,rh]=RATIOS[state.ratio];
-  const long=EXPORT_LONGS[state.exportRes]||1080;
-  let W=rw>=rh?long:Math.round(long*rw/rh);
-  let H=rw>=rh?Math.round(long*rh/rw):long;
+  let W,H;
+  if(state.ratio==='custom'){ W=state.customW||1080; H=state.customH||1080; } // exact pixels the user typed
+  else { const [rw,rh]=RATIOS[state.ratio], long=EXPORT_LONGS[state.exportRes]||1080;
+    W=rw>=rh?long:Math.round(long*rw/rh); H=rw>=rh?Math.round(long*rh/rw):long; }
   W&=~1; H&=~1;                                         // H.264 needs even dimensions
-  const ss=Math.min(2, RENDER_CAP/long);               // 1K→2×, 2K→~1.39× (render ≤ RENDER_CAP)
+  const ss=Math.min(2, RENDER_CAP/Math.max(W,H));       // supersample, capped to RENDER_CAP on the long side
   const RW=(Math.round(W*ss))&~1, RH=(Math.round(H*ss))&~1;
   return {W,H,RW,RH};
 }
@@ -1844,7 +1887,7 @@ function exportingUI(on){
   $('previews').classList.toggle('locked',on);
   $('settings').classList.toggle('locked',on);
   document.body.classList.toggle('exporting',on);
-  $('mp4Btn').disabled=on; $('pngBtn').disabled=on;
+  $('exportBtn').disabled=on; $('exFormat').disabled=on; $('exQuality').disabled=on;
 }
 function setExportProgress(f,txt){
   $('ebFill').style.width=Math.round(f*100)+'%';
@@ -1966,12 +2009,48 @@ function exportPNG(){
   },'image/png');
   resize();                                             // restore on-screen canvas immediately (ds already holds the pixels)
 }
-$('mp4Btn').addEventListener('click',exportMP4);
-$('pngBtn').addEventListener('click',exportPNG);
+// #4 PNG sequence → one clean .zip (a single folder of frames), nothing scattered on disk
+async function exportPNGSequence(){
+  if(exporting||!active) return;
+  exporting=true; exportCancelled=false; setExportUI(true,'Rendering frames');
+  const prevT=animTime, prevPlay=state.playing; state.playing=false;
+  try{
+    const {zipSync}=await import('https://cdn.jsdelivr.net/npm/fflate@0.8.2/+esm');
+    const cv=renderer.domElement, fps=30;
+    const {W,H,RW,RH}=exportDims();
+    const {ds,dx}=beginHiRes(W,H,RW,RH);
+    const loopReal=active.loopSeconds/state.speed;
+    if(loopReal>30) toast('Loop is longer than 30 s — sequence trimmed to 30 s.');
+    const totalFrames=Math.max(fps,Math.min(Math.round(loopReal*fps),fps*30));
+    const files={}, folder=`${state.template.id}-sequence`, pad=n=>String(n).padStart(4,'0');
+    for(let i=0;i<totalFrames;i++){
+      if(exportCancelled) break;
+      animTime=i*state.speed/fps; renderFrame();
+      dx.clearRect(0,0,W,H); dx.drawImage(cv,0,0,W,H);
+      const blob=await new Promise(r=>ds.toBlob(r,'image/png'));
+      files[`${folder}/frame_${pad(i+1)}.png`]=new Uint8Array(await blob.arrayBuffer());
+      if(i%2===0){ setExportProgress(i/totalFrames,'Rendering frames'); await yieldTask(); }
+    }
+    if(!exportCancelled){
+      setExportProgress(1,'Zipping'); await yieldTask();
+      const zipped=zipSync(files,{level:0});             // PNGs are already compressed → store-only, fast
+      const blob=new Blob([zipped],{type:'application/zip'});
+      downloadBlob(blob,fileName('zip'));
+      window.__app.lastExport={type:'seq',size:blob.size,frames:totalFrames};
+      toast(`PNG sequence saved — ${totalFrames} frames, ${(blob.size/1048576).toFixed(1)} MB`);
+    } else toast('Export cancelled.');
+  }catch(err){ console.error('Sequence export failed:',err); toast('Sequence export failed: '+(err.message||err)); }
+  finally{ animTime=prevT; state.playing=prevPlay; exporting=false; exportingUI(false); resize(); }
+}
+$('exportBtn').addEventListener('click',()=>{
+  const fmt=$('exFormat').value;
+  if(fmt==='mp4') exportMP4(); else if(fmt==='png') exportPNG(); else if(fmt==='seq') exportPNGSequence();
+});
+$('exQuality').addEventListener('change',e=>{ state.exportRes=e.target.value; });
 
 /* ================= sizing ================= */
 function resize(){
-  const [rw,rh]=RATIOS[state.ratio], maxDim=1080;
+  const [rw,rh]=ratioWH(), maxDim=1080;                 // preview always ~1K on the long side; export uses exportDims
   let W=rw>=rh?maxDim:Math.round(maxDim*rw/rh);
   let H=rw>=rh?Math.round(maxDim*rh/rw):maxDim;
   W&=~1; H&=~1; // H.264 needs even dimensions
@@ -1995,7 +2074,6 @@ function bindSeg(id,fn){
 }
 bindSeg('dirSeg',v=>{ state.dir=parseInt(v); });
 bindSeg('grainSeg',v=>{ state.grain=v==='on'; });
-bindSeg('resSeg',v=>{ state.exportRes=v; });
 bindSeg('bgSeg',v=>{
   state.transparent=v==='transparent';
   $('bgFill').style.display=state.transparent?'none':'';
@@ -2024,11 +2102,34 @@ wireColor('bgSwatch2','bgHex2','bgColor2','bg2');
 /* dark theme toggle */
 function applyTheme(){ document.body.classList.toggle('dark',state.dark); const t=$('themeToggle'); t.classList.toggle('on',state.dark); t.setAttribute('aria-checked',state.dark?'true':'false'); }
 $('themeToggle').addEventListener('click',()=>{ state.dark=!state.dark; applyTheme(); });
+// #11/#12 aspect ratio in the panel: px tooltip per option + a custom W×H mode
+function exportPxFor(ratioKey){
+  if(ratioKey==='custom') return `${state.customW}×${state.customH}px`;
+  const [rw,rh]=RATIOS[ratioKey], long=EXPORT_LONGS[state.exportRes]||2160;
+  let W=rw>=rh?long:Math.round(long*rw/rh), H=rw>=rh?Math.round(long*rh/rw):long; W&=~1; H&=~1;
+  return `${W}×${H}px @ ${state.exportRes.toUpperCase()}`;
+}
+function refreshRatioTooltips(){
+  $('ratios').querySelectorAll('button').forEach(b=>{ b.title=b.dataset.r==='custom'?'Custom resolution':exportPxFor(b.dataset.r); });
+}
 $('ratios').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
   if(exporting) return;
   $('ratios').querySelectorAll('button').forEach(x=>x.classList.remove('active'));
-  b.classList.add('active'); state.ratio=b.dataset.r; resize();
+  b.classList.add('active'); state.ratio=b.dataset.r;
+  $('customRes').style.display = state.ratio==='custom' ? 'flex' : 'none';
+  resize();
 }));
+function applyCustomRes(){
+  let w=parseInt($('customW').value)||1080, h=parseInt($('customH').value)||1080;
+  w=Math.max(120,Math.min(4096,w))&~1; h=Math.max(120,Math.min(4096,h))&~1;
+  state.customW=w; state.customH=h;
+  if(state.ratio==='custom') resize();
+  refreshRatioTooltips();
+}
+$('customW').addEventListener('change',applyCustomRes);
+$('customH').addEventListener('change',applyCustomRes);
+$('exQuality').addEventListener('change',refreshRatioTooltips);
+refreshRatioTooltips();
 $('speed').addEventListener('input',e=>{
   state.speed=parseFloat(e.target.value);
   $('speedVal').textContent='×'+state.speed.toFixed(2);
@@ -2221,7 +2322,7 @@ window.__app={
   templates:TEMPLATES,
   getActive:()=>active, getTime:()=>animTime, setTime:t=>{animTime=t;},
   applyTemplateById:id=>{ const t=TEMPLATES.find(t=>t.id===id); if(t) applyTemplate(t); return !!t; },
-  exportMP4, exportPNG, lastExport:null,
+  exportMP4, exportPNG, exportPNGSequence, lastExport:null,
   dbgOverrides:()=>[...slotOverrides.keys()],
   setTestImages(n,mixed){ // debug helper: replace project with n generated images (optionally mixed aspects)
     userSources.forEach(u=>{ dropCachedTextures(u.uid); u.src.close?.(); });
