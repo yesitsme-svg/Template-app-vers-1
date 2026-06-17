@@ -391,6 +391,24 @@
     <input type="range" id="spacing" min="0.1" max="2.8" step="0.05" value="1">
   </div>
 
+  <div class="group" id="rotGroup">
+    <div class="slider-row"><div class="label">Rotate Y</div><div class="val" id="rotYVal">0°</div></div>
+    <input type="range" id="rotY" min="-45" max="45" step="1" value="0">
+    <div class="slider-row" style="margin-top:4px"><div class="label">Rotate X</div><div class="val" id="rotXVal">0°</div></div>
+    <input type="range" id="rotX" min="-45" max="45" step="1" value="0">
+    <div class="hint" id="rotLockHint" style="display:none">This layout fills the frame with one card at a time, so there's nothing to tilt.</div>
+  </div>
+
+  <div class="group" id="backGroup">
+    <div class="label">Card backs</div>
+    <div class="seg" id="backSeg">
+      <button data-v="show" class="active">Show</button>
+      <button data-v="hide">Hide</button>
+    </div>
+    <div class="hint" id="backLockHint" style="display:none">All cards face forward in this layout — there are no backs to hide.</div>
+    <div class="hint" id="backHint">Hide the rear of cards once they turn away (3D carousels, globe, or any tilt).</div>
+  </div>
+
   <div class="group" id="fadeGroup">
     <div class="slider-row"><div class="label">Depth fade</div><div class="val" id="fadeVal">0%</div></div>
     <input type="range" id="fade" min="0" max="100" step="1" value="0">
@@ -405,7 +423,7 @@
   <div class="group" id="easeGroup">
     <div class="label">Easing</div>
     <div class="chips" id="easeChips"></div>
-    <div class="hint" id="easeLockHint" style="display:none">Continuous loop — runs at a constant speed, so easing is fixed to Linear.</div>
+    <div class="hint" id="easeLockHint" style="display:none">Continuous loop — Linear keeps it perfectly smooth. Other curves add an ease-in/out each cycle.</div>
     <button class="disclose" id="easeToggle"><span class="chev">›</span><span id="easeToggleLabel">Adjust curve</span></button>
     <div id="easeAdvanced" style="display:none">
       <canvas id="easeCurve"></canvas>
@@ -442,24 +460,6 @@
     <div class="hint" id="bgHint" style="display:none">Transparency is kept in PNG export. MP4 has no alpha — video is rendered on the chosen color.</div>
   </div>
 
-  <div class="group" id="rotGroup">
-    <div class="slider-row"><div class="label">Rotate Y</div><div class="val" id="rotYVal">0°</div></div>
-    <input type="range" id="rotY" min="-45" max="45" step="1" value="0">
-    <div class="slider-row" style="margin-top:4px"><div class="label">Rotate X</div><div class="val" id="rotXVal">0°</div></div>
-    <input type="range" id="rotX" min="-45" max="45" step="1" value="0">
-    <div class="hint" id="rotLockHint" style="display:none">This layout fills the frame with one card at a time, so there's nothing to tilt.</div>
-  </div>
-
-  <div class="group" id="backGroup">
-    <div class="label">Card backs</div>
-    <div class="seg" id="backSeg">
-      <button data-v="show" class="active">Show</button>
-      <button data-v="hide">Hide</button>
-    </div>
-    <div class="hint" id="backLockHint" style="display:none">All cards face forward in this layout — there are no backs to hide.</div>
-    <div class="hint" id="backHint">Hide the rear of cards once they turn away (3D carousels, globe, or any tilt).</div>
-  </div>
-
   <button class="btn sm" id="resetBtn">↺ Reset settings</button>
 
   <details>
@@ -489,7 +489,7 @@
       <div class="ddPop">
         <button type="button" data-v="mp4">MP4 video</button>
         <button type="button" data-v="png">PNG image</button>
-        <button type="button" data-v="seq">PNG sequence · .zip</button>
+        <button type="button" data-v="seq">PNG sequence (ZIP)</button>
       </div>
     </div>
     <div class="dd" id="ddQuality" data-value="2k">
@@ -497,6 +497,7 @@
       <div class="ddPop">
         <button type="button" data-v="1k">1K · 1080</button>
         <button type="button" data-v="2k">2K · 2160</button>
+        <button type="button" data-v="4k">4K · 3840</button>
       </div>
     </div>
   </div>
@@ -1499,7 +1500,7 @@ const state={
   playing:true, grain:false, speed:1, size:1,
   spacing:1, rotY:0, rotX:0, fade:0, exportRes:'2k', dark:false, customW:1080, customH:1080, backface:false,
 };
-let active=null, animTime=0;
+let active=null, animTime=0, builtSpacing=1;
 let exporting=false, exportCancelled=false;
 
 const $=id=>document.getElementById(id);
@@ -1623,11 +1624,13 @@ function applyDepthFade(){
   // layout (grids, scrollers) has a tiny far-near and the division blows sub-pixel depth
   // differences into random per-card banding on overlaps. The floor makes such layouts read as
   // ~no fade, while genuinely deep 3D scenes (carousel/globe/field) still get the full gradient.
-  const DEPTH_FLOOR=2.2;
-  const range=Math.max(far-near, DEPTH_FLOOR), N=1+f*f*6;
+  // Normalize by the scene's OWN depth span so the slider feels identical on every 3D scene
+  // (a shallow carousel and a deep field fade the same way for the same slider value). Flat
+  // scenes are already locked out (sceneHasDepth/flocked), so there's no coplanar banding to guard.
+  const range=Math.max(far-near, 0.35), N=1+f*2.2; // gentle, gradual gradient across depth
   for(let i=0;i<cards.length;i++){
-    const t=clamp01((ds[i]-near)/range);   // 0 near → 1 far (true world depth, stable)
-    const curve=Math.pow(1-t,N);           // near stays clear; only genuinely-far cards melt to bg
+    const t=clamp01((ds[i]-near)/range);   // 0 nearest → 1 farthest (true view-axis depth)
+    const curve=Math.pow(1-t,N);           // nearest stays crisp; depth melts smoothly toward bg
     cards[i].material.uniforms.uFade.value=1-f*(1-curve);
   }
 }
@@ -1737,6 +1740,7 @@ function rebuild(resetTime=false){
   scene.background=state.transparent?null:(state.fillMode==='gradient'?gradientTexture():new THREE.Color(state.bg));
   curBg=bgFadeColor(); cornerNorm=Math.min(0.5,(state.P.corner||0)/12*0.45); // ready before cards are built
   active=SCENES[state.template.scene](state.P);
+  builtSpacing=state.spacing;                              // spacing this layout was baked at (for live-drag scaling)
   if(resetTime) animTime=0;
   updateLoopInfo();
 }
@@ -1798,7 +1802,9 @@ function applyTemplate(t){
   document.querySelectorAll('#backSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v==='show'));
   // #1 locks: easing for continuous loops; rotation for 3D/camera-driven presets. Controls stay
   // VISIBLE but greyed so nothing ever looks like it vanished.
-  $('easeGroup').classList.toggle('elocked', !!t.noEase);
+  // easing is never locked — Linear is just the smart default for continuous loops; the client can change it
+  $('easeGroup').classList.remove('elocked');
+  $('easeLockHint').style.display = t.noEase ? 'block' : 'none';
   $('rotGroup').classList.toggle('rlocked', !!t.noRot);
   rebuild(true);
   // depth fade is meaningful only when the layout has real depth → lock it on flat coplanar presets
@@ -1924,6 +1930,13 @@ function renderFrame(){
   // overlap neighbours). It is NOT a camera zoom and is fully independent of Spacing (position).
   if(camera.zoom!==1){ camera.zoom=1; camera.updateProjectionMatrix(); }
   forEachCard(o=>{ const u=o.material.uniforms.uSize; if(u) u.value=state.size; }); // per-card scale in the vertex shader (no accumulation)
+  // Live spacing preview: while the slider is being dragged we scale card POSITIONS from the
+  // layout centre instead of rebuilding every frame (a rebuild re-tiles the infinite grids and
+  // makes them jump). The exact layout is re-baked once on settle (debounced). Size is untouched.
+  if(builtSpacing>0.001 && Math.abs(state.spacing-builtSpacing)>1e-4){
+    const k=state.spacing/builtSpacing;
+    forEachCard(o=>{ o.position.multiplyScalar(k); });
+  }
   applyUserRot();
   applyDepthFade();
   postMat.uniforms.uTime.value=animTime;
@@ -1954,7 +1967,7 @@ function fileName(ext){ return `wannathis-${state.template.id}-${state.ratio.rep
    export renders the chosen long-side (1K=1080 / 2K=2160) and SUPERSAMPLES (render larger,
    then downscale) so card edges, rounded corners and the photos come out crisp, not pixelated.
    The supersampled render is capped (~3000px long) so 2K square exports stay within GPU limits. */
-const EXPORT_LONGS={'1k':1080,'2k':2160}, RENDER_CAP=3000;
+const EXPORT_LONGS={'1k':1080,'2k':2160,'4k':3840}, RENDER_CAP=4096;
 function ratioWH(){ // [w,h] aspect for the current canvas (custom → the typed pixel size)
   if(state.ratio==='custom') return [state.customW||1080, state.customH||1080];
   return RATIOS[state.ratio];
@@ -2303,7 +2316,13 @@ $('speed').addEventListener('input',e=>{
 });
 $('corner').addEventListener('input',e=>{ state.P.corner=parseFloat(e.target.value); $('cornerVal').textContent=state.P.corner.toFixed(1); refreshCardUniforms(); });
 $('cardSize').addEventListener('input',e=>{ state.size=parseFloat(e.target.value); $('sizeVal').textContent='×'+state.size.toFixed(2); }); // pure camera zoom — applied live in renderFrame, no rebuild
-$('spacing').addEventListener('input',e=>{ state.spacing=parseFloat(e.target.value); $('spacingVal').textContent='×'+state.spacing.toFixed(2); scheduleRebuild(); });
+let spacingSettle=null;
+$('spacing').addEventListener('input',e=>{
+  state.spacing=parseFloat(e.target.value); $('spacingVal').textContent='×'+state.spacing.toFixed(2);
+  // live-scale during the drag (renderFrame), then re-bake the exact layout once movement stops
+  clearTimeout(spacingSettle); spacingSettle=setTimeout(scheduleRebuild, 150);
+});
+$('spacing').addEventListener('change',()=>{ clearTimeout(spacingSettle); scheduleRebuild(); }); // settle on release
 $('fade').addEventListener('input',e=>{ state.fade=parseFloat(e.target.value)/100; $('fadeVal').textContent=Math.round(state.fade*100)+'%'; });
 $('rotY').addEventListener('input',e=>{ state.rotY=parseFloat(e.target.value); $('rotYVal').textContent=state.rotY+'°'; });
 $('rotX').addEventListener('input',e=>{ state.rotX=parseFloat(e.target.value); $('rotXVal').textContent=state.rotX+'°'; });
