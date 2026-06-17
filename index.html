@@ -396,7 +396,7 @@
     <input type="range" id="rotY" min="-45" max="45" step="1" value="0">
     <div class="slider-row" style="margin-top:4px"><div class="label">Rotate X</div><div class="val" id="rotXVal">0°</div></div>
     <input type="range" id="rotX" min="-45" max="45" step="1" value="0">
-    <div class="hint" id="rotLockHint" style="display:none">This layout fills the frame with one card at a time, so there's nothing to tilt.</div>
+    <div class="hint" id="rotLockHint" style="display:none">This preset drives its own camera, so manual tilt is off here — it would fling the framing off-screen.</div>
   </div>
 
   <div class="group" id="backGroup">
@@ -771,6 +771,23 @@ function setCardTex(m,t){ m.material.uniforms.map.value=t; }
 function forEachCard(fn){ root.traverse(o=>{ if(o.material&&o.material.uniforms&&o.material.uniforms.uFade) fn(o); }); }
 function mulberry32(a){ return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 
+/* Cap an infinite-scroll fill so extreme-low spacing can't spawn thousands of cards (lag).
+   Scales the per-group count and the half-extent together; at the cap the dense "mush" simply
+   clumps toward the centre instead of tiling the whole frame. */
+const MAX_FILL=440;
+function capFill(perGroup, half){
+  const tot=perGroup*(2*half+1);
+  if(tot<=MAX_FILL) return [perGroup, half];
+  const k=Math.sqrt(MAX_FILL/tot);
+  return [Math.max(2,Math.round(perGroup*k)), Math.max(1,Math.round(half*k))];
+}
+/* same idea for a full rectangular grid (gridDrift): cap cols×rows */
+function capGrid(cols, rows){
+  const tot=cols*rows;
+  if(tot<=MAX_FILL) return [cols, rows];
+  const k=Math.sqrt(MAX_FILL/tot);
+  return [Math.max(2,Math.round(cols*k)), Math.max(2,Math.round(rows*k))];
+}
 /* phase: integer cycles + eased fraction; per-object stagger offset.
    drift blends in a constant-speed component so motion never dead-stops. */
 function makePhase(P){
@@ -884,7 +901,8 @@ const SCENES = {
     const entries=[]; let maxW=0;
     for(let i=0;i<n;i++){ const e=entryForSlot(i); entries.push(e); maxW=Math.max(maxW,H*e.asp); }
     // radius sized for the widest card so mixed aspects never intersect; even angular spacing
-    const R=Math.max(maxW*(P.chord||1.9)*(state.spacing||1)/(2*Math.sin(Math.PI/n)),1.35);
+    const spRing=Math.min(state.spacing||1, 1.5);          // beyond ~1.5 the ring balloons off-screen → cards vanish; clamp so it stays full
+    const R=Math.max(maxW*(P.chord||1.9)*spRing/(2*Math.sin(Math.PI/n)),1.35);
     const inner=new THREE.Group();
     const meshes=[];
     for(let i=0;i<n;i++){
@@ -1144,10 +1162,10 @@ const SCENES = {
     const n=N0>=minN?N0:N0*Math.ceil(minN/N0);
     const H=0.8;
     const rnd=mulberry32(7);
-    const sp=state.spacing||1;
-    const camZ=5, depth=18*sp;             // long tunnel so cards stay spread in depth
+    const sp=state.spacing||1, spLat=Math.min(sp,1.5);     // clamp lateral + depth scatter so high spacing stays full, not sparse
+    const camZ=5, depth=18*Math.min(sp,1.6);  // long tunnel so cards stay spread in depth
     const fr=frameAt(camZ-1);              // scatter scales with the frame → fills wide (16:9) and tall (9:16) alike
-    const spreadX=fr.w*0.82*sp, spreadY=fr.h*0.82*sp;
+    const spreadX=fr.w*0.82*spLat, spreadY=fr.h*0.82*spLat;
     const meshes=[];
     for(let i=0;i<n;i++){
       const e=entryForSlot(i);
@@ -1386,10 +1404,11 @@ const SCENES = {
     const cardH=cw/(P.cellAsp||0.74);
     const sc=Math.min(sp,1);                            // <1 lets cards overlap on the cross axis too (mush); ≥1 keeps columns dense (no gaps)
     const colPitch=(cw+baseGap)*sc, ch=(cardH+baseGap)*sp; // spacing compresses both axes below 1, spreads the scroll axis above 1
-    const perCol=Math.ceil(fr.h/ch)+5;                   // deep buffer so the wrap stays hidden even when tilted
+    let perCol=Math.ceil(fr.h/ch)+5;                     // deep buffer so the wrap stays hidden even when tilted
+    let cHalf=Math.ceil(fr.w/2/colPitch)+2;              // enough columns each side to fill at any spacing
+    [perCol,cHalf]=capFill(perCol,cHalf);                // cap total cards → no lag at extreme low spacing (mush clumps centrally)
     const span=perCol*ch;
     const meshes=[]; let slot=0;
-    const cHalf=Math.ceil(fr.w/2/colPitch)+2;            // enough columns each side to fill at any spacing
     for(let c=-cHalf;c<=cHalf;c++){
       const x=c*colPitch, dir=(((c%2)+2)%2===0)?1:-1;
       for(let j=0;j<perCol;j++){
@@ -1419,10 +1438,11 @@ const SCENES = {
     const cardW=rh*(P.cellAsp||1.3);
     const sc=Math.min(sp,1);                            // <1 lets rows overlap too (mush); ≥1 keeps rows dense (no gaps)
     const rowPitch=(rh+baseGap)*sc, cwp=(cardW+baseGap)*sp; // spacing compresses both axes below 1, spreads the scroll axis above 1
-    const perRow=Math.ceil(fr.w/cwp)+5;                   // deep buffer so the wrap stays hidden even when tilted
+    let perRow=Math.ceil(fr.w/cwp)+5;                     // deep buffer so the wrap stays hidden even when tilted
+    let rHalf=Math.ceil(fr.h/2/rowPitch)+2;              // enough rows to fill at any spacing
+    [perRow,rHalf]=capFill(perRow,rHalf);                // cap total cards → no lag at extreme low spacing
     const span=perRow*cwp;
     const meshes=[]; let slot=0;
-    const rHalf=Math.ceil(fr.h/2/rowPitch)+2;            // enough rows to fill at any spacing
     for(let r=-rHalf;r<=rHalf;r++){
       const y=-r*rowPitch, dir=(((r%2)+2)%2===0)?-1:1;
       for(let j=0;j<perRow;j++){
@@ -1451,7 +1471,8 @@ const SCENES = {
     const cw=fr.w/cols, ch=fr.h/rows;                     // base cell
     const cardW=cw-baseGap, cardH=ch-baseGap, asp=cardW/cardH; // #3 card size FIXED (independent of spacing)
     const pitchX=cw*sp, pitchY=ch*sp;                     // spacing only spreads the cell PITCH
-    const GC=Math.ceil(fr.w/pitchX)+2*M, GR=Math.ceil(fr.h/pitchY)+2*M; // enough cells to fill at any spacing
+    let GC=Math.ceil(fr.w/pitchX)+2*M, GR=Math.ceil(fr.h/pitchY)+2*M; // enough cells to fill at any spacing
+    [GC,GR]=capGrid(GC,GR);                               // cap total cards → no lag at extreme low spacing
     const spanX=GC*pitchX, spanY=GR*pitchY;               // toroidal period spans the whole extended grid
     const meshes=[]; let slot=0;
     for(let r=0;r<GR;r++) for(let c=0;c<GC;c++){
@@ -1474,9 +1495,9 @@ const SCENES = {
 /* ================= templates, grouped like the arqe catalog ================= */
 const TEMPLATES = [
   {cat:'Carousels 3D'},
-  {id:'carousel',     name:'Carousel Slide',        scene:'ring',         ease:'Smooth',   P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'y', tiltX:7,  step:'card', minN:8, chord:1.9}},
-  {id:'wheel',        name:'Vertical Wheel',        scene:'ring',         ease:'Smooth',   P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'x', step:'card', minN:6, chord:2.2}},
-  {id:'tilted-ring',  name:'Tilted Ring',           scene:'ring',         ease:'Linear',   noEase:true, P:{dur:16, hold:0, drift:1, corner:0, axis:'y', tiltX:14, tiltZ:16, step:'full', minN:9, chord:1.9, sizeMul:.85}},
+  {id:'carousel',     name:'Carousel Slide',        scene:'ring',         ease:'Smooth',   noRot:true, P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'y', tiltX:7,  step:'card', minN:8, chord:1.9}},
+  {id:'wheel',        name:'Vertical Wheel',        scene:'ring',         ease:'Smooth',   noRot:true, P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'x', step:'card', minN:6, chord:2.2}},
+  {id:'tilted-ring',  name:'Tilted Ring',           scene:'ring',         ease:'Linear',   noEase:true, noRot:true, P:{dur:16, hold:0, drift:1, corner:0, axis:'y', tiltX:14, tiltZ:16, step:'full', minN:9, chord:1.9, sizeMul:.85}},
   {cat:'Cards'},
   {id:'stack-reveal', name:'Smooth Stack Reveal',   scene:'stackReveal',  ease:'Smooth',   P:{dur:1.2,  hold:.15, corner:2.5}},
   {id:'shuffle',      name:'Shuffle Cards',         scene:'shuffleCards', ease:'Snappy',   P:{dur:1.0,  hold:.18, corner:2.5}},
@@ -1512,6 +1533,8 @@ const state={
   spacing:1, rotY:0, rotX:0, fade:0, exportRes:'2k', fps:30, dark:false, customW:1080, customH:1080, backface:false,
 };
 let active=null, animTime=0, builtSpacing=1;
+// flat, origin-centred, fixed-camera scenes where spacing == a pure position scale (safe to live-scale)
+const LIVE_SPACE=new Set(['scrollCols','scrollRows','gridDrift','vScroll','gridPop','filmstrip','marquee']);
 let exporting=false, exportCancelled=false;
 
 const $=id=>document.getElementById(id);
@@ -1941,10 +1964,11 @@ function renderFrame(){
   // overlap neighbours). It is NOT a camera zoom and is fully independent of Spacing (position).
   if(camera.zoom!==1){ camera.zoom=1; camera.updateProjectionMatrix(); }
   forEachCard(o=>{ const u=o.material.uniforms.uSize; if(u) u.value=state.size; }); // per-card scale in the vertex shader (no accumulation)
-  // Live spacing preview: while the slider is being dragged we scale card POSITIONS from the
-  // layout centre instead of rebuilding every frame (a rebuild re-tiles the infinite grids and
-  // makes them jump). The exact layout is re-baked once on settle (debounced). Size is untouched.
-  if(builtSpacing>0.001 && Math.abs(state.spacing-builtSpacing)>1e-4){
+  // Live spacing preview (flat, origin-centred, fixed-camera grids only): while the slider is
+  // dragged we scale card POSITIONS from centre instead of rebuilding every frame (a rebuild
+  // re-tiles the infinite grids and makes them jump). Camera-driven presets (rings/field/globe…)
+  // are NOT scaled here — their spacing is clamped in-engine, so they rebuild immediately instead.
+  if(LIVE_SPACE.has(state.template.scene) && builtSpacing>0.001 && Math.abs(state.spacing-builtSpacing)>1e-4){
     const k=state.spacing/builtSpacing;
     forEachCard(o=>{ o.position.multiplyScalar(k); });
   }
@@ -2367,8 +2391,12 @@ $('cardSize').addEventListener('input',e=>{ state.size=parseFloat(e.target.value
 let spacingSettle=null;
 $('spacing').addEventListener('input',e=>{
   state.spacing=parseFloat(e.target.value); $('spacingVal').textContent='×'+state.spacing.toFixed(2);
-  // live-scale during the drag (renderFrame), then re-bake the exact layout once movement stops
-  clearTimeout(spacingSettle); spacingSettle=setTimeout(scheduleRebuild, 150);
+  if(LIVE_SPACE.has(state.template.scene)){
+    // flat grids: live-scale during the drag (renderFrame), re-bake the exact layout once movement stops
+    clearTimeout(spacingSettle); spacingSettle=setTimeout(scheduleRebuild, 150);
+  } else {
+    scheduleRebuild(); // camera-driven presets re-clamp on every step (cheap, few cards, no off-screen blow-up)
+  }
 });
 $('spacing').addEventListener('change',()=>{ clearTimeout(spacingSettle); scheduleRebuild(); }); // settle on release
 $('fade').addEventListener('input',e=>{ state.fade=parseFloat(e.target.value)/100; $('fadeVal').textContent=Math.round(state.fade*100)+'%'; });
