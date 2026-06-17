@@ -137,15 +137,20 @@
   #fadeGroup.flocked input[type=range]{opacity:.4; pointer-events:none;}
   #fadeGroup.flocked .slider-row{opacity:.5;}
   #fadeGroup.flocked #fadeLockHint{display:block !important;}
+  /* card-backs locked (layouts where every card faces forward): seg visible but greyed + hint */
+  #backGroup.blocked .seg{opacity:.4; pointer-events:none;}
+  #backGroup.blocked #backHint{display:none;}
+  #backGroup.blocked #backLockHint{display:block !important;}
   .slider-row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
   .slider-row .val{color:var(--muted); font-variant-numeric:tabular-nums; min-width:44px; text-align:right; font-size:11.5px;}
   input[type=range]{-webkit-appearance:none; width:100%; height:3px; background:#e3e2e8; border-radius:2px; outline:none;}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:15px; height:15px; border-radius:50%; background:var(--dark); cursor:pointer; border:2.5px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.25);}
   input[type=color]{width:100%; height:32px; border:1px solid var(--border); border-radius:10px; background:var(--panel2); cursor:pointer; padding:3px 5px;}
   /* block separators so the panel sections read as distinct cards (Figma/Framer style) */
-  /* full-bleed divider lines with generous breathing room above each section */
-  #settings > * + *{border-top:1px solid var(--border); padding-top:24px; margin-top:8px; margin-left:-16px; margin-right:-16px; padding-left:16px; padding-right:16px;}
-  #settings > details{padding-top:24px; margin-top:8px;}
+  /* full-bleed divider lines (edge-to-edge of the panel) with generous breathing room each side */
+  #setScroll > * + *{border-top:1px solid var(--border); margin-top:26px; padding-top:26px; margin-left:-16px; margin-right:-16px; padding-left:16px; padding-right:16px;}
+  /* action buttons inside the scroll are not sections: no full-bleed divider, just top spacing */
+  #setScroll > button.btn{border-top:none; margin-left:0; margin-right:0; padding-left:10px; padding-right:10px; padding-top:7px; margin-top:18px;}
   /* classic color control: clickable swatch + hex field */
   .colorField{display:flex; align-items:center; gap:8px;}
   .colorRow{display:flex; align-items:center; gap:8px;}
@@ -163,7 +168,7 @@
   .rowBetween{display:flex; align-items:center; justify-content:space-between; gap:10px;}
   /* settings panel = scrollable content + a fixed export footer */
   #settings{padding:0; gap:0; overflow:hidden;}
-  #setScroll{flex:1; overflow-y:auto; padding:18px 16px 22px; display:flex; flex-direction:column; gap:16px;}
+  #setScroll{flex:1; overflow-y:auto; padding:18px 16px 22px; display:flex; flex-direction:column; gap:0;}
   #setScroll::-webkit-scrollbar{width:6px;} #setScroll::-webkit-scrollbar-thumb{background:#ddd; border-radius:3px;}
   #exportBar{flex:0 0 auto; border-top:1px solid var(--border); background:var(--panel); padding:13px 16px 15px; display:flex; flex-direction:column; gap:9px;}
   #exportBar .exrow{display:flex; gap:8px;}
@@ -417,6 +422,16 @@
     <div class="hint" id="rotLockHint" style="display:none">This template controls its own 3D camera, so manual rotation is off.</div>
   </div>
 
+  <div class="group" id="backGroup">
+    <div class="label">Card backs</div>
+    <div class="seg" id="backSeg">
+      <button data-v="show" class="active">Show</button>
+      <button data-v="hide">Hide</button>
+    </div>
+    <div class="hint" id="backLockHint" style="display:none">All cards face forward in this layout — there are no backs to hide.</div>
+    <div class="hint" id="backHint">Hide the rear of cards once they turn away (3D carousels, globe, or any tilt).</div>
+  </div>
+
   <button class="btn sm" id="resetBtn">↺ Reset settings</button>
 
   <details>
@@ -432,12 +447,6 @@
         <button data-v="on">On</button>
         <button data-v="off" class="active">Off</button>
       </div>
-      <div class="label" style="margin-top:4px">Card backs</div>
-      <div class="seg" id="backSeg">
-        <button data-v="show" class="active">Show</button>
-        <button data-v="hide">Hide</button>
-      </div>
-      <div class="hint">Hide the rear of cards that turn away (3D carousels, globe…).</div>
     </div>
   </details>
 
@@ -664,12 +673,18 @@ function frameAt(z){ const h=2*z*Math.tan(THREE.MathUtils.degToRad(camera.fov/2)
 const hex01=hex=>{ const h=hex.replace('#',''); return [parseInt(h.slice(0,2),16)/255,parseInt(h.slice(2,4),16)/255,parseInt(h.slice(4,6),16)/255]; };
 let curBg=[0.05,0.05,0.05];       // sRGB background fed to every card shader
 let cornerNorm=0;                  // corner radius in 0..0.5 uv units
-const CARD_VERT=`varying vec2 vUv; uniform float uSize; void main(){ vUv=uv; vec3 p=position; p.xy*=uSize; gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0); }`;
+const CARD_VERT=`varying vec2 vUv; varying vec3 vNormalVS; varying vec3 vViewPos; uniform float uSize;
+  void main(){ vUv=uv; vec3 p=position; p.xy*=uSize;
+    vec4 mv=modelViewMatrix*vec4(p,1.0); vViewPos=mv.xyz;
+    vNormalVS=normalize(mat3(modelViewMatrix)*vec3(0.0,0.0,1.0)); // the readable (+Z) face direction, in view space
+    gl_Position=projectionMatrix*mv; }`;
 const CARD_FRAG=`
-  uniform sampler2D map; uniform vec3 bgColor; uniform float uFade,uOpacity,cornerRadius,aspect,uPremul;
-  varying vec2 vUv;
+  uniform sampler2D map; uniform vec3 bgColor; uniform float uFade,uOpacity,cornerRadius,aspect,uPremul,uHideBack;
+  varying vec2 vUv; varying vec3 vNormalVS; varying vec3 vViewPos;
   vec3 lin2srgb(vec3 c){ bvec3 co=lessThan(c,vec3(0.0031308)); return mix(1.055*pow(max(c,vec3(0.0)),vec3(1.0/2.4))-0.055, c*12.92, vec3(co)); }
   void main(){
+    // #15 backface (arqe-style): hide a card once its readable face turns away from the camera
+    if(uHideBack>0.5 && dot(vNormalVS, normalize(-vViewPos))<0.0) discard;
     float mask=1.0;
     if(cornerRadius>0.001){
       vec2 p=vUv-0.5; p.y*=aspect;
@@ -695,14 +710,15 @@ function makeCardMaterial(tex,aspect){
   return new THREE.ShaderMaterial({
     uniforms:{ map:{value:tex}, bgColor:{value:new THREE.Vector3(curBg[0],curBg[1],curBg[2])},
                uFade:{value:1}, uOpacity:{value:1}, cornerRadius:{value:cornerNorm}, aspect:{value:aspect},
-               uPremul:{value:1}, uSize:{value:1} },
+               uPremul:{value:1}, uSize:{value:1}, uHideBack:{value:state.backface?1:0} },
     vertexShader:CARD_VERT, fragmentShader:CARD_FRAG,
-    transparent:true, depthWrite:false, depthTest:false, side:state.backface?THREE.FrontSide:THREE.DoubleSide,
+    transparent:true, depthWrite:false, depthTest:false, side:THREE.DoubleSide,
     premultipliedAlpha:true,
   });
 }
-// #15 backface: hide the rear of cards (arqe-style) — FrontSide culls away-facing cards (rings, globe…)
-function refreshCardSides(){ const sd=state.backface?THREE.FrontSide:THREE.DoubleSide; forEachCard(o=>{ if(o.material.side!==sd){ o.material.side=sd; o.material.needsUpdate=true; } }); }
+// #15 backface: hide the rear of cards (arqe-style). Done in-shader (winding-independent) so it
+// culls exactly the cards whose readable face turns away — works on rings, globe, flips, tilts…
+function refreshCardSides(){ const v=state.backface?1:0; forEachCard(o=>{ const u=o.material.uniforms.uHideBack; if(u) u.value=v; }); }
 function plane(tex,w,h,_t){ return new THREE.Mesh(new THREE.PlaneGeometry(w,h), makeCardMaterial(tex,h/w)); }
 function setCardOpacity(m,v){ m.material.uniforms.uOpacity.value=v; }     // engines use these instead of material.opacity / .map
 function setCardTex(m,t){ m.material.uniforms.map.value=t; }
@@ -1419,7 +1435,7 @@ const TEMPLATES = [
   {id:'stack-feed',   name:'Stack Feed',            scene:'stackFeed',    ease:'Smooth',   P:{dur:1.4,  hold:0,   drift:.25, corner:2}},
   {id:'diag-cascade', name:'Diagonal Cascade',      scene:'diagCascade',  ease:'Linear',   noEase:true, P:{corner:2}},
   {id:'wreath',       name:'Card Wreath',           scene:'wreath',       ease:'Smooth',   P:{loop:18,  drift:.3, corner:1.5, minN:12}},
-  {id:'floating',     name:'Floating Cards',        scene:'floating',     ease:'Linear',   noRot:true, noEase:true, P:{loop:9,   corner:1.5}},
+  {id:'floating',     name:'Floating Cards',        scene:'floating',     ease:'Linear',   noEase:true, P:{loop:9,   corner:1.5}},
   {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Slow',     noRot:true, P:{dur:.8,   hold:2.4, corner:1.5}},
   {cat:'Raw & Columns'},
   {id:'scroll-cols',  name:'Scroll Columns',        scene:'scrollCols',   ease:'Linear',   noEase:true, P:{corner:2, cols:3, cellAsp:0.74}},
@@ -1431,7 +1447,7 @@ const TEMPLATES = [
   {id:'grid-pop',     name:'Grid Pop',              scene:'gridPop',      ease:'Snappy',   P:{dur:.55,  hold:1.7, corner:2}},
   {id:'marquee',      name:'Marquee Lanes',         scene:'marquee',      ease:'Linear',   noEase:true, P:{dur:13.5, hold:0,   corner:1, tiltZ:-6}},
   {cat:'Space'},
-  {id:'field',        name:'Field Flight',          scene:'field',        ease:'Smooth',   noRot:true, spacing:0.5, P:{dur:1.3,  hold:.2,  drift:.35, corner:0, minN:18}},
+  {id:'field',        name:'Field Flight',          scene:'field',        ease:'Smooth',   spacing:0.5, P:{dur:1.3,  hold:.2,  drift:.35, corner:0, minN:18}},
   {id:'spiral',       name:'Spiral Vortex',         scene:'spiral',       ease:'Smooth',   P:{corner:1.5, turns:1.6, drift:.3, minN:12}},
   {id:'globe',        name:'Globe',                 scene:'globe',        ease:'Smooth',   noRot:true, P:{dur:9,    hold:0,   drift:.3, corner:1, minN:24}},
   {cat:'Cuts'},
@@ -1535,6 +1551,25 @@ function sceneHasDepth(){
   let near=Infinity, far=-Infinity, n=0;
   forEachCard(o=>{ if(o.visible){ o.getWorldPosition(_fadeVec); _fadeVec.sub(MAIN_CAMERA.position); const d=_fadeVec.dot(_fadeFwd); if(d<near)near=d; if(d>far)far=d; n++; } });
   return n>0 && (far-near)>0.3;
+}
+// does the layout ever turn a card's readable face away from the camera? (rings, globe, wreath…)
+// Sampled across the loop so a momentary all-forward frame doesn't misjudge it.
+const _bN=new THREE.Vector3(), _bP=new THREE.Vector3(), _bQ=new THREE.Quaternion();
+function sceneHasBacks(){
+  if(!active) return false;
+  for(let i=0;i<6;i++){
+    try{ active.update(animTime + i*0.37); }catch(e){}
+    MAIN_SCENE.updateMatrixWorld(true);
+    let away=false;
+    forEachCard(o=>{ if(away||!o.visible) return;
+      _bN.set(0,0,1).applyQuaternion(o.getWorldQuaternion(_bQ));   // readable (+Z) face direction
+      o.getWorldPosition(_bP); _bP.subVectors(MAIN_CAMERA.position,_bP).normalize(); // toward camera
+      if(_bN.dot(_bP) < -0.12) away=true;                           // clearly turned away
+    });
+    if(away){ try{ active.update(animTime); }catch(e){} return true; }
+  }
+  try{ active.update(animTime); }catch(e){}
+  return false;
 }
 function applyDepthFade(){
   const f=state.fade;
@@ -1713,7 +1748,7 @@ function applyTemplate(t){
   state.P={...t.P};
   // #7 full reset of per-preset adjustments. Uploaded images and workspace settings
   // (background, aspect ratio, dark theme, export quality) are intentionally KEPT.
-  state.size=1; state.fade=0; state.speed=1; state.rotY=0; state.rotX=0; state.dir=1; state.grain=false;
+  state.size=1; state.fade=0; state.speed=1; state.rotY=0; state.rotX=0; state.dir=1; state.grain=false; state.backface=false;
   state.spacing=t.spacing??1;                 // per-preset default spacing (Field Flight = 0.5)
   setEase(t.noEase?'Linear':t.ease);
   $('cardSize').value=1; $('sizeVal').textContent='×1.00';
@@ -1724,6 +1759,7 @@ function applyTemplate(t){
   $('corner').value=state.P.corner??0; $('cornerVal').textContent=(state.P.corner??0).toFixed(1);
   document.querySelectorAll('#dirSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v==='1'));
   document.querySelectorAll('#grainSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v==='off'));
+  document.querySelectorAll('#backSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v==='show'));
   // #1 locks: easing for continuous loops; rotation for 3D/camera-driven presets. Controls stay
   // VISIBLE but greyed so nothing ever looks like it vanished.
   $('easeGroup').classList.toggle('elocked', !!t.noEase);
@@ -1731,6 +1767,10 @@ function applyTemplate(t){
   rebuild(true);
   // depth fade is meaningful only when the layout has real depth → lock it on flat coplanar presets
   $('fadeGroup').classList.toggle('flocked', !sceneHasDepth());
+  // card-backs only matter when a card can turn away. Lock it only when the layout keeps every card
+  // facing forward AND rotation is locked too (single-card cuts) — otherwise a tilt could reveal backs.
+  $('backGroup').classList.toggle('blocked', !!t.noRot && !sceneHasBacks());
+  refreshCardSides();
   updateLoopInfo();
   document.querySelectorAll('#tpls .pv').forEach(c=>c.classList.toggle('active',c.dataset.id===t.id));
 }
