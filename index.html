@@ -388,7 +388,7 @@
 
   <div class="group">
     <div class="slider-row"><div class="label">Spacing</div><div class="val" id="spacingVal">×1.00</div></div>
-    <input type="range" id="spacing" min="0.1" max="2.8" step="0.05" value="1">
+    <input type="range" id="spacing" min="0.5" max="2.8" step="0.05" value="1">
   </div>
 
   <div class="group" id="rotGroup">
@@ -773,8 +773,14 @@ function mulberry32(a){ return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a
 
 /* Cap an infinite-scroll fill so extreme-low spacing can't spawn thousands of cards (lag).
    Scales the per-group count and the half-extent together; at the cap the dense "mush" simply
-   clumps toward the centre instead of tiling the whole frame. */
-const MAX_FILL=440;
+   clumps toward the centre instead of tiling the whole frame. Set high enough that normal use (down
+   to the 0.1 spacing floor ≈1500 cards) FILLS the frame with dense overlap — it's only a runaway
+   safety backstop, not a routine clamp (≈1500 cards measured ~1.6ms/frame to update). */
+const MAX_FILL=260;   // hard ceiling on cards in the tiling grids → bounded overdraw/draw-calls (no lag)
+// Catalog grids bake enough cards to fill the frame down to this spacing; below it isn't reachable
+// (the slider floor matches), so spacing only ever scales the PITCH live — smooth drag, no rebuild.
+// Kept moderate (not 0.1) so the card count — hence overdraw — stays light and the grids run at 60fps.
+const SP_FLOOR=0.5;
 function capFill(perGroup, half){
   const tot=perGroup*(2*half+1);
   if(tot<=MAX_FILL) return [perGroup, half];
@@ -869,6 +875,7 @@ const SCENES = {
       const ch=Math.min(boxH, w/e.asp), cw=ch*e.asp; // contain within the cell box
       const m=plane(e.tex,cw,ch,true); m.userData={slot:i};
       m.position.set(x,y,0); m.visible=false;
+      m.userData.spBase=m.position.clone();  // live spacing scales the grid from this base (non-cumulative)
       m.userData.delay=Math.hypot(x,y)*.13+i*.012;
       root.add(m); meshes.push(m);
     }
@@ -910,6 +917,7 @@ const SCENES = {
       const th=(i/n)*Math.PI*2;
       if(P.axis==='x'){ m.position.set(0,Math.sin(th)*R,Math.cos(th)*R); m.rotation.x=-th; }
       else{ m.position.set(Math.sin(th)*R,0,Math.cos(th)*R); m.rotation.y=th; }
+      m.userData.spBase=m.position.clone();  // base radius → live spacing scales from this (non-cumulative)
       inner.add(m); meshes.push(m);
     }
     root.add(inner);
@@ -1028,7 +1036,7 @@ const SCENES = {
     const cols=Math.max(1,Math.min(6,(N>=9?4:N>=4?3:2)));
     const cw=fr.w*1.04/cols, sp=state.spacing||1, baseGap=cw*.10;
     const w=cw-baseGap, boxH=w/PA;                    // #3 card size FIXED (independent of spacing)
-    const colPitch=cw*Math.min(sp,1), rowH=(boxH+baseGap)*sp; // <1 overlaps columns too; ≥1 keeps them in frame; scroll axis spreads
+    const colPitch=cw*sp, rowH=(boxH+baseGap)*sp; // spacing scales BOTH axes (columns spread horizontally too)
     let rows=Math.max(Math.ceil(N/cols), Math.ceil(fr.h/rowH)+2);
     while((rows*cols)%N) rows++; // even image distribution — no duplicate rows at the loop seam
     const meshes=[];
@@ -1206,6 +1214,7 @@ const SCENES = {
       const e=entryForSlot(i);
       const m=plane(e.tex,H*e.asp,H); m.userData={slot:i};
       m.position.set(Math.cos(th)*rr*R, y*R, Math.sin(th)*rr*R);
+      m.userData.spBase=m.position.clone();  // base sphere position → live spacing scales from this
       inner.add(m); meshes.push(m);
     }
     camera.position.set(0,0,R+3.6); camera.lookAt(0,0,0);
@@ -1292,8 +1301,8 @@ const SCENES = {
     const N0=sourceList().length, minN=P.minN||12;
     const n=N0>=minN?N0:N0*Math.ceil(minN/N0);
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
-    const fr=frameAt(5), D=Math.min(fr.w,fr.h), sp=state.spacing||1;
-    const Rmax=D*0.5*sp, Rmin=D*0.1*sp, turns=P.turns||1.6; // spacing spreads/compresses the spiral
+    const fr=frameAt(5), D=Math.min(fr.w,fr.h);
+    const turns=P.turns||1.6;
     const entries=[]; let maxAsp=0.5;
     for(let i=0;i<n;i++){ const e=entryForSlot(i); entries.push(e); maxAsp=Math.max(maxAsp,e.asp); }
     // self-similar: card height ∝ its radius; size set so the spiral arms never collide
@@ -1303,6 +1312,7 @@ const SCENES = {
     const L=P.loop||(n*1.5), dr=P.drift||0;             // slower, calmer vortex; drift keeps eased motion flowing
     return { loopSeconds:L,
       update(T){
+        const sp=state.spacing||1, Rmax=D*0.5*sp, Rmin=D*0.1*sp; // LIVE: spacing spreads/compresses the spiral in realtime
         const frac=(((T/L)%1)+1)%1, k=Math.floor(T/L); // easing shapes the per-loop progress (drift = constant floor)
         const eased=k+state.easeFn(frac);
         const base=(dr? eased*(1-dr)+(T/L)*dr : eased)*state.dir;
@@ -1399,30 +1409,30 @@ const SCENES = {
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
     const cols=P.cols||(N>=4?3:2);
-    const sp=state.spacing||1, baseGap=fr.w*0.02*(P.gap||1);
+    const baseGap=fr.w*0.02*(P.gap||1);
     const cw=(fr.w-baseGap*(cols+1))/cols;               // #3 card size is FIXED (independent of spacing)
     const cardH=cw/(P.cellAsp||0.74);
-    const sc=Math.min(sp,1);                            // <1 lets cards overlap on the cross axis too (mush); ≥1 keeps columns dense (no gaps)
-    const colPitch=(cw+baseGap)*sc, ch=(cardH+baseGap)*sp; // spacing compresses both axes below 1, spreads the scroll axis above 1
-    let perCol=Math.ceil(fr.h/ch)+5;                     // deep buffer so the wrap stays hidden even when tilted
-    let cHalf=Math.ceil(fr.w/2/colPitch)+2;              // enough columns each side to fill at any spacing
-    [perCol,cHalf]=capFill(perCol,cHalf);                // cap total cards → no lag at extreme low spacing (mush clumps centrally)
-    const span=perCol*ch;
+    // bake counts to fill down to the spacing floor; PITCH is live in update() → smooth drag, no rebuild
+    let perCol=Math.ceil(fr.h/((cardH+baseGap)*SP_FLOOR))+5;
+    let cHalf=Math.ceil(fr.w/2/((cw+baseGap)*SP_FLOOR))+2;
+    [perCol,cHalf]=capFill(perCol,cHalf);
     const meshes=[]; let slot=0;
     for(let c=-cHalf;c<=cHalf;c++){
-      const x=c*colPitch, dir=(((c%2)+2)%2===0)?1:-1;
+      const dir=(((c%2)+2)%2===0)?1:-1;
       for(let j=0;j<perCol;j++){
-        const m=plane(texAt(slot,cw/cardH),cw,cardH); m.userData={slot,x,y0:j*ch,dir}; m.renderOrder=slot; // stable draw order (coplanar)
-        m.position.x=x; root.add(m); meshes.push(m); slot++;
+        const m=plane(texAt(slot,cw/cardH),cw,cardH); m.userData={slot,c,j,dir}; m.renderOrder=slot; // stable draw order (coplanar)
+        root.add(m); meshes.push(m); slot++;
       }
     }
-    const L=P.loop||(perCol*(P.sec||1.5));             // ~1.5s per cell-pitch → uniform pace across the column presets
+    const L=P.loop||(perCol*(P.sec||1.5));
     return { loopSeconds:L,
       update(T){
+        const sp=state.spacing||1;                        // spacing scales BOTH axes (columns spread horizontally too)
+        const colPitch=(cw+baseGap)*sp, ch=(cardH+baseGap)*sp, span=perCol*ch; // LIVE pitch, both axes
         const t=(((T/L)%1)+1)%1;
         meshes.forEach(m=>{ const d=m.userData;
-          let y=(d.y0+d.dir*t*span*state.dir)%span; if(y<0)y+=span;
-          m.position.y=y-span/2;                          // off-screen wrap → seamless
+          let y=(d.j*ch+d.dir*t*span*state.dir)%span; if(y<0)y+=span;
+          m.position.set(d.c*colPitch, y-span/2, 0);       // off-screen wrap → seamless
         });
       } };
   },
@@ -1433,30 +1443,30 @@ const SCENES = {
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
     const rows=P.rows||(N>=4?3:2);
-    const sp=state.spacing||1, baseGap=fr.h*0.025*(P.gap||1);
+    const baseGap=fr.h*0.025*(P.gap||1);
     const rh=(fr.h-baseGap*(rows+1))/rows;               // #3 card size FIXED (independent of spacing)
     const cardW=rh*(P.cellAsp||1.3);
-    const sc=Math.min(sp,1);                            // <1 lets rows overlap too (mush); ≥1 keeps rows dense (no gaps)
-    const rowPitch=(rh+baseGap)*sc, cwp=(cardW+baseGap)*sp; // spacing compresses both axes below 1, spreads the scroll axis above 1
-    let perRow=Math.ceil(fr.w/cwp)+5;                     // deep buffer so the wrap stays hidden even when tilted
-    let rHalf=Math.ceil(fr.h/2/rowPitch)+2;              // enough rows to fill at any spacing
-    [perRow,rHalf]=capFill(perRow,rHalf);                // cap total cards → no lag at extreme low spacing
-    const span=perRow*cwp;
+    // bake counts to fill down to the spacing floor; PITCH is live in update() → smooth drag, no rebuild
+    let perRow=Math.ceil(fr.w/((cardW+baseGap)*SP_FLOOR))+5;
+    let rHalf=Math.ceil(fr.h/2/((rh+baseGap)*SP_FLOOR))+2;
+    [perRow,rHalf]=capFill(perRow,rHalf);
     const meshes=[]; let slot=0;
     for(let r=-rHalf;r<=rHalf;r++){
-      const y=-r*rowPitch, dir=(((r%2)+2)%2===0)?-1:1;
+      const dir=(((r%2)+2)%2===0)?-1:1;
       for(let j=0;j<perRow;j++){
-        const m=plane(texAt(slot,cardW/rh),cardW,rh); m.userData={slot,y,x0:j*cwp,dir}; m.renderOrder=slot; // stable draw order (coplanar)
-        m.position.y=y; root.add(m); meshes.push(m); slot++;
+        const m=plane(texAt(slot,cardW/rh),cardW,rh); m.userData={slot,r,j,dir}; m.renderOrder=slot; // stable draw order (coplanar)
+        root.add(m); meshes.push(m); slot++;
       }
     }
-    const L=P.loop||(perRow*(P.sec||1.5));             // same per-cell pace as Scroll Columns
+    const L=P.loop||(perRow*(P.sec||1.5));
     return { loopSeconds:L,
       update(T){
+        const sp=state.spacing||1;                        // spacing scales BOTH axes (rows spread vertically too)
+        const rowPitch=(rh+baseGap)*sp, cwp=(cardW+baseGap)*sp, span=perRow*cwp; // LIVE pitch, both axes
         const t=(((T/L)%1)+1)%1;
         meshes.forEach(m=>{ const d=m.userData;
-          let x=(d.x0+d.dir*t*span*state.dir)%span; if(x<0)x+=span;
-          m.position.x=x-span/2;
+          let x=(d.j*cwp+d.dir*t*span*state.dir)%span; if(x<0)x+=span;
+          m.position.set(x-span/2, -d.r*rowPitch, 0);
         });
       } };
   },
@@ -1467,26 +1477,27 @@ const SCENES = {
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
     const cols=P.cols||3, rows=P.rows||3, M=2;            // M extra cell-ranks beyond every edge → off-screen buffer
-    const sp=state.spacing||1, baseGap=Math.min(fr.w,fr.h)*0.025*(P.gap||1);
+    const baseGap=Math.min(fr.w,fr.h)*0.025*(P.gap||1);
     const cw=fr.w/cols, ch=fr.h/rows;                     // base cell
     const cardW=cw-baseGap, cardH=ch-baseGap, asp=cardW/cardH; // #3 card size FIXED (independent of spacing)
-    const pitchX=cw*sp, pitchY=ch*sp;                     // spacing only spreads the cell PITCH
-    let GC=Math.ceil(fr.w/pitchX)+2*M, GR=Math.ceil(fr.h/pitchY)+2*M; // enough cells to fill at any spacing
-    [GC,GR]=capGrid(GC,GR);                               // cap total cards → no lag at extreme low spacing
-    const spanX=GC*pitchX, spanY=GR*pitchY;               // toroidal period spans the whole extended grid
+    // Bake enough cells to FILL down to the spacing floor; spacing then scales the cell PITCH LIVE
+    // inside update() — so dragging the slider spreads/compresses smoothly with NO rebuild (no jump).
+    let GC=Math.ceil(fr.w/(cw*SP_FLOOR))+2*M, GR=Math.ceil(fr.h/(ch*SP_FLOOR))+2*M;
+    [GC,GR]=capGrid(GC,GR);
     const meshes=[]; let slot=0;
     for(let r=0;r<GR;r++) for(let c=0;c<GC;c++){
-      const m=plane(texAt(slot,asp),cardW,cardH); m.userData={slot,bx:c*pitchX,by:r*pitchY}; m.renderOrder=slot; // stable draw order (coplanar)
+      const m=plane(texAt(slot,asp),cardW,cardH); m.userData={slot,c,r}; m.renderOrder=slot; // stable draw order (coplanar)
       root.add(m); meshes.push(m); slot++;
     }
     const L=P.loop||(GC*(P.sec||1.6)), dx=(P.dx==null?1:P.dx), dy=(P.dy==null?1:P.dy);
     return { loopSeconds:L,
       update(T){
+        const sp=state.spacing||1, pitchX=cw*sp, pitchY=ch*sp, spanX=GC*pitchX, spanY=GR*pitchY; // LIVE pitch
         const t=(((T/L)%1)+1)%1;
         meshes.forEach(m=>{ const d=m.userData;
-          let x=(d.bx+t*spanX*dx*state.dir)%spanX; if(x<0)x+=spanX;
-          let y=(d.by+t*spanY*dy*state.dir)%spanY; if(y<0)y+=spanY;
-          m.position.set(x-spanX/2, y-spanY/2, 0);        // wraps now happen M cells off-screen, hidden even when tilted
+          let x=(d.c*pitchX+t*spanX*dx*state.dir)%spanX; if(x<0)x+=spanX;
+          let y=(d.r*pitchY+t*spanY*dy*state.dir)%spanY; if(y<0)y+=spanY;
+          m.position.set(x-spanX/2, y-spanY/2, 0);        // wraps happen M cells off-screen, hidden even when tilted
         });
       } };
   },
@@ -1495,9 +1506,9 @@ const SCENES = {
 /* ================= templates, grouped like the arqe catalog ================= */
 const TEMPLATES = [
   {cat:'Carousels 3D'},
-  {id:'carousel',     name:'Carousel Slide',        scene:'ring',         ease:'Smooth',   noRot:true, P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'y', tiltX:7,  step:'card', minN:8, chord:1.9}},
-  {id:'wheel',        name:'Vertical Wheel',        scene:'ring',         ease:'Smooth',   noRot:true, P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'x', step:'card', minN:6, chord:2.2}},
-  {id:'tilted-ring',  name:'Tilted Ring',           scene:'ring',         ease:'Linear',   noEase:true, noRot:true, P:{dur:16, hold:0, drift:1, corner:0, axis:'y', tiltX:14, tiltZ:16, step:'full', minN:9, chord:1.9, sizeMul:.85}},
+  {id:'carousel',     name:'Carousel Slide',        scene:'ring',         ease:'Smooth',   P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'y', tiltX:7,  step:'card', minN:8, chord:1.9}},
+  {id:'wheel',        name:'Vertical Wheel',        scene:'ring',         ease:'Smooth',   P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'x', step:'card', minN:6, chord:2.2}},
+  {id:'tilted-ring',  name:'Tilted Ring',           scene:'ring',         ease:'Linear',   noEase:true, P:{dur:16, hold:0, drift:1, corner:0, axis:'y', tiltX:14, tiltZ:16, step:'full', minN:9, chord:1.9, sizeMul:.85}},
   {cat:'Cards'},
   {id:'stack-reveal', name:'Smooth Stack Reveal',   scene:'stackReveal',  ease:'Smooth',   P:{dur:1.2,  hold:.15, corner:2.5}},
   {id:'shuffle',      name:'Shuffle Cards',         scene:'shuffleCards', ease:'Snappy',   P:{dur:1.0,  hold:.18, corner:2.5}},
@@ -1533,8 +1544,11 @@ const state={
   spacing:1, rotY:0, rotX:0, fade:0, exportRes:'2k', fps:30, dark:false, customW:1080, customH:1080, backface:false,
 };
 let active=null, animTime=0, builtSpacing=1;
-// flat, origin-centred, fixed-camera scenes where spacing == a pure position scale (safe to live-scale)
-const LIVE_SPACE=new Set(['scrollCols','scrollRows','gridDrift','vScroll','gridPop','filmstrip','marquee']);
+// presets that read spacing LIVE in their own update() (count baked, pitch/radius live) → smooth, no rebuild
+const LIVE_SPACE=new Set(['scrollCols','scrollRows','gridDrift','spiral']);
+// fixed-count presets where spacing == a uniform position scale from centre → done live in renderFrame
+// (cards keep their size; at low spacing they cluster/overlap = mush, at high they spread). No rebuild.
+const SCALE_SPACE=new Set(['ring','globe','floating','field','wreath','stackFeed','diagCascade','gridPop']);
 let exporting=false, exportCancelled=false;
 
 const $=id=>document.getElementById(id);
@@ -1546,30 +1560,51 @@ const $=id=>document.getElementById(id);
 const userPivot=new THREE.Group(); userPivot.matrixAutoUpdate=false;
 MAIN_SCENE.remove(MAIN_ROOT); userPivot.add(MAIN_ROOT); MAIN_SCENE.add(userPivot);
 const _origLookAt=MAIN_CAMERA.lookAt.bind(MAIN_CAMERA);
-const _wp=new THREE.Vector3(), _pivot=new THREE.Vector3(), _quat=new THREE.Quaternion(), _euler=new THREE.Euler(), _mr=new THREE.Matrix4(), _mt=new THREE.Matrix4(), _mti=new THREE.Matrix4();
-function cardCentroid(){
-  let cx=0,cy=0,cz=0,n=0;
-  forEachCard(o=>{ if(o.visible){ o.getWorldPosition(_wp); cx+=_wp.x; cy+=_wp.y; cz+=_wp.z; n++; } });
-  return n?_pivot.set(cx/n,cy/n,cz/n):null;
+// Capture whatever point each engine aims its camera at — we rotate the composition about THAT
+// point so a manual tilt spins the layout in place (stays framed) and never fights the engine's
+// own camera (the old "re-aim at card centroid" did, which flung 3D rings off-screen).
+const _lookTarget=new THREE.Vector3(0,0,0);
+MAIN_CAMERA.lookAt=function(x,y,z){
+  if(x&&x.isVector3) _lookTarget.set(x.x,x.y,x.z); else _lookTarget.set(x||0,y||0,z||0);
+  return _origLookAt(_lookTarget.x,_lookTarget.y,_lookTarget.z);
+};
+const _quat=new THREE.Quaternion(), _euler=new THREE.Euler(), _off=new THREE.Vector3(), _camBase=new THREE.Vector3();
+const _cq=new THREE.Quaternion(), _pq=new THREE.Quaternion();
+let _camBaseSet=false;
+// When a ring preset is tilted, face its cards to the camera so the tilt reads as a clean fanned
+// arc of forward-facing cards instead of edge-on slivers (ring cards otherwise face fixed directions).
+function billboardRing(){
+  MAIN_CAMERA.getWorldQuaternion(_cq);
+  forEachCard(o=>{ if(o.parent){ o.parent.getWorldQuaternion(_pq); _pq.invert(); o.quaternion.copy(_pq).multiply(_cq); } });
+  MAIN_SCENE.updateMatrixWorld(true);
 }
-// The rotation pivot is cached ONCE per template. Recomputing the live centroid every frame
-// made the whole composition jolt whenever a card wrapped/teleported (scrollers, marquees,
-// filmstrip…) — the mean position jumps discretely on each wrap. A fixed pivot kills that jump.
-let _rotPivot=null;
-function invalidateRotPivot(){ _rotPivot=null; }
+// Order overlapping 3D cards back-to-front by camera distance so they never flicker as the ring
+// spins or clusters (tight spacing). depthTest is off, so renderOrder is the painter's order.
+const _dp=new THREE.Vector3();
+function sortCardsByDepth(){
+  const cp=MAIN_CAMERA.position;
+  forEachCard(o=>{ o.getWorldPosition(_dp); o.renderOrder=Math.round(-_dp.distanceTo(cp)*100); });
+}
+function invalidateRotPivot(){}   // (kept as a no-op so existing rebuild calls don't break)
+// Manual Rotate X/Y ORBITS the camera around the point it's aimed at — the camera always keeps the
+// content in front of it, so any preset (flat grids OR 3D rings) tilts cleanly and can never swing
+// off-screen. We orbit from the engine's BASE camera position (captured at rebuild) so it never
+// compounds frame-to-frame on presets that set their camera only once.
 function applyUserRot(){
-  userPivot.matrix.identity(); userPivot.matrixWorldNeedsUpdate=true;
-  if(!state.rotY && !state.rotX) return;
+  userPivot.matrix.identity(); userPivot.matrixWorldNeedsUpdate=true; // layout itself is never moved
   MAIN_SCENE.updateMatrixWorld(true);
-  if(!_rotPivot){ if(!cardCentroid()) return; _rotPivot=_pivot.clone(); } // capture a stable pivot once
-  const C=_rotPivot;
+  if((!state.rotY && !state.rotX) || !_camBaseSet){
+    // no tilt → make sure the camera sits at its base (presets that set the camera only once would
+    // otherwise stay orbited after the slider returns to 0)
+    if(_camBaseSet){ MAIN_CAMERA.position.copy(_camBase); _origLookAt(_lookTarget.x,_lookTarget.y,_lookTarget.z); MAIN_CAMERA.updateMatrixWorld(); }
+    return;
+  }
+  const T=_lookTarget;
+  _off.copy(_camBase).sub(T);                            // engine's intended camera offset from its aim point
   _quat.setFromEuler(_euler.set(THREE.MathUtils.degToRad(state.rotX),THREE.MathUtils.degToRad(state.rotY),0,'YXZ'));
-  _mr.makeRotationFromQuaternion(_quat);
-  _mt.makeTranslation(C.x,C.y,C.z); _mti.makeTranslation(-C.x,-C.y,-C.z);
-  userPivot.matrix.copy(_mt).multiply(_mr).multiply(_mti); // rigid rotation about the centroid
-  userPivot.matrixWorldNeedsUpdate=true;
-  MAIN_SCENE.updateMatrixWorld(true);
-  _origLookAt(C.x,C.y,C.z);                             // re-aim camera at that same centroid → stays screen-centre
+  _off.applyQuaternion(_quat);
+  MAIN_CAMERA.position.copy(T).add(_off);
+  _origLookAt(T.x,T.y,T.z);
   MAIN_CAMERA.updateMatrixWorld();
 }
 
@@ -1775,6 +1810,8 @@ function rebuild(resetTime=false){
   curBg=bgFadeColor(); cornerNorm=Math.min(0.5,(state.P.corner||0)/12*0.45); // ready before cards are built
   active=SCENES[state.template.scene](state.P);
   builtSpacing=state.spacing;                              // spacing this layout was baked at (for live-drag scaling)
+  try{ active.update(animTime); }catch(e){}                // let the engine aim its camera, then snapshot the base
+  _camBase.copy(MAIN_CAMERA.position); _camBaseSet=true;   // camera orbit (applyUserRot) starts from this each frame
   if(resetTime) animTime=0;
   updateLoopInfo();
 }
@@ -1964,22 +2001,25 @@ function renderFrame(){
   // overlap neighbours). It is NOT a camera zoom and is fully independent of Spacing (position).
   if(camera.zoom!==1){ camera.zoom=1; camera.updateProjectionMatrix(); }
   forEachCard(o=>{ const u=o.material.uniforms.uSize; if(u) u.value=state.size; }); // per-card scale in the vertex shader (no accumulation)
-  // Live spacing preview (flat, origin-centred, fixed-camera grids only): while the slider is
-  // dragged we scale card POSITIONS from centre instead of rebuilding every frame (a rebuild
-  // re-tiles the infinite grids and makes them jump). Camera-driven presets (rings/field/globe…)
-  // are NOT scaled here — their spacing is clamped in-engine, so they rebuild immediately instead.
-  if(LIVE_SPACE.has(state.template.scene) && builtSpacing>0.001 && Math.abs(state.spacing-builtSpacing)>1e-4){
+  // Live spacing for fixed-count presets: scale card POSITIONS from centre in realtime (smooth drag,
+  // no rebuild). Card size is untouched → low spacing clusters/overlaps (mush), high spacing spreads.
+  if(SCALE_SPACE.has(state.template.scene) && builtSpacing>0.001){
     const k=state.spacing/builtSpacing;
-    forEachCard(o=>{ o.position.multiplyScalar(k); });
+    forEachCard(o=>{ const bp=o.userData.spBase;
+      if(bp) o.position.set(bp.x*k,bp.y*k,bp.z*k);   // static-position presets (rings/globe/pop): scale from base — never cumulative
+      else if(Math.abs(k-1)>1e-4) o.position.multiplyScalar(k); // per-frame-position presets reset each update, so a one-shot scale is fine
+    });
   }
   applyUserRot();
+  if(state.template.scene==='ring' && (state.rotY||state.rotX)) billboardRing(); // tilted carousel → cards face camera
+  if(state.template.scene==='ring' || state.template.scene==='globe') sortCardsByDepth(); // overlap → no flicker
   applyDepthFade();
   postMat.uniforms.uTime.value=animTime;
   renderer.clear();
   renderer.render(scene,camera);
   if(state.grain && !state.transparent) renderer.render(postScene,postCam);
 }
-let last=performance.now();
+let last=performance.now(), fpsAccum=0;
 let rec=null, recChunks=[], recUntil=0;
 let pendingRebuild=false;
 function scheduleRebuild(){ pendingRebuild=true; } // coalesce live slider drags to one rebuild per frame
@@ -1988,7 +2028,13 @@ function tickFrame(now){
   if(exporting) return; // export loop drives rendering
   if(pendingRebuild){ pendingRebuild=false; rebuild(); }
   const dt=Math.min((now-last)/1000,.1); last=now;
-  if(state.playing) animTime+=dt*state.speed;
+  // advance in whole FPS steps so the PREVIEW plays at the chosen export framerate (24 = choppier,
+  // 60 = smoother) — what you see is what you'll export.
+  if(state.playing){
+    const step=1/(state.fps||30);
+    fpsAccum+=dt*state.speed;
+    if(fpsAccum>=step){ const n=Math.floor(fpsAccum/step); animTime+=n*step; fpsAccum-=n*step; }
+  }
   renderFrame();
   updateTimeline();
   tickPreviews(dt);
@@ -2391,14 +2437,12 @@ $('cardSize').addEventListener('input',e=>{ state.size=parseFloat(e.target.value
 let spacingSettle=null;
 $('spacing').addEventListener('input',e=>{
   state.spacing=parseFloat(e.target.value); $('spacingVal').textContent='×'+state.spacing.toFixed(2);
-  if(LIVE_SPACE.has(state.template.scene)){
-    // flat grids: live-scale during the drag (renderFrame), re-bake the exact layout once movement stops
-    clearTimeout(spacingSettle); spacingSettle=setTimeout(scheduleRebuild, 150);
-  } else {
-    scheduleRebuild(); // camera-driven presets re-clamp on every step (cheap, few cards, no off-screen blow-up)
-  }
+  // Live-spacing presets (catalog grids + fixed-count scatters/rings) update in realtime with NO
+  // rebuild → buttery-smooth drag. The few remaining presets re-bake once the slider settles.
+  if(LIVE_SPACE.has(state.template.scene) || SCALE_SPACE.has(state.template.scene)) return;
+  clearTimeout(spacingSettle); spacingSettle=setTimeout(scheduleRebuild, 90);
 });
-$('spacing').addEventListener('change',()=>{ clearTimeout(spacingSettle); scheduleRebuild(); }); // settle on release
+$('spacing').addEventListener('change',()=>{ const s=state.template.scene; if(LIVE_SPACE.has(s)||SCALE_SPACE.has(s))return; clearTimeout(spacingSettle); scheduleRebuild(); });
 $('fade').addEventListener('input',e=>{ state.fade=parseFloat(e.target.value)/100; $('fadeVal').textContent=Math.round(state.fade*100)+'%'; });
 $('rotY').addEventListener('input',e=>{ state.rotY=parseFloat(e.target.value); $('rotYVal').textContent=state.rotY+'°'; });
 $('rotX').addEventListener('input',e=>{ state.rotX=parseFloat(e.target.value); $('rotXVal').textContent=state.rotX+'°'; });
