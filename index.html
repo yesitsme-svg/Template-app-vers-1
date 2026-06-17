@@ -335,9 +335,9 @@
   </div>
   <div class="group">
     <div class="label">Images <small id="imgCount"></small></div>
-    <div class="drop" id="drop">Drop images here or click to browse<br><span class="sub">JPG · PNG · WEBP — up to 20 files, 15 MB each</span></div>
-    <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" multiple hidden>
-    <input type="file" id="replaceInput" accept="image/jpeg,image/png,image/webp" hidden>
+    <div class="drop" id="drop">Drop images or videos here, or click to browse<br><span class="sub">JPG · PNG · WEBP · MP4 / WEBM — images ≤15 MB, video ≤30 MB</span></div>
+    <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" multiple hidden>
+    <input type="file" id="replaceInput" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" hidden>
     <div class="thumbs" id="thumbs"></div>
     <div class="row2" id="imgActions" style="display:none">
       <button class="btn sm" id="shuffleBtn">⇄ Shuffle</button>
@@ -432,6 +432,12 @@
         <button data-v="on">On</button>
         <button data-v="off" class="active">Off</button>
       </div>
+      <div class="label" style="margin-top:4px">Card backs</div>
+      <div class="seg" id="backSeg">
+        <button data-v="show" class="active">Show</button>
+        <button data-v="hide">Hide</button>
+      </div>
+      <div class="hint">Hide the rear of cards that turn away (3D carousels, globe…).</div>
     </div>
   </details>
 
@@ -555,6 +561,14 @@ const clampAspect=a=>Math.max(0.42, Math.min(2.4, a)); // keep extreme panoramas
 function makeTexture(source, key, aspect){
   const ck=key+'|'+aspect.toFixed(3);
   if(texCache.has(ck)) return texCache.get(ck);
+  if(source.tagName==='VIDEO'){ // #9 video card: redraw the current frame (cover-fit, capped res) each tick
+    const VL=1280, W=aspect>=1?VL:Math.round(VL*aspect), H=aspect>=1?Math.round(VL/aspect):VL;
+    const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d');
+    const tex=new THREE.CanvasTexture(c); tex.colorSpace=THREE.SRGBColorSpace; tex.anisotropy=4;
+    tex.__videoUpdate=()=>{ const v=source; if(v.readyState>=2 && v.videoWidth){ const s=Math.max(W/v.videoWidth,H/v.videoHeight), dw=v.videoWidth*s, dh=v.videoHeight*s; x.drawImage(v,(W-dw)/2,(H-dh)/2,dw,dh); tex.needsUpdate=true; } };
+    tex.__videoUpdate();
+    texCache.set(ck,tex); return tex;
+  }
   const LONG=2048; // long side 2K — matches the upload cap, crisp for full-frame cards / higher-res export
   const W=aspect>=1?LONG:Math.round(LONG*aspect), H=aspect>=1?Math.round(LONG/aspect):LONG;
   const c=document.createElement('canvas'); c.width=W; c.height=H;
@@ -603,6 +617,12 @@ function dropCachedTextures(uid){
   for(const [k,t] of [...texCache]){
     if(k.startsWith(uid+'|')){ t.dispose(); texCache.delete(k); }
   }
+}
+function updateVideoTextures(){ for(const t of texCache.values()){ if(t.__videoUpdate) t.__videoUpdate(); } }
+function disposeSource(u){ // free a userSources entry (image bitmap or video element)
+  dropCachedTextures(u.uid);
+  if(u.isVideo){ try{ u.src.pause(); }catch(e){} if(u._url) URL.revokeObjectURL(u._url); }
+  else u.src.close?.();
 }
 
 /* ================= three setup ================= */
@@ -677,10 +697,12 @@ function makeCardMaterial(tex,aspect){
                uFade:{value:1}, uOpacity:{value:1}, cornerRadius:{value:cornerNorm}, aspect:{value:aspect},
                uPremul:{value:1}, uSize:{value:1} },
     vertexShader:CARD_VERT, fragmentShader:CARD_FRAG,
-    transparent:true, depthWrite:false, depthTest:false, side:THREE.DoubleSide,
+    transparent:true, depthWrite:false, depthTest:false, side:state.backface?THREE.FrontSide:THREE.DoubleSide,
     premultipliedAlpha:true,
   });
 }
+// #15 backface: hide the rear of cards (arqe-style) — FrontSide culls away-facing cards (rings, globe…)
+function refreshCardSides(){ const sd=state.backface?THREE.FrontSide:THREE.DoubleSide; forEachCard(o=>{ if(o.material.side!==sd){ o.material.side=sd; o.material.needsUpdate=true; } }); }
 function plane(tex,w,h,_t){ return new THREE.Mesh(new THREE.PlaneGeometry(w,h), makeCardMaterial(tex,h/w)); }
 function setCardOpacity(m,v){ m.material.uniforms.uOpacity.value=v; }     // engines use these instead of material.opacity / .map
 function setCardTex(m,t){ m.material.uniforms.map.value=t; }
@@ -1416,7 +1438,7 @@ const state={
   template:null, P:{}, ease:'Smooth', bez:[.76,0,.24,1], easeFn:null,
   dir:1, bg:'#0d0d0d', bg2:'#2a1a5c', fillMode:'solid', transparent:false, ratio:'3:4',
   playing:true, grain:false, speed:1, size:1,
-  spacing:1, rotY:0, rotX:0, fade:0, exportRes:'2k', dark:false, customW:1080, customH:1080,
+  spacing:1, rotY:0, rotX:0, fade:0, exportRes:'2k', dark:false, customW:1080, customH:1080, backface:false,
 };
 let active=null, animTime=0;
 let exporting=false, exportCancelled=false;
@@ -1813,6 +1835,7 @@ function tickPreviews(dt){
 
 /* ================= render loop ================= */
 function renderFrame(){
+  updateVideoTextures();               // #9 refresh any video card textures to the current frame
   active?.update(animTime);
   // #16 Card size = a per-card scale (each card grows from its OWN centre, so big cards can
   // overlap neighbours). It is NOT a camera zoom and is fully independent of Spacing (position).
@@ -2074,6 +2097,7 @@ function bindSeg(id,fn){
 }
 bindSeg('dirSeg',v=>{ state.dir=parseInt(v); });
 bindSeg('grainSeg',v=>{ state.grain=v==='on'; });
+bindSeg('backSeg',v=>{ state.backface=v==='hide'; refreshCardSides(); });
 bindSeg('bgSeg',v=>{
   state.transparent=v==='transparent';
   $('bgFill').style.display=state.transparent?'none':'';
@@ -2208,8 +2232,9 @@ function toast(msg){
 }
 
 /* ================= uploads ================= */
-const MAX_FILES=20, MAX_FILE_MB=15, MAX_DIM=2048;
+const MAX_FILES=20, MAX_FILE_MB=15, MAX_DIM=2048, MAX_VIDEO_MB=30;
 const OK_TYPES=['image/jpeg','image/png','image/webp'];
+const VIDEO_TYPES=['video/mp4','video/webm','video/quicktime'];
 const drop=$('drop'), fileInput=$('fileInput'), replaceInput=$('replaceInput'), thumbs=$('thumbs');
 const DROP_HTML=drop.innerHTML;
 drop.addEventListener('click',()=>fileInput.click());
@@ -2223,7 +2248,7 @@ replaceInput.addEventListener('change',async()=>{
   const src=await processFile(f);
   if(!src) return;
   if(thumbReplaceIdx>=0 && thumbReplaceIdx<userSources.length){ // #2 swap an uploaded image in place
-    const old=userSources[thumbReplaceIdx]; dropCachedTextures(old.uid); old.src.close?.();
+    const old=userSources[thumbReplaceIdx]; disposeSource(old);
     userSources[thumbReplaceIdx]=src; thumbReplaceIdx=-1;
     renderThumbs(); rebuild();
     toast('Image replaced.');
@@ -2236,8 +2261,22 @@ replaceInput.addEventListener('change',async()=>{
   }
 });
 
+async function processVideoFile(f){ // #9 build a looping <video> source object
+  if(f.size>MAX_VIDEO_MB*1048576){ toast(`${f.name}: video is over the ${MAX_VIDEO_MB} MB limit — keep clips short for smooth playback.`); return null; }
+  const url=URL.createObjectURL(f);
+  const v=document.createElement('video');
+  v.src=url; v.muted=true; v.loop=true; v.playsInline=true; v.preload='auto';
+  try{ await new Promise((res,rej)=>{ v.onloadeddata=res; v.onerror=()=>rej(new Error('decode')); setTimeout(()=>rej(new Error('timeout')),15000); }); }
+  catch(err){ URL.revokeObjectURL(url); toast(`${f.name}: could not read this video.`); return null; }
+  const sw=v.videoWidth, sh=v.videoHeight;
+  const tc=document.createElement('canvas'); tc.width=80; tc.height=106; const tx=tc.getContext('2d');
+  const ts=Math.max(80/sw,106/sh); tx.drawImage(v,(80-sw*ts)/2,(106-sh*ts)/2,sw*ts,sh*ts);
+  try{ await v.play(); }catch(e){}
+  return {src:v, thumb:tc.toDataURL('image/jpeg',.7), name:f.name, uid:'u'+(uidSeq++), aspect:clampAspect(sw/sh), isVideo:true, _url:url};
+}
 async function processFile(f){ // validate + downscale + build a source object (or null)
-  if(!OK_TYPES.includes(f.type)){ toast(`${f.name}: only JPG, PNG or WEBP files are supported.`); return null; }
+  if(VIDEO_TYPES.includes(f.type)) return processVideoFile(f);
+  if(!OK_TYPES.includes(f.type)){ toast(`${f.name}: use JPG, PNG, WEBP or MP4/WEBM video.`); return null; }
   if(f.size>MAX_FILE_MB*1048576){ toast(`${f.name}: file is over the ${MAX_FILE_MB} MB limit.`); return null; }
   try{
     let bmp=await createImageBitmap(f);
@@ -2289,7 +2328,7 @@ function renderThumbs(){
     });
     const x=document.createElement('button'); x.className='x'; x.textContent='✕'; x.title='Remove';
     x.addEventListener('click',()=>{
-      dropCachedTextures(u.uid); u.src.close?.();
+      disposeSource(u);
       userSources.splice(i,1);
       renderThumbs(); rebuild();
     });
@@ -2311,7 +2350,7 @@ function clearSlotOverrides(){
   slotOverrides.clear();
 }
 $('clearBtn').addEventListener('click',()=>{
-  userSources.forEach(u=>{ dropCachedTextures(u.uid); u.src.close?.(); });
+  userSources.forEach(u=>{ disposeSource(u); });
   userSources=[]; clearSlotOverrides();
   renderThumbs(); rebuild(true);
 });
@@ -2325,7 +2364,7 @@ window.__app={
   exportMP4, exportPNG, exportPNGSequence, lastExport:null,
   dbgOverrides:()=>[...slotOverrides.keys()],
   setTestImages(n,mixed){ // debug helper: replace project with n generated images (optionally mixed aspects)
-    userSources.forEach(u=>{ dropCachedTextures(u.uid); u.src.close?.(); });
+    userSources.forEach(u=>{ disposeSource(u); });
     clearSlotOverrides();
     const aspects=[3/4,1,16/9,4/5,9/16];
     userSources=[...Array(n)].map((_,i)=>{
