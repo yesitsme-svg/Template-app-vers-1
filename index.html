@@ -146,6 +146,12 @@
   #backGroup.blocked #backLockHint{display:block !important;}
   .slider-row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
   .slider-row .val{color:var(--muted); font-variant-numeric:tabular-nums; min-width:44px; text-align:right; font-size:11.5px;}
+  /* slider UX: number is click-to-edit, label is double-click-to-reset */
+  .slider-row .val.editable{cursor:text; border-radius:4px; padding:1px 2px; margin:-1px -2px; transition:background .12s;}
+  .slider-row .val.editable:hover{background:rgba(20,16,40,.06); color:var(--ink,#1a1a1a);}
+  .slider-row .label.resettable{cursor:pointer;}
+  .valEdit{width:54px; font:inherit; font-size:11.5px; text-align:right; border:1px solid var(--accent,#a07cff); border-radius:4px; padding:1px 4px; background:#fff; color:#111; outline:none; -moz-appearance:textfield;}
+  .valEdit::-webkit-outer-spin-button,.valEdit::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
   input[type=range]{-webkit-appearance:none; width:100%; height:3px; background:#e3e2e8; border-radius:2px; outline:none;}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:15px; height:15px; border-radius:50%; background:var(--dark); cursor:pointer; border:2.5px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.25);}
   input[type=color]{width:100%; height:32px; border:1px solid var(--border); border-radius:10px; background:var(--panel2); cursor:pointer; padding:3px 5px;}
@@ -1942,6 +1948,7 @@ function applyTemplate(t){
   $('speed').value=1; $('speedVal').textContent='×1.00';
   $('rotY').value=0; $('rotYVal').textContent='0°'; $('rotX').value=0; $('rotXVal').textContent='0°';
   $('corner').value=state.P.corner??0; $('cornerVal').textContent=(state.P.corner??0).toFixed(1);
+  snapshotSliderDefaults();                              // remember this preset's slider values → double-click resets to them
   document.querySelectorAll('#dirSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v==='1'));
   document.querySelectorAll('#grainSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v==='off'));
   document.querySelectorAll('#backSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v==='show'));
@@ -2536,6 +2543,38 @@ function updateDynamicFadeLock(){
 }
 $('rotY').addEventListener('input',e=>{ state.rotY=parseFloat(e.target.value); $('rotYVal').textContent=state.rotY+'°'; updateDynamicFadeLock(); });
 $('rotX').addEventListener('input',e=>{ state.rotX=parseFloat(e.target.value); $('rotXVal').textContent=state.rotX+'°'; updateDynamicFadeLock(); });
+
+/* slider UX: double-click the label (or slider) → reset to the preset default; click the number → type a value */
+const SLIDER_PAIRS=[['cardSize','sizeVal'],['spacing','spacingVal'],['compScale','compVal'],['speed','speedVal'],['fade','fadeVal'],['rotY','rotYVal'],['rotX','rotXVal'],['corner','cornerVal']];
+const SLIDER_DEFAULTS={};
+function snapshotSliderDefaults(){ for(const [rid] of SLIDER_PAIRS){ const el=$(rid); if(el) SLIDER_DEFAULTS[rid]=el.value; } }
+function sliderLocked(range){ return getComputedStyle(range).pointerEvents==='none'; } // greyed/locked groups
+function fireInput(el){ el.dispatchEvent(new Event('input',{bubbles:true})); }
+function wireSliderUX(rangeId, valId){
+  const range=$(rangeId), val=$(valId); if(!range||!val) return;
+  const reset=e=>{ if(e)e.preventDefault(); if(sliderLocked(range))return; const d=SLIDER_DEFAULTS[rangeId]; if(d==null)return; range.value=d; fireInput(range); };
+  range.addEventListener('dblclick',reset);
+  const row=val.closest('.slider-row'), label=row&&row.querySelector('.label');
+  if(label){ label.classList.add('resettable'); label.title='Double-click to reset'; label.addEventListener('dblclick',reset); }
+  val.classList.add('editable'); val.title='Click to type a value · double-click the label to reset';
+  val.addEventListener('click',()=>{
+    if(sliderLocked(range)||val.querySelector('input'))return;
+    const inp=document.createElement('input');
+    inp.className='valEdit'; inp.type='number'; inp.value=range.value; inp.min=range.min; inp.max=range.max; inp.step=range.step;
+    val.textContent=''; val.appendChild(inp); inp.focus(); inp.select();
+    let done=false;
+    const commit=apply=>{ if(done)return; done=true;
+      if(apply){ let v=parseFloat(inp.value); if(!isNaN(v)){ v=Math.min(parseFloat(range.max),Math.max(parseFloat(range.min),v)); range.value=v; } }
+      fireInput(range);   // handler rewrites the formatted label (with its × / % / ° unit) + applies state
+    };
+    inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();commit(true);} else if(e.key==='Escape'){e.preventDefault();commit(false);} });
+    inp.addEventListener('blur',()=>commit(true));
+    inp.addEventListener('click',e=>e.stopPropagation());
+  });
+}
+SLIDER_PAIRS.forEach(([r,v])=>wireSliderUX(r,v));
+snapshotSliderDefaults();
+
 function resetAdjustments(){
   const t=state.template;
   state.size=1; state.comp=1; state.spacing=1; state.fade=0; state.rotY=0; state.rotX=0; state.dir=1; state.speed=1;
