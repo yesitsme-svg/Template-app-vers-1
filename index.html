@@ -669,6 +669,9 @@ function entryForSlot(slot){
   const s=srcForSlot(slot);
   return {tex:makeTexture(s.src,s.key,s.aspect), asp:s.aspect};
 }
+// average aspect of the loaded images — grid presets size their cells to this so 16:9 uploads
+// get 16:9 cells (not forced into a portrait cell). Falls back to a portrait default.
+function avgSourceAsp(fallback){ const l=sourceList(); if(!l.length) return fallback||0.74; let s=0; for(const e of l) s+=(e.aspect||fallback||0.74); return s/l.length; }
 function texAt(slot, aspect){ // cover-crop a slot's image to a fixed cell aspect (used by the grid presets)
   const s=srcForSlot(slot);
   return makeTexture(s.src, s.key, aspect);
@@ -1431,12 +1434,12 @@ const SCENES = {
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
     const cols=P.cols||(N>=4?3:2);
+    const cellAsp=avgSourceAsp(P.cellAsp||0.74);          // #2 cells adopt the loaded images' aspect (16:9 → wide cells)
     const baseGap=fr.w*0.02*(P.gap||1);
-    const cw=(fr.w-baseGap*(cols+1))/cols;               // #3 card size is FIXED (independent of spacing)
-    const cardH=cw/(P.cellAsp||0.74);
-    // bake counts to fill down to the spacing floor; PITCH is live in update() → smooth drag, no rebuild
-    let perCol=Math.ceil(fr.h/((cardH+baseGap)*SP_FLOOR))+5;
-    let cHalf=Math.ceil(fr.w/2/((cw+baseGap)*SP_FLOOR))+2;
+    const cw=fr.w/cols, cardH=cw/cellAsp;                 // card FILLS its column slot → tiles edge-to-edge at min spacing; size FIXED
+    // bake for the densest pitch (= card size, at the spacing floor) + buffer; PITCH is live → smooth drag, no rebuild
+    let perCol=Math.ceil(fr.h/cardH)+5;
+    let cHalf=Math.ceil(fr.w/2/cw)+2;
     [perCol,cHalf]=capFill(perCol,cHalf);
     const meshes=[]; let slot=0;
     for(let c=-cHalf;c<=cHalf;c++){
@@ -1449,8 +1452,9 @@ const SCENES = {
     const L=P.loop||(perCol*(P.sec||1.5));
     return { loopSeconds:L,
       update(T){
-        const sp=state.spacing||1;                        // spacing scales BOTH axes (columns spread horizontally too)
-        const colPitch=(cw+baseGap)*sp, ch=(cardH+baseGap)*sp, span=perCol*ch; // LIVE pitch, both axes
+        const sp=state.spacing||1;                        // min slider (0.5) = 0 gap (cards touch); grows from there, never overlaps
+        const gap=baseGap*Math.max(0,(sp-0.5)/0.5);       // 0 at floor → baseGap at ×1 → wider above
+        const colPitch=cw+gap, ch=cardH+gap, span=perCol*ch; // LIVE pitch, both axes
         const t=(((T/L)%1)+1)%1;
         meshes.forEach(m=>{ const d=m.userData;
           let y=(d.j*ch+d.dir*t*span*state.dir)%span; if(y<0)y+=span;
@@ -1465,12 +1469,12 @@ const SCENES = {
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
     const rows=P.rows||(N>=4?3:2);
+    const cellAsp=avgSourceAsp(P.cellAsp||1.3);           // #2 cells adopt the loaded images' aspect (16:9 → wide cells)
     const baseGap=fr.h*0.025*(P.gap||1);
-    const rh=(fr.h-baseGap*(rows+1))/rows;               // #3 card size FIXED (independent of spacing)
-    const cardW=rh*(P.cellAsp||1.3);
-    // bake counts to fill down to the spacing floor; PITCH is live in update() → smooth drag, no rebuild
-    let perRow=Math.ceil(fr.w/((cardW+baseGap)*SP_FLOOR))+5;
-    let rHalf=Math.ceil(fr.h/2/((rh+baseGap)*SP_FLOOR))+2;
+    const rh=fr.h/rows, cardW=rh*cellAsp;                 // card FILLS its row slot → tiles edge-to-edge at min spacing; size FIXED
+    // bake for the densest pitch (= card size, at the spacing floor) + buffer; PITCH is live → smooth drag, no rebuild
+    let perRow=Math.ceil(fr.w/cardW)+5;
+    let rHalf=Math.ceil(fr.h/2/rh)+2;
     [perRow,rHalf]=capFill(perRow,rHalf);
     const meshes=[]; let slot=0;
     for(let r=-rHalf;r<=rHalf;r++){
@@ -1483,8 +1487,9 @@ const SCENES = {
     const L=P.loop||(perRow*(P.sec||1.5));
     return { loopSeconds:L,
       update(T){
-        const sp=state.spacing||1;                        // spacing scales BOTH axes (rows spread vertically too)
-        const rowPitch=(rh+baseGap)*sp, cwp=(cardW+baseGap)*sp, span=perRow*cwp; // LIVE pitch, both axes
+        const sp=state.spacing||1;                        // min slider (0.5) = 0 gap (cards touch); grows from there, never overlaps
+        const gap=baseGap*Math.max(0,(sp-0.5)/0.5);       // 0 at floor → baseGap at ×1 → wider above
+        const rowPitch=rh+gap, cwp=cardW+gap, span=perRow*cwp; // LIVE pitch, both axes
         const t=(((T/L)%1)+1)%1;
         meshes.forEach(m=>{ const d=m.userData;
           let x=(d.j*cwp+d.dir*t*span*state.dir)%span; if(x<0)x+=span;
@@ -1498,13 +1503,14 @@ const SCENES = {
     const N=sourceList().length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const cols=P.cols||3, rows=P.rows||3, M=2;            // M extra cell-ranks beyond every edge → off-screen buffer
+    const cols=P.cols||3, M=2;                            // M extra cell-ranks beyond every edge → off-screen buffer
+    const cellAsp=avgSourceAsp(1);                        // #2 cells adopt the loaded images' aspect
     const baseGap=Math.min(fr.w,fr.h)*0.025*(P.gap||1);
-    const cw=fr.w/cols, ch=fr.h/rows;                     // base cell
-    const cardW=cw-baseGap, cardH=ch-baseGap, asp=cardW/cardH; // #3 card size FIXED (independent of spacing)
-    // Bake enough cells to FILL down to the spacing floor; spacing then scales the cell PITCH LIVE
-    // inside update() — so dragging the slider spreads/compresses smoothly with NO rebuild (no jump).
-    let GC=Math.ceil(fr.w/(cw*SP_FLOOR))+2*M, GR=Math.ceil(fr.h/(ch*SP_FLOOR))+2*M;
+    const cw=fr.w/cols, rows=Math.max(1,Math.round(fr.h/(cw/cellAsp))); // rows follow the image aspect so cells aren't squashed
+    const ch=fr.h/rows;                                   // cell fills the frame in both axes (card = cell → 0 gap at floor)
+    const cardW=cw, cardH=ch, asp=cw/ch;                  // card FILLS its cell; size FIXED (Card-size slider scales separately)
+    // Bake enough cells for the densest pitch (= cell size, at the spacing floor) + buffer; PITCH is live in update().
+    let GC=Math.ceil(fr.w/cw)+2*M, GR=Math.ceil(fr.h/ch)+2*M;
     [GC,GR]=capGrid(GC,GR);
     const meshes=[]; let slot=0;
     for(let r=0;r<GR;r++) for(let c=0;c<GC;c++){
@@ -1514,7 +1520,9 @@ const SCENES = {
     const L=P.loop||(GC*(P.sec||1.6)), dx=(P.dx==null?1:P.dx), dy=(P.dy==null?1:P.dy);
     return { loopSeconds:L,
       update(T){
-        const sp=state.spacing||1, pitchX=cw*sp, pitchY=ch*sp, spanX=GC*pitchX, spanY=GR*pitchY; // LIVE pitch
+        const sp=state.spacing||1;                        // min slider (0.5) = 0 gap (cards touch); grows from there, never overlaps
+        const gap=baseGap*Math.max(0,(sp-0.5)/0.5);       // 0 at floor → baseGap at ×1 → wider above
+        const pitchX=cw+gap, pitchY=ch+gap, spanX=GC*pitchX, spanY=GR*pitchY; // LIVE pitch
         const t=(((T/L)%1)+1)%1;
         meshes.forEach(m=>{ const d=m.userData;
           let x=(d.c*pitchX+t*spanX*dx*state.dir)%spanX; if(x<0)x+=spanX;
@@ -1540,9 +1548,9 @@ const TEMPLATES = [
   {id:'floating',     name:'Floating Cards',        scene:'floating',     ease:'Linear',   noEase:true, lockEase:true, P:{loop:9,   corner:1.5}},
   {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Smooth',   noSpace:true, P:{dur:.8,   hold:2.4, corner:1.5}},
   {cat:'Raw & Columns'},
-  {id:'scroll-cols',  name:'Scroll Columns',        scene:'scrollCols',   ease:'Linear',   noEase:true, P:{corner:2, cols:3, cellAsp:0.74}},
-  {id:'marquee-rows', name:'Marquee Rows',          scene:'scrollRows',   ease:'Linear',   noEase:true, P:{corner:2, rows:3, cellAsp:0.7}},
-  {id:'grid-drift',   name:'Drifting Wall',         scene:'gridDrift',    ease:'Linear',   noEase:true, P:{corner:2, cols:3, rows:3, dx:1, dy:1}},
+  {id:'scroll-cols',  name:'Scroll Columns',        scene:'scrollCols',   ease:'Linear',   noEase:true, lockEase:true, P:{corner:2, cols:3, cellAsp:0.74}},
+  {id:'marquee-rows', name:'Marquee Rows',          scene:'scrollRows',   ease:'Linear',   noEase:true, lockEase:true, P:{corner:2, rows:3, cellAsp:0.7}},
+  {id:'grid-drift',   name:'Drifting Wall',         scene:'gridDrift',    ease:'Linear',   noEase:true, lockEase:true, P:{corner:2, cols:3, dx:1, dy:1}},
   {cat:'Walls & Strips'},
   {id:'filmstrip',    name:'Horizontal Filmstrip',  scene:'filmstrip',    ease:'Linear',   noEase:true, P:{dur:1.6, hold:0, drift:1, corner:1.5}},
   {id:'v-scroll',     name:'Vertical Scroll',       scene:'vScroll',      ease:'Linear',   noEase:true, P:{dur:1.6, hold:0, drift:1, corner:0}},
@@ -1714,6 +1722,7 @@ function sceneHasBacks(){
   try{ active.update(animTime); }catch(e){}
   return false;
 }
+const FLAT_ROT_FADE=new Set(['diagCascade','wreath','scrollCols','scrollRows','gridDrift']); // flat at rest, real depth once tilted
 function applyDepthFade(){
   const f=state.fade;
   if(f<=0){ forEachCard(o=>{ o.material.uniforms.uFade.value=1; }); return; }
@@ -1724,11 +1733,11 @@ function applyDepthFade(){
   // euclidean distance. A flat layout (grids/scrollers) is one depth plane → ~no fade, so it
   // never gets the odd radial vignette; only genuinely 3D scenes (carousel/globe/field) fade.
   camera.getWorldDirection(_fadeFwd);
-  // Diagonal Cascade is a long conveyor whose ends run off-screen on both sides. If the fade span
-  // is measured across ALL cards, the nearest VISIBLE card sits mid-curve (dimmed) and the gradient
-  // is squeezed. Instead measure the span across only the ON-SCREEN cards → nearest visible card is
-  // full-bright and it melts smoothly into darkness across exactly the depth you see.
-  const isCascade = state.template && state.template.scene==='diagCascade';
+  // Flat-tiled scenes (Diagonal Cascade + the Raw & Columns grids) are long conveyors whose ends run
+  // off-screen. If the fade span is measured across ALL cards, the nearest VISIBLE card sits mid-curve
+  // (dimmed) and the gradient is squeezed. Instead measure the span across only the ON-SCREEN cards →
+  // nearest visible card is full-bright and it melts smoothly into darkness across exactly the depth seen.
+  const isCascade = state.template && FLAT_ROT_FADE.has(state.template.scene);
   let near=Infinity, far=-Infinity; const ds=[];
   let vNear=Infinity, vFar=-Infinity;
   for(const o of cards){
@@ -2522,7 +2531,7 @@ $('fade').addEventListener('input',e=>{ state.fade=parseFloat(e.target.value)/10
 // real view-axis depth, so we unlock Depth fade only while they're rotated. Scoped to these presets.
 function updateDynamicFadeLock(){
   const t=state.template; if(!t) return;
-  if(t.id==='diag-cascade' || t.id==='wreath')
+  if(FLAT_ROT_FADE.has(t.scene))
     $('fadeGroup').classList.toggle('flocked', !(state.rotY||state.rotX));
 }
 $('rotY').addEventListener('input',e=>{ state.rotY=parseFloat(e.target.value); $('rotYVal').textContent=state.rotY+'°'; updateDynamicFadeLock(); });
