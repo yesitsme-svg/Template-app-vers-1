@@ -2027,10 +2027,9 @@ function renderFrame(){
     });
   }
   applyUserRot();
-  // Horizontal ring (carousel/tilted-ring) tilts cleanly via camera-orbit — no billboard, so cards lean
-  // with the scene and Card backs/Hide still works. The VERTICAL wheel curves cards away under any tilt
-  // (mirrored backs), so when it's tilted we billboard its cards to face the camera → readable column.
-  if(state.template.scene==='ring' && state.P && state.P.axis==='x' && (state.rotY||state.rotX)) billboardRing();
+  // No billboard on any ring: cards must tilt WITH the composition (real perspective lean) so the tilt
+  // reads right (wheel: Rotate X = vertical, Rotate Y = horizontal) AND Card backs/Hide can cull the
+  // away-facing cards that a tilt reveals. (The vertical wheel uses layout-rotation in applyUserRot.)
   if(state.template.scene==='ring' || state.template.scene==='globe') sortCardsByDepth(); // overlap → no flicker
   applyDepthFade();
   postMat.uniforms.uTime.value=animTime;
