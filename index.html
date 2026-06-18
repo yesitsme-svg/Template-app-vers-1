@@ -386,7 +386,7 @@
     <input type="range" id="cardSize" min="0.15" max="2.5" step="0.05" value="1">
   </div>
 
-  <div class="group">
+  <div class="group" id="spaceGroup">
     <div class="slider-row"><div class="label">Spacing</div><div class="val" id="spacingVal">×1.00</div></div>
     <input type="range" id="spacing" min="0.5" max="2.8" step="0.05" value="1">
   </div>
@@ -1524,7 +1524,7 @@ const TEMPLATES = [
   {id:'diag-cascade', name:'Diagonal Cascade',      scene:'diagCascade',  ease:'Linear',   noEase:true, lockEase:true, P:{corner:2}},
   {id:'wreath',       name:'Card Wreath',           scene:'wreath',       ease:'Linear',   noEase:true, lockEase:true, P:{loop:22, drift:1, corner:1.5, minN:12}},
   {id:'floating',     name:'Floating Cards',        scene:'floating',     ease:'Linear',   noEase:true, lockEase:true, P:{loop:9,   corner:1.5}},
-  {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Smooth',   P:{dur:.8,   hold:2.4, corner:1.5}},
+  {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Linear',   noEase:true, lockEase:true, noSpace:true, P:{dur:.8,   hold:2.4, corner:1.5}},
   {cat:'Raw & Columns'},
   {id:'scroll-cols',  name:'Scroll Columns',        scene:'scrollCols',   ease:'Linear',   noEase:true, P:{corner:2, cols:3, cellAsp:0.74}},
   {id:'marquee-rows', name:'Marquee Rows',          scene:'scrollRows',   ease:'Linear',   noEase:true, P:{corner:2, rows:3, cellAsp:0.7}},
@@ -1928,6 +1928,7 @@ function applyTemplate(t){
   $('easeGroup').classList.toggle('elocked', !!t.lockEase);   // per-template lock (e.g. Diagonal Cascade = Linear only)
   $('easeLockHint').style.display = (t.noEase || t.lockEase) ? 'block' : 'none';
   $('rotGroup').classList.toggle('rlocked', !!t.noRot);
+  $('spaceGroup').style.display = t.noSpace ? 'none' : '';   // some presets (Product Showcase) have no meaningful spacing
   rebuild(true);
   // depth fade is meaningful only when the layout has real depth → lock it on flat coplanar presets
   $('fadeGroup').classList.toggle('flocked', !sceneHasDepth());
