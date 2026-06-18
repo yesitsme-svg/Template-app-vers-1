@@ -1670,7 +1670,7 @@ function applyBackground(){
    instead of snapping the far card straight to the background. The power curve only
    shapes how the fade is distributed by depth. */
 const _fadeVec=new THREE.Vector3(), _fadeFwd=new THREE.Vector3(), _fadeProj=new THREE.Vector3();
-let _cascNear=null, _cascFar=null;   // smoothed visible-depth span for diagCascade fade
+let _cascNear=null, _cascFar=null, _cascKey=null, _cascSettle=0;   // frozen visible-depth span for diagCascade fade
 // does the active layout span real depth (along the view axis)? flat coplanar grids do not.
 function sceneHasDepth(){
   if(!active) return false;
@@ -1726,11 +1726,18 @@ function applyDepthFade(){
     if(isCascade && onScreen){ if(d<vNear)vNear=d; if(d>vFar)vFar=d; }
   }
   if(isCascade && vFar>vNear){
-    // ease the visible span frame-to-frame so conveyor recycling can't pop the gradient
-    _cascNear = _cascNear==null ? vNear : _cascNear+(vNear-_cascNear)*0.15;
-    _cascFar  = _cascFar ==null ? vFar  : _cascFar +(vFar -_cascFar )*0.15;
-    near=_cascNear; far=_cascFar;
-  } else if(isCascade){ if(_cascNear!=null){ near=_cascNear; far=_cascFar; } }
+    // FREEZE the span while the scene is static (only the conveyor moves) so each card fades by its
+    // own absolute depth — no per-frame min/max means no sawtooth when a card recycles. Re-chase the
+    // span only while a control that changes the geometry (tilt / spacing / zoom) is actually moving.
+    const key = Math.round(state.rotX)+'|'+Math.round(state.rotY)+'|'+state.spacing.toFixed(2)+'|'+(state.comp||1).toFixed(2);
+    if(key!==_cascKey){ _cascKey=key; _cascSettle=0; }
+    if(_cascSettle<8){
+      _cascNear = _cascNear==null ? vNear : _cascNear+(vNear-_cascNear)*0.4;
+      _cascFar  = _cascFar ==null ? vFar  : _cascFar +(vFar -_cascFar )*0.4;
+      _cascSettle++;
+    }
+  }
+  if(isCascade && _cascNear!=null){ near=_cascNear; far=_cascFar; }
   // Normalize by a MINIMUM depth span (DEPTH_FLOOR world units). Without this, a near-coplanar
   // layout (grids, scrollers) has a tiny far-near and the division blows sub-pixel depth
   // differences into random per-card banding on overlaps. The floor makes such layouts read as
@@ -1847,7 +1854,7 @@ function rebuild(resetTime=false){
     });
   }
   root.rotation.set(0,0,0);
-  _cascNear=_cascFar=null;                                // drop any stale cascade fade span
+  _cascNear=_cascFar=null; _cascKey=null; _cascSettle=0;  // drop any stale cascade fade span
   invalidateRotPivot();                                  // re-capture the rotation pivot for the new layout
   scene.background=state.transparent?null:(state.fillMode==='gradient'?gradientTexture():new THREE.Color(state.bg));
   curBg=bgFadeColor(); cornerNorm=Math.min(0.5,(state.P.corner||0)/12*0.45); // ready before cards are built
