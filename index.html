@@ -909,9 +909,10 @@ const SCENES = {
     const H=(n>10?1.5*Math.sqrt(10/n):1.5)*(P.sizeMul||1);
     const entries=[]; let maxW=0;
     for(let i=0;i<n;i++){ const e=entryForSlot(i); entries.push(e); maxW=Math.max(maxW,H*e.asp); }
-    // radius sized for the widest card so mixed aspects never intersect; even angular spacing
-    const spRing=Math.min(state.spacing||1, 1.5);          // beyond ~1.5 the ring balloons off-screen → cards vanish; clamp so it stays full
-    const R=Math.max(maxW*(P.chord||1.9)*spRing/(2*Math.sin(Math.PI/n)),1.35);
+    // radius sized for the widest card so mixed aspects never intersect; even angular spacing.
+    // R scales LINEARLY with spacing (no clamp) — the live spacing scale (renderFrame) divides by the
+    // built spacing, so any clamp here would mismatch and make spacing jump to wrong values.
+    const R=Math.max(maxW*(P.chord||1.9)*(state.spacing||1)/(2*Math.sin(Math.PI/n)),1.35);
     const inner=new THREE.Group();
     const meshes=[];
     for(let i=0;i<n;i++){
@@ -1572,6 +1573,7 @@ MAIN_CAMERA.lookAt=function(x,y,z){
 };
 const _quat=new THREE.Quaternion(), _euler=new THREE.Euler(), _off=new THREE.Vector3(), _camBase=new THREE.Vector3();
 const _cq=new THREE.Quaternion(), _pq=new THREE.Quaternion();
+const _mr=new THREE.Matrix4(), _mt=new THREE.Matrix4(), _mti=new THREE.Matrix4();
 let _camBaseSet=false;
 // When a ring preset is tilted, face its cards to the camera so the tilt reads as a clean fanned
 // arc of forward-facing cards instead of edge-on slivers (ring cards otherwise face fixed directions).
@@ -1602,8 +1604,19 @@ function applyUserRot(){
     return;
   }
   const T=_lookTarget;
-  _off.copy(_camBase).sub(T);                            // engine's intended camera offset from its aim point
   _quat.setFromEuler(_euler.set(THREE.MathUtils.degToRad(state.rotX),THREE.MathUtils.degToRad(state.rotY),0,'YXZ'));
+  // Vertical wheel: tilt the COMPOSITION about its centre (camera fixed). Its cards form a vertical
+  // ring, so a camera ORBIT would swing it edge-on; rotating the layout makes the column lean readably.
+  if(state.template.scene==='ring' && state.P && state.P.axis==='x'){
+    if(_camBaseSet){ MAIN_CAMERA.position.copy(_camBase); _origLookAt(T.x,T.y,T.z); MAIN_CAMERA.updateMatrixWorld(); }
+    _mr.makeRotationFromQuaternion(_quat);
+    _mt.makeTranslation(T.x,T.y,T.z); _mti.makeTranslation(-T.x,-T.y,-T.z);
+    userPivot.matrix.copy(_mt).multiply(_mr).multiply(_mti);
+    userPivot.matrixWorldNeedsUpdate=true; MAIN_SCENE.updateMatrixWorld(true);
+    return;
+  }
+  // default (carousel / flat presets): ORBIT the camera around the look point → clean perspective lean
+  _off.copy(_camBase).sub(T);                            // engine's intended camera offset from its aim point
   _off.applyQuaternion(_quat);
   MAIN_CAMERA.position.copy(T).add(_off);
   _origLookAt(T.x,T.y,T.z);
@@ -2014,8 +2027,10 @@ function renderFrame(){
     });
   }
   applyUserRot();
-  // (no billboard: the ring must TILT with the scene when rotated — cards lean with it, not re-face the
-  //  camera — so the tilt reads as a composition tilt and Card backs/Hide can still cull away-facing cards)
+  // Horizontal ring (carousel/tilted-ring) tilts cleanly via camera-orbit — no billboard, so cards lean
+  // with the scene and Card backs/Hide still works. The VERTICAL wheel curves cards away under any tilt
+  // (mirrored backs), so when it's tilted we billboard its cards to face the camera → readable column.
+  if(state.template.scene==='ring' && state.P && state.P.axis==='x' && (state.rotY||state.rotX)) billboardRing();
   if(state.template.scene==='ring' || state.template.scene==='globe') sortCardsByDepth(); // overlap → no flicker
   applyDepthFade();
   postMat.uniforms.uTime.value=animTime;
