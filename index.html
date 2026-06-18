@@ -391,6 +391,29 @@
     <input type="range" id="spacing" min="0.5" max="2.8" step="0.05" value="1">
   </div>
 
+  <div class="group">
+    <div class="slider-row"><div class="label">Speed</div><div class="val" id="speedVal">×1.00</div></div>
+    <input type="range" id="speed" min="0.25" max="2" step="0.05" value="1">
+  </div>
+
+  <div class="group" id="fadeGroup">
+    <div class="slider-row"><div class="label">Depth fade</div><div class="val" id="fadeVal">0%</div></div>
+    <input type="range" id="fade" min="0" max="100" step="1" value="0">
+    <div class="hint" id="fadeLockHint" style="display:none">Flat layout — all cards sit on one plane, so there's no depth to fade.</div>
+  </div>
+
+  <div class="group" id="easeGroup">
+    <div class="label">Easing</div>
+    <div class="chips" id="easeChips"></div>
+    <div class="hint" id="easeLockHint" style="display:none">Continuous loop — Linear keeps it perfectly smooth. Other curves add an ease-in/out each cycle.</div>
+    <button class="disclose" id="easeToggle"><span class="chev">›</span><span id="easeToggleLabel">Adjust curve</span></button>
+    <div id="easeAdvanced" style="display:none">
+      <canvas id="easeCurve"></canvas>
+      <div class="bezvals" id="bezVals"></div>
+      <div class="hint">Drag the two handles to shape the curve.</div>
+    </div>
+  </div>
+
   <div class="group" id="rotGroup">
     <div class="slider-row"><div class="label">Rotate Y</div><div class="val" id="rotYVal">0°</div></div>
     <input type="range" id="rotY" min="-45" max="45" step="1" value="0">
@@ -407,29 +430,6 @@
     </div>
     <div class="hint" id="backLockHint" style="display:none">All cards face forward in this layout — there are no backs to hide.</div>
     <div class="hint" id="backHint">Hide the rear of cards once they turn away (3D carousels, globe, or any tilt).</div>
-  </div>
-
-  <div class="group" id="fadeGroup">
-    <div class="slider-row"><div class="label">Depth fade</div><div class="val" id="fadeVal">0%</div></div>
-    <input type="range" id="fade" min="0" max="100" step="1" value="0">
-    <div class="hint" id="fadeLockHint" style="display:none">Flat layout — all cards sit on one plane, so there's no depth to fade.</div>
-  </div>
-
-  <div class="group">
-    <div class="slider-row"><div class="label">Speed</div><div class="val" id="speedVal">×1.00</div></div>
-    <input type="range" id="speed" min="0.25" max="2" step="0.05" value="1">
-  </div>
-
-  <div class="group" id="easeGroup">
-    <div class="label">Easing</div>
-    <div class="chips" id="easeChips"></div>
-    <div class="hint" id="easeLockHint" style="display:none">Continuous loop — Linear keeps it perfectly smooth. Other curves add an ease-in/out each cycle.</div>
-    <button class="disclose" id="easeToggle"><span class="chev">›</span><span id="easeToggleLabel">Adjust curve</span></button>
-    <div id="easeAdvanced" style="display:none">
-      <canvas id="easeCurve"></canvas>
-      <div class="bezvals" id="bezVals"></div>
-      <div class="hint">Drag the two handles to shape the curve.</div>
-    </div>
   </div>
 
   <div class="group">
@@ -485,22 +485,20 @@
 <div id="exportBar">
   <div class="exrow">
     <div class="dd" id="ddFormat" data-value="mp4">
-      <button class="ddBtn" type="button"><span class="ddVal">MP4 video</span><span class="ddCar">▾</span></button>
+      <button class="ddBtn" type="button"><span class="ddVal">MP4</span><span class="ddCar">▾</span></button>
       <div class="ddPop">
-        <button type="button" data-v="mp4">MP4 video</button>
+        <button type="button" data-v="mp4">MP4</button>
         <button type="button" data-v="gif">GIF</button>
-        <button type="button" data-v="png">PNG image</button>
-        <button type="button" data-v="seq">PNG sequence (ZIP)</button>
+        <button type="button" data-v="png">PNG</button>
+        <button type="button" data-v="seq">PNG seq</button>
       </div>
     </div>
-  </div>
-  <div class="exrow">
     <div class="dd" id="ddQuality" data-value="2k">
-      <button class="ddBtn" type="button"><span class="ddVal">2K · 2160</span><span class="ddCar">▾</span></button>
+      <button class="ddBtn" type="button"><span class="ddVal">2K</span><span class="ddCar">▾</span></button>
       <div class="ddPop">
-        <button type="button" data-v="1k">1K · 1080</button>
-        <button type="button" data-v="2k">2K · 2160</button>
-        <button type="button" data-v="4k">4K · 3840</button>
+        <button type="button" data-v="1k">1K</button>
+        <button type="button" data-v="2k">2K</button>
+        <button type="button" data-v="4k">4K</button>
       </div>
     </div>
     <div class="dd" id="ddFps" data-value="30">
