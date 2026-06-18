@@ -387,6 +387,11 @@
   </div>
 
   <div class="group">
+    <div class="slider-row"><div class="label">Composition</div><div class="val" id="compVal">×1.00</div></div>
+    <input type="range" id="compScale" min="0.4" max="2.5" step="0.05" value="1">
+  </div>
+
+  <div class="group">
     <div class="slider-row"><div class="label">Spacing</div><div class="val" id="spacingVal">×1.00</div></div>
     <input type="range" id="spacing" min="0.5" max="2.8" step="0.05" value="1">
   </div>
@@ -1538,7 +1543,7 @@ const RATIOS={'3:4':[3,4],'9:16':[9,16],'1:1':[1,1],'4:3':[4,3],'16:9':[16,9]};
 const state={
   template:null, P:{}, ease:'Smooth', bez:[.76,0,.24,1], easeFn:null,
   dir:1, bg:'#0d0d0d', bg2:'#2a1a5c', fillMode:'solid', transparent:false, ratio:'3:4',
-  playing:true, grain:false, speed:1, size:1,
+  playing:true, grain:false, speed:1, size:1, comp:1,
   spacing:1, rotY:0, rotX:0, fade:0, exportRes:'2k', fps:30, dark:false, customW:1080, customH:1080, backface:false,
 };
 let active=null, animTime=0, builtSpacing=1;
@@ -1857,10 +1862,11 @@ function applyTemplate(t){
   state.P={...t.P};
   // #7 full reset of per-preset adjustments. Uploaded images and workspace settings
   // (background, aspect ratio, dark theme, export quality) are intentionally KEPT.
-  state.size=1; state.fade=0; state.speed=1; state.rotY=0; state.rotX=0; state.dir=1; state.grain=false; state.backface=false;
+  state.size=1; state.comp=1; state.fade=0; state.speed=1; state.rotY=0; state.rotX=0; state.dir=1; state.grain=false; state.backface=false;
   state.spacing=t.spacing??1;                 // per-preset default spacing (Field Flight = 0.5)
   setEase(t.noEase?'Linear':t.ease);
   $('cardSize').value=1; $('sizeVal').textContent='×1.00';
+  $('compScale').value=1; $('compVal').textContent='×1.00';
   $('spacing').value=state.spacing; $('spacingVal').textContent='×'+state.spacing.toFixed(2);
   $('fade').value=0; $('fadeVal').textContent='0%';
   $('speed').value=1; $('speedVal').textContent='×1.00';
@@ -1995,9 +2001,9 @@ function tickPreviews(dt){
 function renderFrame(){
   updateVideoTextures();               // #9 refresh any video card textures to the current frame
   active?.update(animTime);
-  // #16 Card size = a per-card scale (each card grows from its OWN centre, so big cards can
-  // overlap neighbours). It is NOT a camera zoom and is fully independent of Spacing (position).
-  if(camera.zoom!==1){ camera.zoom=1; camera.updateProjectionMatrix(); }
+  // #16 Card size = per-card scale (each card grows from its own centre). Composition = a pure
+  // CAMERA ZOOM of the whole scene (doesn't touch spacing or card sizes — just scales the view).
+  if(camera.zoom!==state.comp){ camera.zoom=state.comp; camera.updateProjectionMatrix(); }
   forEachCard(o=>{ const u=o.material.uniforms.uSize; if(u) u.value=state.size; }); // per-card scale in the vertex shader (no accumulation)
   // Live spacing for fixed-count presets: scale card POSITIONS from centre in realtime (smooth drag,
   // no rebuild). Card size is untouched → low spacing clusters/overlaps (mush), high spacing spreads.
@@ -2431,7 +2437,8 @@ $('speed').addEventListener('input',e=>{
   updateLoopInfo();
 });
 $('corner').addEventListener('input',e=>{ state.P.corner=parseFloat(e.target.value); $('cornerVal').textContent=state.P.corner.toFixed(1); refreshCardUniforms(); });
-$('cardSize').addEventListener('input',e=>{ state.size=parseFloat(e.target.value); $('sizeVal').textContent='×'+state.size.toFixed(2); }); // pure camera zoom — applied live in renderFrame, no rebuild
+$('cardSize').addEventListener('input',e=>{ state.size=parseFloat(e.target.value); $('sizeVal').textContent='×'+state.size.toFixed(2); }); // per-card scale — applied live in renderFrame, no rebuild
+$('compScale').addEventListener('input',e=>{ state.comp=parseFloat(e.target.value); $('compVal').textContent='×'+state.comp.toFixed(2); }); // whole-scene camera zoom — live, no rebuild
 let spacingSettle=null;
 $('spacing').addEventListener('input',e=>{
   state.spacing=parseFloat(e.target.value); $('spacingVal').textContent='×'+state.spacing.toFixed(2);
@@ -2446,11 +2453,12 @@ $('rotY').addEventListener('input',e=>{ state.rotY=parseFloat(e.target.value); $
 $('rotX').addEventListener('input',e=>{ state.rotX=parseFloat(e.target.value); $('rotXVal').textContent=state.rotX+'°'; });
 function resetAdjustments(){
   const t=state.template;
-  state.size=1; state.spacing=1; state.fade=0; state.rotY=0; state.rotX=0; state.dir=1; state.speed=1;
+  state.size=1; state.comp=1; state.spacing=1; state.fade=0; state.rotY=0; state.rotX=0; state.dir=1; state.speed=1;
   state.P={...t.P};            // restores corner/drift to the template's stock defaults
   setEase(t.ease);             // and the template's ideal easing
   clearSlotOverrides();        // drop per-card image swaps
   $('cardSize').value=1; $('sizeVal').textContent='×1.00';
+  $('compScale').value=1; $('compVal').textContent='×1.00';
   $('spacing').value=1; $('spacingVal').textContent='×1.00';
   $('fade').value=0; $('fadeVal').textContent='0%';
   $('speed').value=1; $('speedVal').textContent='×1.00';
