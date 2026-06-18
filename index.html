@@ -1669,7 +1669,8 @@ function applyBackground(){
    The slider scales the AMOUNT (mix from no-fade), so it ramps in smoothly from 0
    instead of snapping the far card straight to the background. The power curve only
    shapes how the fade is distributed by depth. */
-const _fadeVec=new THREE.Vector3(), _fadeFwd=new THREE.Vector3();
+const _fadeVec=new THREE.Vector3(), _fadeFwd=new THREE.Vector3(), _fadeProj=new THREE.Vector3();
+let _cascNear=null, _cascFar=null;   // smoothed visible-depth span for diagCascade fade
 // does the active layout span real depth (along the view axis)? flat coplanar grids do not.
 function sceneHasDepth(){
   if(!active) return false;
@@ -1709,8 +1710,27 @@ function applyDepthFade(){
   // euclidean distance. A flat layout (grids/scrollers) is one depth plane → ~no fade, so it
   // never gets the odd radial vignette; only genuinely 3D scenes (carousel/globe/field) fade.
   camera.getWorldDirection(_fadeFwd);
+  // Diagonal Cascade is a long conveyor whose ends run off-screen on both sides. If the fade span
+  // is measured across ALL cards, the nearest VISIBLE card sits mid-curve (dimmed) and the gradient
+  // is squeezed. Instead measure the span across only the ON-SCREEN cards → nearest visible card is
+  // full-bright and it melts smoothly into darkness across exactly the depth you see.
+  const isCascade = state.template && state.template.scene==='diagCascade';
   let near=Infinity, far=-Infinity; const ds=[];
-  for(const o of cards){ o.getWorldPosition(_fadeVec); _fadeVec.sub(camera.position); const d=_fadeVec.dot(_fadeFwd); ds.push(d); if(d<near)near=d; if(d>far)far=d; }
+  let vNear=Infinity, vFar=-Infinity;
+  for(const o of cards){
+    o.getWorldPosition(_fadeVec);
+    if(isCascade){ _fadeProj.copy(_fadeVec).project(camera);
+      var onScreen = Math.abs(_fadeProj.x)<=1.15 && Math.abs(_fadeProj.y)<=1.15; }
+    _fadeVec.sub(camera.position); const d=_fadeVec.dot(_fadeFwd); ds.push(d);
+    if(d<near)near=d; if(d>far)far=d;
+    if(isCascade && onScreen){ if(d<vNear)vNear=d; if(d>vFar)vFar=d; }
+  }
+  if(isCascade && vFar>vNear){
+    // ease the visible span frame-to-frame so conveyor recycling can't pop the gradient
+    _cascNear = _cascNear==null ? vNear : _cascNear+(vNear-_cascNear)*0.15;
+    _cascFar  = _cascFar ==null ? vFar  : _cascFar +(vFar -_cascFar )*0.15;
+    near=_cascNear; far=_cascFar;
+  } else if(isCascade){ if(_cascNear!=null){ near=_cascNear; far=_cascFar; } }
   // Normalize by a MINIMUM depth span (DEPTH_FLOOR world units). Without this, a near-coplanar
   // layout (grids, scrollers) has a tiny far-near and the division blows sub-pixel depth
   // differences into random per-card banding on overlaps. The floor makes such layouts read as
@@ -1718,7 +1738,7 @@ function applyDepthFade(){
   // Normalize by the scene's OWN depth span so the slider feels identical on every 3D scene
   // (a shallow carousel and a deep field fade the same way for the same slider value). Flat
   // scenes are already locked out (sceneHasDepth/flocked), so there's no coplanar banding to guard.
-  const range=Math.max(far-near, 0.35), N=1+f*2.2; // gentle, gradual gradient across depth
+  const range=Math.max(far-near, 0.35), N=isCascade ? 1+f*0.5 : 1+f*2.2; // cascade: near-linear so it melts evenly into the dark
   for(let i=0;i<cards.length;i++){
     const t=clamp01((ds[i]-near)/range);   // 0 nearest → 1 farthest (true view-axis depth)
     const curve=Math.pow(1-t,N);           // nearest stays crisp; depth melts smoothly toward bg
@@ -1827,6 +1847,7 @@ function rebuild(resetTime=false){
     });
   }
   root.rotation.set(0,0,0);
+  _cascNear=_cascFar=null;                                // drop any stale cascade fade span
   invalidateRotPivot();                                  // re-capture the rotation pivot for the new layout
   scene.background=state.transparent?null:(state.fillMode==='gradient'?gradientTexture():new THREE.Color(state.bg));
   curBg=bgFadeColor(); cornerNorm=Math.min(0.5,(state.P.corner||0)/12*0.45); // ready before cards are built
