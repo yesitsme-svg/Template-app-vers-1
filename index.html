@@ -1102,13 +1102,13 @@ const SCENES = {
     const rnd=mulberry32(5);
     const jr=[...Array(n)].map(()=>(rnd()-.5)*.12);
     const jx=[...Array(n)].map(()=>(rnd()-.5)*.06);
-    const gz=Math.min(.075,.55/n)*(state.spacing||1);   // spacing spreads the stacked deck
     const meshes=[], ws=[];
     for(let i=0;i<n;i++){ const e=entryForSlot(i), wi=H*e.asp; ws.push(wi); const m=plane(e.tex,wi,H); m.userData.slot=i; root.add(m); meshes.push(m); }
     camera.position.set(0,.04,4.7); camera.lookAt(0,0,0);
     const cyc=P.dur+P.hold;
     return { loopSeconds:cyc*n,
       update(T){
+        const gz=Math.min(.075,.55/n)*(state.spacing||1); // LIVE: spacing spreads the stacked deck — no rebuild
         const c=Math.floor(T/cyc), m0=T-c*cyc;
         const eR=state.easeFn(clamp01(m0/P.dur)); // anticipation (<0) reads as a wind-up
         const e=clamp01(eR);
@@ -1121,7 +1121,8 @@ const SCENES = {
             m.position.set(
               jx[i]+Math.sin(g*Math.PI)*ws[i]*1.12*state.dir,
               arc*H*.10+breathe,
-              -(n-1)*gz*gl+arc*.42);
+              -(n-1)*gz*gl+arc*.18); // gentler forward pop → the travelling card stays within the deck's
+                                     // depth so Depth fade's range stays stable (no shimmer on the stacked cards)
             m.rotation.z=jr[i]+arc*.3*state.dir;
             m.scale.setScalar(1-(n-1)*.025*gl);
           }else{
@@ -1552,7 +1553,7 @@ const state={
 };
 let active=null, animTime=0, builtSpacing=1;
 // presets that read spacing LIVE in their own update() (count baked, pitch/radius live) → smooth, no rebuild
-const LIVE_SPACE=new Set(['scrollCols','scrollRows','gridDrift','spiral','stackReveal']);
+const LIVE_SPACE=new Set(['scrollCols','scrollRows','gridDrift','spiral','stackReveal','shuffleCards']);
 // fixed-count presets where spacing == a uniform position scale from centre → done live in renderFrame
 // (cards keep their size; at low spacing they cluster/overlap = mush, at high they spread). No rebuild.
 const SCALE_SPACE=new Set(['ring','globe','floating','field','wreath','stackFeed','diagCascade','gridPop']);
