@@ -1587,7 +1587,9 @@ function billboardRing(){
 const _dp=new THREE.Vector3();
 function sortCardsByDepth(){
   const cp=MAIN_CAMERA.position;
-  forEachCard(o=>{ o.getWorldPosition(_dp); o.renderOrder=Math.round(-_dp.distanceTo(cp)*100); });
+  // float draw order (NOT rounded) + a tiny per-card tiebreak → near-equal-depth cards keep a stable
+  // order frame-to-frame instead of flickering (the rounded version swapped them = visible jerk).
+  forEachCard(o=>{ o.getWorldPosition(_dp); o.renderOrder=-_dp.distanceTo(cp)+(o.userData.slot||0)*1e-4; });
 }
 function invalidateRotPivot(){}   // (kept as a no-op so existing rebuild calls don't break)
 // Manual Rotate X/Y ORBITS the camera around the point it's aimed at — the camera always keeps the
