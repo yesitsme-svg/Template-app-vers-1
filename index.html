@@ -1521,7 +1521,7 @@ const TEMPLATES = [
   {id:'stack-reveal', name:'Smooth Stack Reveal',   scene:'stackReveal',  ease:'Smooth',   P:{dur:1.2,  hold:.15, corner:2.5}},
   {id:'shuffle',      name:'Shuffle Cards',         scene:'shuffleCards', ease:'Snappy',   P:{dur:1.0,  hold:.18, corner:2.5}},
   {id:'stack-feed',   name:'Stack Feed',            scene:'stackFeed',    ease:'Smooth',   P:{dur:1.4,  hold:0,   drift:.25, corner:2}},
-  {id:'diag-cascade', name:'Diagonal Cascade',      scene:'diagCascade',  ease:'Linear',   noEase:true, P:{corner:2}},
+  {id:'diag-cascade', name:'Diagonal Cascade',      scene:'diagCascade',  ease:'Linear',   noEase:true, lockEase:true, P:{corner:2}},
   {id:'wreath',       name:'Card Wreath',           scene:'wreath',       ease:'Linear',   noEase:true, P:{loop:22, drift:1, corner:1.5, minN:12}},
   {id:'floating',     name:'Floating Cards',        scene:'floating',     ease:'Linear',   noEase:true, P:{loop:9,   corner:1.5}},
   {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Smooth',   P:{dur:.8,   hold:2.4, corner:1.5}},
@@ -1897,8 +1897,8 @@ function applyTemplate(t){
   // #1 locks: easing for continuous loops; rotation for 3D/camera-driven presets. Controls stay
   // VISIBLE but greyed so nothing ever looks like it vanished.
   // easing is never locked — Linear is just the smart default for continuous loops; the client can change it
-  $('easeGroup').classList.remove('elocked');
-  $('easeLockHint').style.display = t.noEase ? 'block' : 'none';
+  $('easeGroup').classList.toggle('elocked', !!t.lockEase);   // per-template lock (e.g. Diagonal Cascade = Linear only)
+  $('easeLockHint').style.display = (t.noEase || t.lockEase) ? 'block' : 'none';
   $('rotGroup').classList.toggle('rlocked', !!t.noRot);
   rebuild(true);
   // depth fade is meaningful only when the layout has real depth → lock it on flat coplanar presets
@@ -2054,14 +2054,15 @@ function tickFrame(now){
   if(exporting) return; // export loop drives rendering
   if(pendingRebuild){ pendingRebuild=false; rebuild(); }
   const dt=Math.min((now-last)/1000,.1); last=now;
-  // advance in whole FPS steps so the PREVIEW plays at the chosen export framerate (24 = choppier,
-  // 60 = smoother) — what you see is what you'll export.
+  // animTime STEPS at the chosen FPS cadence (24 = choppier, 60 = smoother — matches export), but the
+  // step cadence is tied to real time, NOT speed: each step advances animTime by step*speed. So at any
+  // speed the motion plays at FPS frames/sec (the old code tied the cadence to speed → speed<0.5 froze).
   if(state.playing){
     const step=1/(state.fps||30);
-    fpsAccum+=dt*state.speed;
-    if(fpsAccum>=step){ const n=Math.floor(fpsAccum/step); animTime+=n*step; fpsAccum-=n*step; }
+    fpsAccum+=dt;
+    if(fpsAccum>=step){ const n=Math.floor(fpsAccum/step); fpsAccum-=n*step; animTime+=n*step*state.speed; }
   }
-  renderFrame();
+  renderFrame();          // every frame → slider feedback stays smooth even while the motion is FPS-stepped
   updateTimeline();
   tickPreviews(dt);
   if(rec && rec.state==='recording' && animTime>=recUntil) rec.stop();
