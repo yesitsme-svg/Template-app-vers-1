@@ -1522,7 +1522,7 @@ const TEMPLATES = [
   {id:'shuffle',      name:'Shuffle Cards',         scene:'shuffleCards', ease:'Snappy',   P:{dur:1.0,  hold:.18, corner:2.5}},
   {id:'stack-feed',   name:'Stack Feed',            scene:'stackFeed',    ease:'Smooth',   P:{dur:1.4,  hold:0,   drift:.25, corner:2}},
   {id:'diag-cascade', name:'Diagonal Cascade',      scene:'diagCascade',  ease:'Linear',   noEase:true, lockEase:true, P:{corner:2}},
-  {id:'wreath',       name:'Card Wreath',           scene:'wreath',       ease:'Linear',   noEase:true, P:{loop:22, drift:1, corner:1.5, minN:12}},
+  {id:'wreath',       name:'Card Wreath',           scene:'wreath',       ease:'Linear',   noEase:true, lockEase:true, P:{loop:22, drift:1, corner:1.5, minN:12}},
   {id:'floating',     name:'Floating Cards',        scene:'floating',     ease:'Linear',   noEase:true, P:{loop:9,   corner:1.5}},
   {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Smooth',   P:{dur:.8,   hold:2.4, corner:1.5}},
   {cat:'Raw & Columns'},
@@ -2503,10 +2503,11 @@ $('spacing').addEventListener('input',e=>{
 });
 $('spacing').addEventListener('change',()=>{ const s=state.template.scene; if(LIVE_SPACE.has(s)||SCALE_SPACE.has(s))return; clearTimeout(spacingSettle); scheduleRebuild(); });
 $('fade').addEventListener('input',e=>{ state.fade=parseFloat(e.target.value)/100; $('fadeVal').textContent=Math.round(state.fade*100)+'%'; });
-// Diagonal Cascade is flat at rest (Depth fade locked) but a tilt gives its cards real view-axis depth,
-// so we unlock Depth fade only while it's rotated. Scoped to this preset.
+// Diagonal Cascade and Card Wreath are flat at rest (Depth fade locked) but a tilt gives their cards
+// real view-axis depth, so we unlock Depth fade only while they're rotated. Scoped to these presets.
 function updateDynamicFadeLock(){
-  if(state.template && state.template.id==='diag-cascade')
+  const t=state.template; if(!t) return;
+  if(t.id==='diag-cascade' || t.id==='wreath')
     $('fadeGroup').classList.toggle('flocked', !(state.rotY||state.rotX));
 }
 $('rotY').addEventListener('input',e=>{ state.rotY=parseFloat(e.target.value); $('rotYVal').textContent=state.rotY+'°'; updateDynamicFadeLock(); });
