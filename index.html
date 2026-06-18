@@ -137,6 +137,9 @@
   #fadeGroup.flocked input[type=range]{opacity:.4; pointer-events:none;}
   #fadeGroup.flocked .slider-row{opacity:.5;}
   #fadeGroup.flocked #fadeLockHint{display:block !important;}
+  /* spacing locked (presets with no meaningful spacing, e.g. single-card Product Showcase): greyed */
+  #spaceGroup.slocked input[type=range]{opacity:.4; pointer-events:none;}
+  #spaceGroup.slocked .slider-row{opacity:.5;}
   /* card-backs locked (layouts where every card faces forward): seg visible but greyed + hint */
   #backGroup.blocked .seg{opacity:.4; pointer-events:none;}
   #backGroup.blocked #backHint{display:none;}
@@ -1286,19 +1289,30 @@ const SCENES = {
           m.position.set(0,yb,0); m.rotation.y=ry;
           return;
         }
+        const life=seg+P.dur;
         meshes.forEach((m,i)=>{
           const d=(((local-i*seg)%loop)+loop)%loop;
-          if(d<seg+P.dur){
+          if(d<life){
             m.visible=true;
-            let x=0,op=1,r=0;
-            if(d<P.dur){ const p=clamp01(state.easeFn(d/P.dur)); // glide in from the right
-              x=(1-p)*ws[i]*.7*state.dir; op=p; r=(1-p)*.3*state.dir; m.renderOrder=5;
-            }else if(d>seg){ const q=clamp01(state.easeFn((d-seg)/P.dur)); // exit left
-              x=-q*ws[i]*.7*state.dir; op=1-q; r=-q*.3*state.dir; m.renderOrder=4;
-            }else m.renderOrder=3;
-            m.position.set(x,yb,0);
-            m.rotation.y=ry+r;
-            setCardOpacity(m,op);
+            if(state.ease==='Linear'){
+              // even, continuous glide across the frame — never holds/dead-stops, so the constant
+              // velocity has no jerk at the seams. Same fade envelope as the eased swap ("ровный").
+              const nx=1-2*d/life;                                 // +1 right → -1 left, constant speed
+              const op=clamp01(Math.min(d,life-d)/P.dur);
+              m.position.set(nx*ws[i]*.5*state.dir, 0, 0);
+              m.rotation.y=nx*.18*state.dir;
+              setCardOpacity(m,op); m.renderOrder=4;
+            }else{
+              let x=0,op=1,r=0;
+              if(d<P.dur){ const p=clamp01(state.easeFn(d/P.dur)); // glide in from the right
+                x=(1-p)*ws[i]*.7*state.dir; op=p; r=(1-p)*.3*state.dir; m.renderOrder=5;
+              }else if(d>seg){ const q=clamp01(state.easeFn((d-seg)/P.dur)); // exit left
+                x=-q*ws[i]*.7*state.dir; op=1-q; r=-q*.3*state.dir; m.renderOrder=4;
+              }else m.renderOrder=3;
+              m.position.set(x,yb,0);
+              m.rotation.y=ry+r;
+              setCardOpacity(m,op);
+            }
           } else m.visible=false;
         });
       } };
@@ -1524,7 +1538,7 @@ const TEMPLATES = [
   {id:'diag-cascade', name:'Diagonal Cascade',      scene:'diagCascade',  ease:'Linear',   noEase:true, lockEase:true, P:{corner:2}},
   {id:'wreath',       name:'Card Wreath',           scene:'wreath',       ease:'Linear',   noEase:true, lockEase:true, P:{loop:22, drift:1, corner:1.5, minN:12}},
   {id:'floating',     name:'Floating Cards',        scene:'floating',     ease:'Linear',   noEase:true, lockEase:true, P:{loop:9,   corner:1.5}},
-  {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Linear',   noEase:true, lockEase:true, noSpace:true, P:{dur:.8,   hold:2.4, corner:1.5}},
+  {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Smooth',   noSpace:true, P:{dur:.8,   hold:2.4, corner:1.5}},
   {cat:'Raw & Columns'},
   {id:'scroll-cols',  name:'Scroll Columns',        scene:'scrollCols',   ease:'Linear',   noEase:true, P:{corner:2, cols:3, cellAsp:0.74}},
   {id:'marquee-rows', name:'Marquee Rows',          scene:'scrollRows',   ease:'Linear',   noEase:true, P:{corner:2, rows:3, cellAsp:0.7}},
@@ -1928,7 +1942,7 @@ function applyTemplate(t){
   $('easeGroup').classList.toggle('elocked', !!t.lockEase);   // per-template lock (e.g. Diagonal Cascade = Linear only)
   $('easeLockHint').style.display = (t.noEase || t.lockEase) ? 'block' : 'none';
   $('rotGroup').classList.toggle('rlocked', !!t.noRot);
-  $('spaceGroup').style.display = t.noSpace ? 'none' : '';   // some presets (Product Showcase) have no meaningful spacing
+  $('spaceGroup').classList.toggle('slocked', !!t.noSpace);   // grey out spacing on presets where it does nothing (Product Showcase)
   rebuild(true);
   // depth fade is meaningful only when the layout has real depth → lock it on flat coplanar presets
   $('fadeGroup').classList.toggle('flocked', !sceneHasDepth());
