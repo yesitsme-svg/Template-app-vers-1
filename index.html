@@ -534,7 +534,6 @@ const EASINGS = [
   {name:'Smooth',   b:[.76, 0,   .24, 1 ]}, // balanced ease-in-out — the default (arqe "Smooth")
   {name:'Ease Out', b:[.16, 1,   .3,  1 ]}, // fast start, soft landing — reveals & slides
   {name:'Snappy',   b:[.34, 1.3, .55, 1 ]}, // gentle overshoot — pops & playful cards
-  {name:'Slow',     b:[.87, 0,   .13, 1 ]}, // heavy cinematic in-out — gallery / product (arqe "Ease")
   {name:'Linear',   b:[0,   0,   1,   1 ]}, // constant speed
 ];
 function cubicBezier(x1,y1,x2,y2){
@@ -1519,7 +1518,7 @@ const TEMPLATES = [
   {id:'diag-cascade', name:'Diagonal Cascade',      scene:'diagCascade',  ease:'Linear',   noEase:true, P:{corner:2}},
   {id:'wreath',       name:'Card Wreath',           scene:'wreath',       ease:'Linear',   noEase:true, P:{loop:22, drift:1, corner:1.5, minN:12}},
   {id:'floating',     name:'Floating Cards',        scene:'floating',     ease:'Linear',   noEase:true, P:{loop:9,   corner:1.5}},
-  {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Slow',     P:{dur:.8,   hold:2.4, corner:1.5}},
+  {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Smooth',   P:{dur:.8,   hold:2.4, corner:1.5}},
   {cat:'Raw & Columns'},
   {id:'scroll-cols',  name:'Scroll Columns',        scene:'scrollCols',   ease:'Linear',   noEase:true, P:{corner:2, cols:3, cellAsp:0.74}},
   {id:'marquee-rows', name:'Marquee Rows',          scene:'scrollRows',   ease:'Linear',   noEase:true, P:{corner:2, rows:3, cellAsp:0.7}},
@@ -1534,7 +1533,7 @@ const TEMPLATES = [
   {id:'spiral',       name:'Spiral Vortex',         scene:'spiral',       ease:'Linear',   noEase:true, P:{corner:1.5, turns:1.6, drift:1, minN:12}},
   {id:'globe',        name:'Globe',                 scene:'globe',        ease:'Linear',   noEase:true, P:{dur:14, hold:0, drift:1, corner:1, minN:24}},
   {cat:'Cuts'},
-  {id:'zoom-gallery', name:'Zoom Gallery',          scene:'zoomGallery',  ease:'Slow',     noRot:true, P:{dur:.9,   hold:2.1, corner:0}},
+  {id:'zoom-gallery', name:'Zoom Gallery',          scene:'zoomGallery',  ease:'Smooth',   noRot:true, P:{dur:.9,   hold:2.1, corner:0}},
   {id:'flicker',      name:'Flicker',               scene:'flicker',      ease:'Ease Out', noRot:true, P:{dur:.34,  hold:.12, corner:0}},
 ];
 
@@ -2015,7 +2014,8 @@ function renderFrame(){
     });
   }
   applyUserRot();
-  if(state.template.scene==='ring' && (state.rotY||state.rotX)) billboardRing(); // tilted carousel → cards face camera
+  // (no billboard: the ring must TILT with the scene when rotated — cards lean with it, not re-face the
+  //  camera — so the tilt reads as a composition tilt and Card backs/Hide can still cull away-facing cards)
   if(state.template.scene==='ring' || state.template.scene==='globe') sortCardsByDepth(); // overlap → no flicker
   applyDepthFade();
   postMat.uniforms.uTime.value=animTime;
