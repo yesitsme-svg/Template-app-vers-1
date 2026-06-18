@@ -2472,8 +2472,14 @@ $('spacing').addEventListener('input',e=>{
 });
 $('spacing').addEventListener('change',()=>{ const s=state.template.scene; if(LIVE_SPACE.has(s)||SCALE_SPACE.has(s))return; clearTimeout(spacingSettle); scheduleRebuild(); });
 $('fade').addEventListener('input',e=>{ state.fade=parseFloat(e.target.value)/100; $('fadeVal').textContent=Math.round(state.fade*100)+'%'; });
-$('rotY').addEventListener('input',e=>{ state.rotY=parseFloat(e.target.value); $('rotYVal').textContent=state.rotY+'°'; });
-$('rotX').addEventListener('input',e=>{ state.rotX=parseFloat(e.target.value); $('rotXVal').textContent=state.rotX+'°'; });
+// Diagonal Cascade is flat at rest (Depth fade locked) but a tilt gives its cards real view-axis depth,
+// so we unlock Depth fade only while it's rotated. Scoped to this preset.
+function updateDynamicFadeLock(){
+  if(state.template && state.template.id==='diag-cascade')
+    $('fadeGroup').classList.toggle('flocked', !(state.rotY||state.rotX));
+}
+$('rotY').addEventListener('input',e=>{ state.rotY=parseFloat(e.target.value); $('rotYVal').textContent=state.rotY+'°'; updateDynamicFadeLock(); });
+$('rotX').addEventListener('input',e=>{ state.rotX=parseFloat(e.target.value); $('rotXVal').textContent=state.rotX+'°'; updateDynamicFadeLock(); });
 function resetAdjustments(){
   const t=state.template;
   state.size=1; state.comp=1; state.spacing=1; state.fade=0; state.rotY=0; state.rotX=0; state.dir=1; state.speed=1;
