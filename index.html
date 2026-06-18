@@ -2038,7 +2038,10 @@ function renderFrame(){
   // No billboard on any ring: cards must tilt WITH the composition (real perspective lean) so the tilt
   // reads right (wheel: Rotate X = vertical, Rotate Y = horizontal) AND Card backs/Hide can cull the
   // away-facing cards that a tilt reveals. (The vertical wheel uses layout-rotation in applyUserRot.)
-  if(state.template.scene==='ring' || state.template.scene==='globe') sortCardsByDepth(); // overlap → no flicker
+  // ring/globe always; the flat Diagonal Cascade only WHEN tilted (its conveyor draw-order is right when
+  // flat but wrong once tilted → far cards drew over near ones, reading as flicker / wrong depth).
+  if(state.template.scene==='ring' || state.template.scene==='globe' ||
+     (state.template.scene==='diagCascade' && (state.rotY||state.rotX))) sortCardsByDepth(); // overlap → no flicker
   applyDepthFade();
   postMat.uniforms.uTime.value=animTime;
   renderer.clear();
