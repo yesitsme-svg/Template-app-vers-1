@@ -816,16 +816,20 @@ const SCENES = {
   stackReveal(P){
     const N0=sourceList().length, n=N0>=3?N0:N0*Math.ceil(3/N0);
     const H=1.55;
-    const sp=state.spacing||1;                          // spacing spreads how much the deck fans back
-    const gz=Math.min(.42,2.6/n)*sp, gy=Math.min(.16,.9/n)*sp, shrink=Math.min(.06,.38/n);
+    const shrink=Math.min(.06,.38/n);
     const meshes=[];
     for(let i=0;i<n;i++){ const e=entryForSlot(i); const m=plane(e.tex,H*e.asp,H,true); m.userData.slot=i; root.add(m); meshes.push(m); }
     camera.position.set(0,.18,4.6); camera.lookAt(0,0,0);
     const cyc=P.dur+P.hold;
     return { loopSeconds:cyc*n,
       update(T){
+        const sp=state.spacing||1;                      // LIVE: spacing spreads how much the deck fans back — no rebuild
+        const gz=Math.min(.42,2.6/n)*sp, gy=Math.min(.16,.9/n)*sp;
+        // Linear → the reveal spans the WHOLE cycle (no hold-pause) so the deck cycles evenly/continuously,
+        // the "infinite" vibe with no abrupt stop. Other curves keep the dur+hold settle.
+        const effDur=state.ease==='Linear'?cyc:P.dur;
         const c=Math.floor(T/cyc), m0=T-c*cyc;
-        const e=clamp01(state.easeFn(clamp01(m0/P.dur)));
+        const e=clamp01(state.easeFn(clamp01(m0/effDur)));
         const bob=Math.sin(Math.PI*clamp01(m0/cyc))*.018; // deck never dead-stops
         for(let i=0;i<n;i++){
           const b=(((i-c)%n)+n)%n, m=meshes[i];
@@ -1548,7 +1552,7 @@ const state={
 };
 let active=null, animTime=0, builtSpacing=1;
 // presets that read spacing LIVE in their own update() (count baked, pitch/radius live) → smooth, no rebuild
-const LIVE_SPACE=new Set(['scrollCols','scrollRows','gridDrift','spiral']);
+const LIVE_SPACE=new Set(['scrollCols','scrollRows','gridDrift','spiral','stackReveal']);
 // fixed-count presets where spacing == a uniform position scale from centre → done live in renderFrame
 // (cards keep their size; at low spacing they cluster/overlap = mush, at high they spread). No rebuild.
 const SCALE_SPACE=new Set(['ring','globe','floating','field','wreath','stackFeed','diagCascade','gridPop']);
@@ -1898,9 +1902,10 @@ function applyTemplate(t){
   rebuild(true);
   // depth fade is meaningful only when the layout has real depth → lock it on flat coplanar presets
   $('fadeGroup').classList.toggle('flocked', !sceneHasDepth());
-  // card-backs only matter when a card can turn away. Lock it only when the layout keeps every card
-  // facing forward AND rotation is locked too (single-card cuts) — otherwise a tilt could reveal backs.
-  $('backGroup').classList.toggle('blocked', !!t.noRot && !sceneHasBacks());
+  // card-backs only matters when some card actually turns away from the camera (3D rings/globe). Flat
+  // layouts (stacks, grids, coplanar) keep every card facing forward even when tilted ≤45°, so there's
+  // nothing to hide → lock it. Rings have away-facing cards at rest → stays available.
+  $('backGroup').classList.toggle('blocked', !sceneHasBacks());
   refreshCardSides();
   updateLoopInfo();
   document.querySelectorAll('#tpls .pv').forEach(c=>c.classList.toggle('active',c.dataset.id===t.id));
