@@ -1199,34 +1199,38 @@ const SCENES = {
     const N0=sourceList().length;
     const minN=P.minN||16;
     const n=N0>=minN?N0:N0*Math.ceil(minN/N0);
-    const H=0.8;
+    const H=0.85;
     const rnd=mulberry32(7);
-    const sp=state.spacing||1, spLat=Math.min(sp,1.5);     // clamp lateral + depth scatter so high spacing stays full, not sparse
-    const camZ=5, depth=18*Math.min(sp,1.6);  // long tunnel so cards stay spread in depth
-    const fr=frameAt(camZ-1);              // scatter scales with the frame → fills wide (16:9) and tall (9:16) alike
-    const spreadX=fr.w*0.82*spLat, spreadY=fr.h*0.82*spLat;
-    const meshes=[];
+    const camZ=5;
+    const fr=frameAt(camZ-2);              // scatter scales with the frame → fills wide (16:9) and tall (9:16) alike
+    const cards=[];
     for(let i=0;i<n;i++){
       const e=entryForSlot(i);
       const m=plane(e.tex,H*e.asp,H,true); m.userData={slot:i};
-      const ang=i*2.39996+rnd()*.6, rad=0.42+rnd()*0.95; // ring-ish scatter, avoids the dead centre
-      Object.assign(m.userData,{ x:Math.cos(ang)*rad*spreadX, y:Math.sin(ang)*rad*spreadY, z0:(i/n)*depth });
-      root.add(m); meshes.push(m);
+      const ang=i*2.39996+rnd()*.7, rad=0.32+rnd()*0.9;  // golden-angle scatter, off the dead centre
+      Object.assign(m.userData,{ ux:Math.cos(ang)*rad, uy:Math.sin(ang)*rad, zf:(i+rnd()*.6)/n });
+      m.rotation.z=(rnd()-.5)*0.5;                          // slight per-card roll → less rigid, more stylish
+      root.add(m); cards.push(m);
     }
     camera.position.set(0,0,camZ); camera.lookAt(0,0,0);
     const phase=makePhase(P);
     return { loopSeconds:(P.dur+P.hold)*n,
       update(T){
-        const adv=phase(T)*(depth/n);
-        meshes.forEach(m=>{
-          const {x,y,z0}=m.userData;
-          const z=(((z0+adv)%depth)+depth)%depth;     // 0 = far, depth = at the camera
-          const worldZ=camZ-depth+z;
-          m.position.set(x,y,worldZ);
-          const dist=camZ-worldZ;                      // depth (far) → 0 (at camera)
-          const emerge=1-THREE.MathUtils.smoothstep(dist, depth*0.72, depth*0.98); // fade in from the fog
-          const pass  =THREE.MathUtils.smoothstep(dist, 0.35, 1.6);                // fade out as it flies past
-          setCardOpacity(m, emerge*pass);
+        const sp=state.spacing||1;
+        const depth=15*sp, margin=2.0, travel=depth+margin; // LIVE: spacing deepens the tunnel
+        const spreadX=fr.w*0.95*sp, spreadY=fr.h*0.95*sp;   // LIVE: spacing widens the field
+        const farZ=camZ-depth;
+        const adv=phase(T)*(travel/n);
+        cards.forEach(m=>{
+          const d=m.userData;
+          const z=((d.zf*travel+adv)%travel+travel)%travel; // 0 = far fog → travel = behind the camera
+          const worldZ=farZ+z;
+          const zn=Math.min(z/depth,1);                      // 0 far → 1 near plane
+          const radial=0.5+0.6*zn;                           // emerge from a central vanishing point, sweep outward as they approach
+          m.position.set(d.ux*spreadX*radial, d.uy*spreadY*radial, worldZ);
+          const inFront = worldZ < camZ-0.04;                // cull + silently recycle once it slips behind the camera (no pop)
+          m.visible=inFront;
+          if(inFront) setCardOpacity(m, THREE.MathUtils.smoothstep(z, 0, depth*0.2)); // fade in from the far fog; crisp the rest of the way in
         });
       } };
   },
@@ -1573,7 +1577,7 @@ const TEMPLATES = [
   {id:'marquee',      name:'Marquee Lanes',         scene:'marquee',      ease:'Linear',   noEase:true, lockEase:true, P:{dur:13.5, hold:0,   corner:1, tiltZ:-6}},
   {id:'grid-pop',     name:'Grid Pop',              scene:'gridPop',      ease:'Snappy',   P:{dur:.55,  hold:1.7, corner:2}},
   {cat:'Space'},
-  {id:'field',        name:'Field Flight',          scene:'field',        ease:'Smooth',   spacing:0.5, P:{dur:1.3,  hold:.2,  drift:.35, corner:0, minN:18}},
+  {id:'field',        name:'Field Flight',          scene:'field',        ease:'Smooth',   spacing:0.85, fade:60, P:{dur:1.3,  hold:.2,  drift:.35, corner:0, minN:18}},
   {id:'spiral',       name:'Spiral Vortex',         scene:'spiral',       ease:'Linear',   noEase:true, P:{corner:1.5, turns:1.6, drift:1, minN:12}},
   {id:'globe',        name:'Globe',                 scene:'globe',        ease:'Linear',   noEase:true, P:{dur:14, hold:0, drift:1, corner:1, minN:24}},
   {cat:'Cuts'},
@@ -1591,10 +1595,10 @@ const state={
 };
 let active=null, animTime=0, builtSpacing=1;
 // presets that read spacing LIVE in their own update() (count baked, pitch/radius live) → smooth, no rebuild
-const LIVE_SPACE=new Set(['scrollCols','scrollRows','gridDrift','spiral','stackReveal','shuffleCards','filmstrip','vScroll','gridPop','marquee']);
+const LIVE_SPACE=new Set(['scrollCols','scrollRows','gridDrift','spiral','stackReveal','shuffleCards','filmstrip','vScroll','gridPop','marquee','field']);
 // fixed-count presets where spacing == a uniform position scale from centre → done live in renderFrame
 // (cards keep their size; at low spacing they cluster/overlap = mush, at high they spread). No rebuild.
-const SCALE_SPACE=new Set(['ring','globe','floating','field','wreath','stackFeed','diagCascade']);
+const SCALE_SPACE=new Set(['ring','globe','floating','wreath','stackFeed','diagCascade']);
 let exporting=false, exportCancelled=false;
 
 const $=id=>document.getElementById(id);
@@ -1948,13 +1952,13 @@ function applyTemplate(t){
   state.P={...t.P};
   // #7 full reset of per-preset adjustments. Uploaded images and workspace settings
   // (background, aspect ratio, dark theme, export quality) are intentionally KEPT.
-  state.size=1; state.comp=1; state.fade=0; state.speed=1; state.rotY=0; state.rotX=0; state.dir=1; state.grain=false; state.backface=false;
+  state.size=1; state.comp=1; state.fade=(t.fade??0)/100; state.speed=1; state.rotY=0; state.rotX=0; state.dir=1; state.grain=false; state.backface=false;
   state.spacing=t.spacing??1;                 // per-preset default spacing (Field Flight = 0.5)
   setEase(t.noEase?'Linear':t.ease);
   $('cardSize').value=1; $('sizeVal').textContent='×1.00';
   $('compScale').value=1; $('compVal').textContent='×1.00';
   $('spacing').value=state.spacing; $('spacingVal').textContent='×'+state.spacing.toFixed(2);
-  $('fade').value=0; $('fadeVal').textContent='0%';
+  $('fade').value=t.fade??0; $('fadeVal').textContent=(t.fade??0)+'%';
   $('speed').value=1; $('speedVal').textContent='×1.00';
   $('rotY').value=0; $('rotYVal').textContent='0°'; $('rotX').value=0; $('rotXVal').textContent='0°';
   $('corner').value=state.P.corner??0; $('cornerVal').textContent=(state.P.corner??0).toFixed(1);
