@@ -494,6 +494,7 @@
 
   <div class="group">
     <div class="loopinfo" id="loopInfo"></div>
+    <button class="btn sm" id="shareBtn" style="width:100%" title="Copy a link that restores this template + all settings (images aren't included)">🔗 Copy share link</button>
   </div>
 </div><!-- /setScroll -->
 <div id="exportBar">
@@ -2167,6 +2168,24 @@ requestAnimationFrame(tickFrame);
 
 /* ================= export ================= */
 function fileName(ext){ return `wannathis-${state.template.id}-${state.ratio.replace(':','x')}.${ext}`; }
+// Offline exports jump animTime per frame, but a <video> texture only shows whatever realtime frame it's
+// at → video mockups would export out of sync. Seek every clip to the matching playback moment and await
+// the decode before rendering that frame. NO-OP when there are no video sources (image projects unchanged).
+function exportHasVideo(){ return userSources.some(u=>u.isVideo); }
+function seekVideosTo(playSec){
+  const vids=userSources.filter(u=>u.isVideo);
+  if(!vids.length) return Promise.resolve();
+  return Promise.all(vids.map(u=>new Promise(res=>{
+    const v=u.src, dur=v.duration;
+    if(!dur||!isFinite(dur)){ res(); return; }
+    const target=((playSec%dur)+dur)%dur;
+    if(Math.abs(v.currentTime-target)<1/120){ res(); return; }
+    let done=false; const fin=()=>{ if(done)return; done=true; v.removeEventListener('seeked',fin); clearTimeout(to); res(); };
+    const to=setTimeout(fin,300);                         // safety: never hang the export on a stuck seek
+    v.addEventListener('seeked',fin);
+    try{ if(!v.paused) v.pause(); v.currentTime=target; }catch(e){ fin(); }
+  })));
+}
 /* Export resolution is decoupled from the (small) on-screen canvas. Preview stays at 1K;
    export renders the chosen long-side (1K=1080 / 2K=2160) and SUPERSAMPLES (render larger,
    then downscale) so card edges, rounded corners and the photos come out crisp, not pixelated.
@@ -2260,9 +2279,11 @@ async function exportMP4(){
     }
     if(!cfg) throw new Error('no supported H.264 encoder');
     encoder.configure(cfg);
+    const hasVid=exportHasVideo();
     for(let i=0;i<totalFrames;i++){
       if(exportCancelled||encErr) break;
       animTime=i*state.speed/fps;
+      if(hasVid) await seekVideosTo(i/fps);             // keep video-card clips in sync with the timeline
       renderFrame();
       dx.clearRect(0,0,W,H); dx.drawImage(cv,0,0,W,H);  // supersample → downscale for clean edges
       const vf=new VideoFrame(ds,{timestamp:Math.round(i*1e6/fps),duration:Math.round(1e6/fps)});
@@ -2319,8 +2340,9 @@ function exportWebM(){ // fallback for browsers without WebCodecs: realtime capt
   $('ebFill').style.width='100%';
 }
 
-function exportPNG(){
+async function exportPNG(){
   if(!active||exporting) return;
+  if(exportHasVideo()) await seekVideosTo(animTime/(state.speed||1)); // sync video-card frame to the current time
   const cv=renderer.domElement, {W,H,RW,RH}=exportDims();
   const {ds,dx}=beginHiRes(W,H,RW,RH);                  // full-HD supersampled still
   renderFrame();
@@ -2346,9 +2368,12 @@ async function exportPNGSequence(){
     if(loopReal>30) toast('Loop is longer than 30 s — sequence trimmed to 30 s.');
     const totalFrames=Math.max(fps,Math.min(Math.round(loopReal*fps),fps*30));
     const files={}, folder=`${state.template.id}-sequence`, pad=n=>String(n).padStart(4,'0');
+    const hasVid=exportHasVideo();
     for(let i=0;i<totalFrames;i++){
       if(exportCancelled) break;
-      animTime=i*state.speed/fps; renderFrame();
+      animTime=i*state.speed/fps;
+      if(hasVid) await seekVideosTo(i/fps);
+      renderFrame();
       dx.clearRect(0,0,W,H); dx.drawImage(cv,0,0,W,H);
       const blob=await new Promise(r=>ds.toBlob(r,'image/png'));
       files[`${folder}/frame_${pad(i+1)}.png`]=new Uint8Array(await blob.arrayBuffer());
@@ -2382,9 +2407,12 @@ async function exportGIF(){
     const loopReal=active.loopSeconds/state.speed;
     const totalFrames=Math.max(fps,Math.min(Math.round(loopReal*fps),fps*12)); // ≤12 s of GIF
     const gif=GIFEncoder(), delay=Math.round(1000/fps);
+    const hasVid=exportHasVideo();
     for(let i=0;i<totalFrames;i++){
       if(exportCancelled) break;
-      animTime=i*state.speed/fps; renderFrame();
+      animTime=i*state.speed/fps;
+      if(hasVid) await seekVideosTo(i/fps);
+      renderFrame();
       dx.fillStyle=state.bg; dx.fillRect(0,0,gw,gh); dx.drawImage(cv,0,0,gw,gh); // composite on bg (GIF has no smooth alpha)
       const {data}=dx.getImageData(0,0,gw,gh);
       const palette=quantize(data,256), index=applyPalette(data,palette);
@@ -2633,12 +2661,26 @@ function updatePlayBtn(){ $('tlPlay').textContent=state.playing?'⏸':'▶'; }
 function togglePlay(){ state.playing=!state.playing; updatePlayBtn(); }
 $('tlPlay').addEventListener('click',togglePlay);
 window.addEventListener('keydown',e=>{
-  // spacebar toggles play/pause anywhere, unless the user is typing in a field
-  if(e.code==='Space' && !exporting){
-    const t=e.target, tag=(t.tagName||'').toLowerCase();
-    if(tag==='input' && t.type==='text') return;
-    if(tag==='textarea' || t.isContentEditable) return;
-    e.preventDefault(); togglePlay();
+  const t=e.target, tag=(t.tagName||'').toLowerCase();
+  const typing=(tag==='input'&&(t.type==='text'||t.type==='number')) || tag==='textarea' || t.isContentEditable;
+  if(typing || exporting || e.metaKey || e.ctrlKey || e.altKey) return;
+  // spacebar toggles play/pause anywhere
+  if(e.code==='Space'){ e.preventDefault(); togglePlay(); return; }
+  // ← / → scrub by a frame (Shift = 0.5 s); pauses playback so you can step through
+  if(e.key==='ArrowLeft' || e.key==='ArrowRight'){
+    if(!active) return; e.preventDefault();
+    if(state.playing){ state.playing=false; updatePlayBtn(); }
+    const step=(e.shiftKey?0.5:1/(state.fps||30))*(state.speed||1), loop=active.loopSeconds||1;
+    animTime=((animTime+(e.key==='ArrowRight'?step:-step))%loop+loop)%loop;
+    renderFrame(); updateTimeline(); return;
+  }
+  // [ / ] step through templates
+  if(e.key==='[' || e.key===']'){
+    e.preventDefault();
+    const list=TEMPLATES.filter(x=>!x.cat), idx=list.findIndex(x=>x.id===state.template.id);
+    const nxt=list[((idx+(e.key===']'?1:-1))%list.length+list.length)%list.length];
+    if(nxt){ applyTemplate(nxt); document.querySelectorAll('#tpls .pv').forEach(c=>c.classList.toggle('active',c.dataset.id===nxt.id)); }
+    return;
   }
 });
 
@@ -2826,12 +2868,88 @@ window.__app={
     renderThumbs(); rebuild(true);
   },
 };
+/* ===== shareable preset link (settings only — uploaded media stays on the user's device) ===== */
+function buildShareParams(){
+  const p=new URLSearchParams();
+  p.set('t',state.template.id); if(!state.template.noEase) p.set('e',state.ease);
+  p.set('sp',state.spacing.toFixed(2)); p.set('fd',Math.round(state.fade*100)); p.set('spd',state.speed.toFixed(2));
+  p.set('sz',state.size.toFixed(2)); p.set('z',state.comp.toFixed(2));
+  p.set('ry',state.rotY); p.set('rx',state.rotX); p.set('cn',state.P.corner??0); p.set('dir',state.dir);
+  p.set('r',state.ratio); p.set('fps',state.fps); p.set('gr',state.grain?1:0);
+  p.set('bg',state.bg.replace('#','')); p.set('bg2',state.bg2.replace('#','')); p.set('fm',state.fillMode);
+  if(state.ratio==='custom'){ p.set('cw',state.customW); p.set('ch',state.customH); }
+  return p.toString();
+}
+function sharePreset(){
+  const url=location.origin+location.pathname+'#'+buildShareParams();
+  const ok=()=>toast('Share link copied — settings only, your images stay on your device.');
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(ok,()=>prompt('Copy this link:',url));
+  else prompt('Copy this link:',url);
+}
+function applySharedPreset(){
+  try{
+    const h=location.hash.slice(1); if(!h) return false;
+    const p=new URLSearchParams(h);
+    const t=TEMPLATES.find(x=>x.id===p.get('t')); if(!t) return false;
+    const num=k=>{ const v=p.get(k); return v!=null&&isFinite(+v)?+v:null; };
+    const fire=(id,v)=>{ const el=$(id); if(el&&v!=null){ el.value=v; el.dispatchEvent(new Event('input',{bubbles:true})); } };
+    const clickSeg=(sel,v)=>{ const el=document.querySelector(`${sel} button[data-v="${v}"]`); if(el) el.click(); };
+    // ratio (+ custom dims) before the template so framing is right, then the template, then overrides
+    const r=p.get('r');
+    if(r==='custom'){ const cw=num('cw'),ch=num('ch'); if(cw)state.customW=cw; if(ch)state.customH=ch; }
+    if(r){ const rb=document.querySelector(`#ratios button[data-r="${r}"]`); if(rb) rb.click(); }
+    applyTemplate(t);
+    if(!t.noEase && p.get('e')) setEase(p.get('e'));
+    fire('spacing',num('sp')); fire('fade',num('fd')); fire('speed',num('spd'));
+    fire('cardSize',num('sz')); fire('compScale',num('z')); fire('rotY',num('ry')); fire('rotX',num('rx')); fire('corner',num('cn'));
+    if(p.get('dir')!=null) clickSeg('#dirSeg',p.get('dir'));
+    if(p.get('gr')!=null) clickSeg('#grainSeg',p.get('gr')==='1'?'on':'off');
+    const fps=num('fps'); if(fps){ state.fps=fps; const dd=$('ddFps'); if(dd){ dd.dataset.value=fps; const lab=dd.querySelector('.ddval'); if(lab) lab.textContent=fps+' fps'; } }
+    if(p.get('bg')) state.bg='#'+p.get('bg'); if(p.get('bg2')) state.bg2='#'+p.get('bg2'); if(p.get('fm')) state.fillMode=p.get('fm');
+    applyBackground();
+    ['bg','bg2'].forEach(k=>{ const sw=$(k+'Swatch'), hx=$(k+'Hex'); if(sw)sw.style.background=state[k]; if(hx)hx.value=state[k].replace('#','').toUpperCase(); });
+    snapshotSliderDefaults();
+    history.replaceState(null,'',location.pathname);   // tidy the URL once restored
+    toast('Preset loaded from link — drop your own images to use it.');
+    return true;
+  }catch(err){ console.warn('share link parse failed:',err); return false; }
+}
+$('shareBtn').addEventListener('click',sharePreset);
+window.__app.buildShareParams=buildShareParams;   // exposed for tests
+
+/* ===== first-visit onboarding (shows once; localStorage flag) ===== */
+function maybeOnboard(){
+  try{ if(localStorage.getItem('wann_onboard_v2')) return; }catch(e){ return; }
+  const o=document.createElement('div'); o.id='onboard';
+  o.innerHTML=`<style>
+    #onboard{position:fixed; inset:0; z-index:999; background:rgba(15,15,18,.55); display:flex; align-items:center; justify-content:center; backdrop-filter:blur(3px);}
+    #onboard .obCard{width:min(420px,90vw); background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:16px; padding:26px 26px 22px; box-shadow:0 24px 70px rgba(0,0,0,.35);}
+    #onboard .obT{font-size:18px; font-weight:600; margin-bottom:14px;}
+    #onboard ol{margin:0 0 20px 18px; padding:0; display:flex; flex-direction:column; gap:11px; font-size:13.5px; line-height:1.45;}
+    #onboard b{font-weight:600;}
+    #onboard .obGo{width:100%;}</style>
+    <div class="obCard">
+      <div class="obT">Welcome to Motion Grid 👋</div>
+      <ol>
+        <li><b>Drop images or videos</b> on the right panel (or click to browse).</li>
+        <li><b>Pick a template</b> on the left, then dial in size, spacing, depth fade & more. Double-click a label to reset; click a number to type a value.</li>
+        <li><b>Export</b> as MP4, GIF, PNG, or a PNG sequence — pick the format and hit Export.</li>
+      </ol>
+      <button class="btn primary obGo" id="obGo">Start creating</button>
+    </div>`;
+  document.body.appendChild(o);
+  const close=()=>{ o.remove(); try{ localStorage.setItem('wann_onboard_v2','1'); }catch(e){} };
+  $('obGo').addEventListener('click',close);
+  o.addEventListener('click',e=>{ if(e.target===o) close(); });
+}
+
 window.addEventListener('error',e=>console.error('PAGE ERROR:',e.message,e.filename,e.lineno));
 resize();
-applyTemplate(TEMPLATES.find(t=>!t.cat));
+if(!applySharedPreset()) applyTemplate(TEMPLATES.find(t=>!t.cat));
 renderThumbs();
 updatePlayBtn();
 buildPreviews();
+maybeOnboard();
 </script>
 </body>
 </html>
