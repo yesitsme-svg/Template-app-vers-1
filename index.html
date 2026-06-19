@@ -1115,18 +1115,29 @@ const SCENES = {
       baseCenter.push(pre + w/2); pre += w;            // cumulative WIDTH only — the gap is inserted live below
       root.add(m); meshes.push(m);
     }
-    const sumW=pre, phase=makePhase(P);
-    return { loopSeconds:(P.dur+P.hold)*n,
+    const sumW=pre, beatTime=P.dur+P.hold;
+    return { loopSeconds:beatTime*n,
       update(T){
         const sp=state.spacing||1;
         const gap=baseGap*Math.max(0,(sp-0.5)/0.5);    // min slider (0.5) = 0 gap (cards touch); grows above, never overlaps
-        const total=sumW + n*gap, avgStep=total/n;
-        // lockstep: one shared phase keeps every gap constant — collisions are impossible
-        const adv=phase(T)*avgStep*state.dir;
-        for(let i=0;i<n;i++){
-          let x=baseCenter[i] + i*gap - adv;            // LIVE gap between cards
-          x=((x%total)+total)%total;
-          meshes[i].position.x=x-total/2;
+        const total=sumW + n*gap, avgStep=total/n, dir=state.dir;
+        if(state.ease==='Linear'){
+          // constant continuous scroll — one shared advance keeps every gap fixed (no collisions)
+          const adv=(T/beatTime)*avgStep*dir;
+          for(let i=0;i<n;i++){ let x=baseCenter[i]+i*gap-adv; x=((x%total)+total)%total; meshes[i].position.x=x-total/2; }
+        }else{
+          // SWIPE: each beat eases the strip one card-width to the left, then settles; a travelling stagger
+          // delays cards along the strip so each one "catches up" to its neighbour → stylish wave swipe.
+          const beat=T/beatTime, k=Math.floor(beat), fr=beat-k, swipe=0.58;
+          // the catch-up stagger only opens up when there's gap to absorb it → at 0 gap it's a clean lockstep
+          // swipe (no overlap), and the wave grows as spacing widens.
+          const stag=0.22*clamp01(gap/(avgStep*0.35));
+          for(let i=0;i<n;i++){
+            const ph=(((baseCenter[i]/total)%1)+1)%1;               // 0..1 around the strip → wave phase
+            const sw=state.easeFn(clamp01((fr-ph*stag)/swipe));     // eased swipe, holds at 1 until the next beat
+            const adv=(k+sw)*avgStep*dir;
+            let x=baseCenter[i]+i*gap-adv; x=((x%total)+total)%total; meshes[i].position.x=x-total/2;
+          }
         }
       } };
   },
@@ -1387,7 +1398,10 @@ const SCENES = {
           m.scale.setScalar(0.55+0.45*(1-p));            // gentle funnel taper (perspective does the rest)
           m.rotation.z=0;
           m.renderOrder=Math.round((1-p)*1000);          // rim (near) drawn in front
-          setCardOpacity(m, Math.min(clamp01(p/0.12), clamp01((1-p)/0.14))); // mask the rim↔core wrap seam; Depth fade adds the core fog
+          setCardOpacity(m, Math.min(clamp01(p/0.12), clamp01((1-p)/0.14))); // mask the rim↔core wrap seam
+          // depth fade driven DIRECTLY by p (= depth): near rim cards stay FULLY crisp, then the fog ramps
+          // toward the far core → simple, legible depth. (Spiral handles its own fade; applyDepthFade skips it.)
+          m.material.uniforms.uFade.value = 1 - state.fade*THREE.MathUtils.smoothstep(p,0.18,0.92);
         }
       } };
   },
@@ -1588,7 +1602,7 @@ const TEMPLATES = [
   {id:'scroll-cols',  name:'Scroll Columns',        scene:'scrollCols',   ease:'Linear',   noEase:true, lockEase:true, P:{corner:2, cols:3, cellAsp:0.74}},
   {id:'marquee-rows', name:'Marquee Rows',          scene:'scrollRows',   ease:'Linear',   noEase:true, lockEase:true, P:{corner:2, rows:3, cellAsp:0.7}},
   {id:'grid-drift',   name:'Drifting Wall',         scene:'gridDrift',    ease:'Linear',   noEase:true, lockEase:true, P:{corner:2, cols:3, dx:1, dy:1}},
-  {id:'filmstrip',    name:'Horizontal Filmstrip',  scene:'filmstrip',    ease:'Linear',   noEase:true, P:{dur:1.6, hold:0, drift:1, corner:1.5}},
+  {id:'filmstrip',    name:'Horizontal Filmstrip',  scene:'filmstrip',    ease:'Linear',   eases:['Linear','Smooth'], P:{dur:1.6, hold:0, drift:1, corner:1.5}},
   {id:'v-scroll',     name:'Vertical Scroll',       scene:'vScroll',      ease:'Linear',   noEase:true, lockEase:true, P:{dur:1.6, hold:0, drift:1, corner:0}},
   {id:'marquee',      name:'Marquee Lanes',         scene:'marquee',      ease:'Linear',   noEase:true, lockEase:true, P:{dur:13.5, hold:0,   corner:1, tiltZ:-6}},
   {id:'grid-pop',     name:'Grid Pop',              scene:'gridPop',      ease:'Snappy',   P:{dur:.55,  hold:1.7, corner:2}},
@@ -1761,8 +1775,9 @@ function sceneHasBacks(){
 const FLAT_ROT_FADE=new Set(['diagCascade','wreath','scrollCols','scrollRows','gridDrift','filmstrip','vScroll','gridPop','marquee']); // flat at rest, real depth once tilted
 // scenes that use the ON-SCREEN FROZEN fade span (near visible card full-bright, melts to dark, no breathing as
 // cards recycle). = the flat-rot scenes PLUS Field Flight (a fly-through whose visible depth window is constant).
-const FROZEN_SPAN_FADE=new Set([...FLAT_ROT_FADE,'field','spiral','globe']);
+const FROZEN_SPAN_FADE=new Set([...FLAT_ROT_FADE,'field','globe']); // spiral drives its own p-based fade (see engine)
 function applyDepthFade(){
+  if(state.template && state.template.scene==='spiral') return; // spiral sets uFade itself from p (depth)
   const f=state.fade;
   if(f<=0){ forEachCard(o=>{ o.material.uniforms.uFade.value=1; }); return; }
   const cards=[];
