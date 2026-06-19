@@ -1126,17 +1126,17 @@ const SCENES = {
           const adv=(T/beatTime)*avgStep*dir;
           for(let i=0;i<n;i++){ let x=baseCenter[i]+i*gap-adv; x=((x%total)+total)%total; meshes[i].position.x=x-total/2; }
         }else{
-          // SMOOTH FLOWING SWIPE: each card-beat is eased (the strip leans into each card) but BLENDED with a
-          // constant drift so it never fully stops — a gentle, breathing rhythm instead of a freeze-then-jump.
-          // A subtle gap-scaled stagger lets trailing cards "catch up" without ever overlapping.
-          const beat=T/beatTime, k=Math.floor(beat), fr=beat-k;
-          const drift=0.5, stag=0.34*clamp01(gap/(avgStep*1.0)); // catch-up delay scaled by AVAILABLE gap → grows with spacing, ~0 on wide cards at low spacing (never overlaps)
+          // SMOOTH FLOW + travelling ACCORDION catch-up: the strip flows steadily left while a wave makes each
+          // card rush up to nearly touch the next, then a fresh gap opens behind it. The edge-gap between
+          // neighbours = gap + (off[i+1]-off[i]) — independent of card width — so this is provably overlap-free
+          // on any aspect, and the catch-up depth is exact. Amplitude scales with the live gap (0 at min spacing).
+          const adv=(T/beatTime)*avgStep*dir;
+          const waves=Math.max(2,Math.round(n/2.6)), lam=n/waves;  // integer cycles → continuous across the wrap seam
+          const wave=gap*0.48, wt=2*Math.PI*(T/(beatTime*1.25))*dir;
           for(let i=0;i<n;i++){
-            const ph=(((baseCenter[i]/total)%1)+1)%1;               // 0..1 around the strip → travelling-wave phase
-            const lf=clamp01((fr-ph*stag)/(1-stag));                // staggered local fraction
-            const phase=(k+state.easeFn(lf))*(1-drift) + (k+fr)*drift; // pulse blended with steady flow → smooth, never stops
-            const adv=phase*avgStep*dir;
-            let x=baseCenter[i]+i*gap-adv; x=((x%total)+total)%total; meshes[i].position.x=x-total/2;
+            const off=wave*Math.sin(2*Math.PI*i/lam - wt);         // each card eases toward / away from its neighbour
+            let x=baseCenter[i]+i*gap-adv+off;
+            x=((x%total)+total)%total; meshes[i].position.x=x-total/2;
           }
         }
       } };
