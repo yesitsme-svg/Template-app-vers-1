@@ -873,28 +873,25 @@ const SCENES = {
     const N=sourceList().length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
+    const cellAsp=avgSourceAsp(PA);                       // cells adopt the loaded images' aspect (vertical imgs → tall cells)
+    // pick the cols/rows that make the cards as LARGE as possible while the whole grid fits the frame
     let best=null;
     for(let cols=1;cols<=Math.min(N,6);cols++){
       const rows=Math.ceil(N/cols);
-      const cellW=fr.w*.99/cols, cellH=fr.h*.99/rows;
-      const w=Math.min(cellW*.95, cellH*.95*PA);        // fuller cells → cards fill the frame
-      if(!best||w>best.w) best={cols,rows,w,cellW,cellH};
+      let cw=fr.w/cols, ch=cw/cellAsp;
+      const sc=Math.min(1, fr.h/(rows*ch));               // shrink so all rows fit the frame height
+      cw*=sc; ch*=sc;
+      if(!best||cw*ch>best.cw*best.ch) best={cols,rows,cw,ch};
     }
-    const {cols,rows,cellW,cellH,w}=best;                 // #3 card size FIXED (base cell fill, independent of spacing)
-    const sp=Math.min(state.spacing||1,1.15);             // fit-to-frame grid: full compress, capped spread (stays on screen)
-    const pitchW=cellW*sp, pitchH=cellH*sp;               // spacing only spreads the cell PITCH
-    const boxH=w/PA; // each image is contained inside this box, keeping its own aspect
+    const {cols,rows,cw,ch}=best;                          // card FILLS its cell (cover-crop); size FIXED (Card-size slider scales separately)
+    const baseGap=Math.min(fr.w,fr.h)*0.02;
     const meshes=[];
     for(let i=0;i<N;i++){
       const r=Math.floor(i/cols), c=i%cols;
-      const inRow=Math.min(cols,N-r*cols); // center a partial last row
-      const x=(c-(inRow-1)/2)*pitchW, y=((rows-1)/2-r)*pitchH;
-      const e=entryForSlot(i);
-      const ch=Math.min(boxH, w/e.asp), cw=ch*e.asp; // contain within the cell box
-      const m=plane(e.tex,cw,ch,true); m.userData={slot:i};
-      m.position.set(x,y,0); m.visible=false;
-      m.userData.spBase=m.position.clone();  // live spacing scales the grid from this base (non-cumulative)
-      m.userData.delay=Math.hypot(x,y)*.13+i*.012;
+      const m=plane(texAt(i,cw/ch),cw,ch,true); m.userData={slot:i,r,c};
+      m.visible=false;
+      // radial pop stagger from the GRID centre (cell coords, not pixels) → timing never shifts with spacing
+      m.userData.delay=Math.hypot(c-(cols-1)/2,(rows-1)/2-r)*.34 + i*.012;
       root.add(m); meshes.push(m);
     }
     const maxDelay=Math.max(...meshes.map(m=>m.userData.delay));
@@ -902,13 +899,19 @@ const SCENES = {
     const loop=outStart+maxDelay*.5+outDur+.05;  // tight wrap → next pop-in overlaps the pop-out, no blank flash
     return { loopSeconds:loop,
       update(T){
+        const sp=state.spacing||1;                         // min slider (0.5) = 0 gap (cards touch); grows above, never overlaps
+        const gap=baseGap*Math.max(0,(sp-0.5)/0.5);        // LIVE pitch — 0 at floor → spreads above, no rebuild
+        const pitchW=cw+gap, pitchH=ch+gap;
         const local=((T%loop)+loop)%loop;
         meshes.forEach(m=>{
           const d=m.userData;
+          const inRow=Math.min(cols,N-d.r*cols);           // center a partial last row
+          const x=(d.c-(inRow-1)/2)*pitchW, y=((rows-1)/2-d.r)*pitchH;
           const p=state.easeFn(clamp01((local-d.delay)/P.dur)); // overshoot welcome
           const q0=clamp01((local-outStart-d.delay*.5)/outDur), q=q0*q0;
           const s=Math.max(p*(1-q),.0001);
           m.visible=s>.002;
+          m.position.set(x,y,0);
           m.scale.setScalar(s);
           setCardOpacity(m,clamp01(p*2)*(1-q));
         });
@@ -1588,10 +1591,10 @@ const state={
 };
 let active=null, animTime=0, builtSpacing=1;
 // presets that read spacing LIVE in their own update() (count baked, pitch/radius live) → smooth, no rebuild
-const LIVE_SPACE=new Set(['scrollCols','scrollRows','gridDrift','spiral','stackReveal','shuffleCards','filmstrip','vScroll']);
+const LIVE_SPACE=new Set(['scrollCols','scrollRows','gridDrift','spiral','stackReveal','shuffleCards','filmstrip','vScroll','gridPop']);
 // fixed-count presets where spacing == a uniform position scale from centre → done live in renderFrame
 // (cards keep their size; at low spacing they cluster/overlap = mush, at high they spread). No rebuild.
-const SCALE_SPACE=new Set(['ring','globe','floating','field','wreath','stackFeed','diagCascade','gridPop']);
+const SCALE_SPACE=new Set(['ring','globe','floating','field','wreath','stackFeed','diagCascade']);
 let exporting=false, exportCancelled=false;
 
 const $=id=>document.getElementById(id);
@@ -1735,7 +1738,7 @@ function sceneHasBacks(){
   try{ active.update(animTime); }catch(e){}
   return false;
 }
-const FLAT_ROT_FADE=new Set(['diagCascade','wreath','scrollCols','scrollRows','gridDrift','filmstrip','vScroll']); // flat at rest, real depth once tilted
+const FLAT_ROT_FADE=new Set(['diagCascade','wreath','scrollCols','scrollRows','gridDrift','filmstrip','vScroll','gridPop']); // flat at rest, real depth once tilted
 function applyDepthFade(){
   const f=state.fade;
   if(f<=0){ forEachCard(o=>{ o.material.uniforms.uFade.value=1; }); return; }
