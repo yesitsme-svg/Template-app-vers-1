@@ -494,7 +494,10 @@
 
   <div class="group">
     <div class="loopinfo" id="loopInfo"></div>
-    <button class="btn sm" id="shareBtn" style="width:100%" title="Copy a link that restores this template + all settings (images aren't included)">🔗 Copy share link</button>
+    <div style="display:flex; gap:8px;">
+      <button class="btn sm" id="shareBtn" style="flex:1" title="Copies a link that reopens this exact preset — template + every setting. Your uploaded images aren't included.">🔗 Share this preset</button>
+      <button class="btn sm" id="helpBtn" style="flex:0 0 auto; width:40px" title="How it works">?</button>
+    </div>
   </div>
 </div><!-- /setScroll -->
 <div id="exportBar">
@@ -2917,9 +2920,10 @@ function applySharedPreset(){
 $('shareBtn').addEventListener('click',sharePreset);
 window.__app.buildShareParams=buildShareParams;   // exposed for tests
 
-/* ===== first-visit onboarding (shows once; localStorage flag) ===== */
-function maybeOnboard(){
-  try{ if(localStorage.getItem('wann_onboard_v2')) return; }catch(e){ return; }
+/* ===== onboarding: auto-shows once (localStorage flag); the "?" button reopens it any time ===== */
+function showOnboard(force){
+  if(!force){ try{ if(localStorage.getItem('wann_onboard_v2')) return; }catch(e){ return; } }
+  if(document.getElementById('onboard')) return;
   const o=document.createElement('div'); o.id='onboard';
   o.innerHTML=`<style>
     #onboard{position:fixed; inset:0; z-index:999; background:rgba(15,15,18,.55); display:flex; align-items:center; justify-content:center; backdrop-filter:blur(3px);}
@@ -2949,7 +2953,8 @@ if(!applySharedPreset()) applyTemplate(TEMPLATES.find(t=>!t.cat));
 renderThumbs();
 updatePlayBtn();
 buildPreviews();
-maybeOnboard();
+showOnboard(false);
+$('helpBtn').addEventListener('click',()=>showOnboard(true));
 </script>
 </body>
 </html>
