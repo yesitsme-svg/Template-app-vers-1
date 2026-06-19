@@ -1583,8 +1583,8 @@ const TEMPLATES = [
   {id:'spiral',       name:'Spiral Vortex',         scene:'spiral',       ease:'Linear',   noEase:true, lockEase:true, fade:55, P:{corner:1.5, turns:2.1, drift:1, minN:12}},
   {id:'globe',        name:'Globe',                 scene:'globe',        ease:'Linear',   noEase:true, lockEase:true, fade:40, P:{dur:14, hold:0, drift:1, corner:1, minN:24}},
   {cat:'Cuts'},
-  {id:'zoom-gallery', name:'Zoom Gallery',          scene:'zoomGallery',  ease:'Smooth',   noRot:true, P:{dur:.9,   hold:2.1, corner:0}},
-  {id:'flicker',      name:'Flicker',               scene:'flicker',      ease:'Ease Out', noRot:true, P:{dur:.34,  hold:.12, corner:0}},
+  {id:'zoom-gallery', name:'Zoom Gallery',          scene:'zoomGallery',  ease:'Smooth',   noRot:true, noSpace:true, eases:['Smooth','Ease Out'], P:{dur:.9,   hold:2.1, corner:0}},
+  {id:'flicker',      name:'Flicker',               scene:'flicker',      ease:'Ease Out', noRot:true, noSpace:true, eases:['Ease Out','Smooth'], P:{dur:.34,  hold:.12, corner:0}},
 ];
 
 /* ================= state ================= */
@@ -1976,6 +1976,8 @@ function applyTemplate(t){
   // easing is never locked — Linear is just the smart default for continuous loops; the client can change it
   $('easeGroup').classList.toggle('elocked', !!t.lockEase);   // per-template lock (e.g. Diagonal Cascade = Linear only)
   $('easeLockHint').style.display = (t.noEase || t.lockEase) ? 'block' : 'none';
+  // per-template easing whitelist: show only the curves that suit this preset (e.g. Cuts = Ease Out + Smooth)
+  document.querySelectorAll('#easeChips .chip').forEach(c=>{ c.style.display = (!t.eases || t.eases.includes(c.textContent)) ? '' : 'none'; });
   $('rotGroup').classList.toggle('rlocked', !!t.noRot);
   $('spaceGroup').classList.toggle('slocked', !!t.noSpace);   // grey out spacing on presets where it does nothing (Product Showcase)
   rebuild(true);
