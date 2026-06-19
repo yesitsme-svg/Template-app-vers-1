@@ -1162,25 +1162,26 @@ const SCENES = {
     const N0=sourceList().length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    // bigger cards → fewer lanes; lane height stays proportional, no collisions
     const lanes=Math.max(2,Math.min(6,(N0>=10?4:3)));
-    const laneH=(fr.h*1.15)/lanes;
-    const boxH=laneH*.86, w=boxH*PA, gap=Math.max(-w*0.5, w*.18*(1.7*(state.spacing||1)-0.7)), step=w+gap; // spacing<1 overlaps lanes; >1 spreads
-    let perLane=Math.ceil(fr.w*1.4/step)+1;
+    const cellAsp=avgSourceAsp(PA);                    // cells adopt the loaded images' aspect (vertical imgs → narrow cells)
+    const baseGap=fr.h*0.02;
+    const laneH=(fr.h*1.15)/lanes;                     // lanes overscan the frame height so top/bottom never gap
+    const cardH=laneH, cardW=cardH*cellAsp;            // card FILLS its lane (cover-crop) → lanes touch vertically; size FIXED
+    // bake for the densest pitch (= card width, at the spacing floor) + buffer; PITCH is live in update()
+    let perLane=Math.ceil(fr.w*1.4/cardW)+2;
     while(perLane%N0) perLane++; // even cycle inside each lane
-    const total=perLane*step;
     const meshes=[];
     for(let l=0;l<lanes;l++) for(let i=0;i<perLane;i++){
       const slot=l*perLane+i+l*2;
-      const e=entryForSlot(slot);
-      const ch=Math.min(boxH, w/e.asp), cw=ch*e.asp; // contain image in the lane cell
-      const m=plane(e.tex,cw,ch); m.userData={l,i,slot}; m.renderOrder=slot; // stable draw order (coplanar)
+      const m=plane(texAt(slot,cellAsp),cardW,cardH); m.userData={l,i,slot}; m.renderOrder=slot; // stable draw order (coplanar)
       root.add(m); meshes.push(m);
     }
     root.rotation.z=THREE.MathUtils.degToRad(P.tiltZ||0);
-    const speed=total/(P.dur+P.hold);
     return { loopSeconds:P.dur+P.hold,
       update(T){
+        const sp=state.spacing||1;                     // min slider (0.5) = 0 gap (cards touch); grows above, never overlaps
+        const gap=baseGap*Math.max(0,(sp-0.5)/0.5);    // LIVE horizontal pitch — 0 at floor → spreads above, no rebuild
+        const step=cardW+gap, total=perLane*step, speed=total/(P.dur+P.hold);
         meshes.forEach(m=>{
           const {l,i}=m.userData;
           const dir=(l%2?-1:1)*state.dir;
@@ -1569,9 +1570,9 @@ const TEMPLATES = [
   {id:'grid-drift',   name:'Drifting Wall',         scene:'gridDrift',    ease:'Linear',   noEase:true, lockEase:true, P:{corner:2, cols:3, dx:1, dy:1}},
   {id:'filmstrip',    name:'Horizontal Filmstrip',  scene:'filmstrip',    ease:'Linear',   noEase:true, P:{dur:1.6, hold:0, drift:1, corner:1.5}},
   {id:'v-scroll',     name:'Vertical Scroll',       scene:'vScroll',      ease:'Linear',   noEase:true, lockEase:true, P:{dur:1.6, hold:0, drift:1, corner:0}},
+  {id:'marquee',      name:'Marquee Lanes',         scene:'marquee',      ease:'Linear',   noEase:true, lockEase:true, P:{dur:13.5, hold:0,   corner:1, tiltZ:-6}},
   {cat:'Walls & Strips'},
   {id:'grid-pop',     name:'Grid Pop',              scene:'gridPop',      ease:'Snappy',   P:{dur:.55,  hold:1.7, corner:2}},
-  {id:'marquee',      name:'Marquee Lanes',         scene:'marquee',      ease:'Linear',   noEase:true, P:{dur:13.5, hold:0,   corner:1, tiltZ:-6}},
   {cat:'Space'},
   {id:'field',        name:'Field Flight',          scene:'field',        ease:'Smooth',   spacing:0.5, P:{dur:1.3,  hold:.2,  drift:.35, corner:0, minN:18}},
   {id:'spiral',       name:'Spiral Vortex',         scene:'spiral',       ease:'Linear',   noEase:true, P:{corner:1.5, turns:1.6, drift:1, minN:12}},
@@ -1591,7 +1592,7 @@ const state={
 };
 let active=null, animTime=0, builtSpacing=1;
 // presets that read spacing LIVE in their own update() (count baked, pitch/radius live) → smooth, no rebuild
-const LIVE_SPACE=new Set(['scrollCols','scrollRows','gridDrift','spiral','stackReveal','shuffleCards','filmstrip','vScroll','gridPop']);
+const LIVE_SPACE=new Set(['scrollCols','scrollRows','gridDrift','spiral','stackReveal','shuffleCards','filmstrip','vScroll','gridPop','marquee']);
 // fixed-count presets where spacing == a uniform position scale from centre → done live in renderFrame
 // (cards keep their size; at low spacing they cluster/overlap = mush, at high they spread). No rebuild.
 const SCALE_SPACE=new Set(['ring','globe','floating','field','wreath','stackFeed','diagCascade']);
@@ -1738,7 +1739,7 @@ function sceneHasBacks(){
   try{ active.update(animTime); }catch(e){}
   return false;
 }
-const FLAT_ROT_FADE=new Set(['diagCascade','wreath','scrollCols','scrollRows','gridDrift','filmstrip','vScroll','gridPop']); // flat at rest, real depth once tilted
+const FLAT_ROT_FADE=new Set(['diagCascade','wreath','scrollCols','scrollRows','gridDrift','filmstrip','vScroll','gridPop','marquee']); // flat at rest, real depth once tilted
 function applyDepthFade(){
   const f=state.fade;
   if(f<=0){ forEachCard(o=>{ o.material.uniforms.uFade.value=1; }); return; }
