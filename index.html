@@ -1126,20 +1126,17 @@ const SCENES = {
           const adv=(T/beatTime)*avgStep*dir;
           for(let i=0;i<n;i++){ let x=baseCenter[i]+i*gap-adv; x=((x%total)+total)%total; meshes[i].position.x=x-total/2; }
         }else{
-          // DOMINO PUSH: the strip STEPS one card forward per beat (eased swipe + brief settle, with a tiny
-          // drift so it creeps instead of dead-freezing) → discrete, not an infinite flow. On top, a travelling
-          // PULSE makes each card bump up to nearly touch the next, then a fresh gap opens — "card pushes the
-          // next". Edge-gap = gap + (off[i+1]-off[i]) is width-independent and the pulse period divides the
-          // loop, so it's overlap-free on any aspect.
-          const beat=T/beatTime, k=Math.floor(beat), fr=beat-k;
-          const swipeFrac=0.55, drift=0.14;
-          const step=state.easeFn(clamp01(fr/swipeFrac));          // eased step 0→1, then holds
-          const baseAdv=((k+step)*(1-drift)+(k+fr)*drift)*avgStep*dir;
+          // DOMINO WITH REST: cards mostly STAND STILL (a slow creep keeps it alive), and a travelling LOCALIZED
+          // shove gives each card a quick forward push toward the next, then it eases back as a fresh gap opens —
+          // "a card stands, the next pushes it, they move". The shove is flat (rest) most of its cycle. Edge-gap =
+          // gap + (off[i+1]-off[i]) is width-independent and the pulse period divides the loop → overlap-free.
+          const baseFlow=(T/(beatTime*3.5))*avgStep*dir;           // gentle creep so it's never dead-frozen
           const waves=Math.max(2,Math.round(n/3)), lam=n/waves;    // integer cycles → seamless across the wrap
-          const wave=gap*0.46, wt=2*Math.PI*(beat);                // the push travels one card per beat
+          const amp=gap*0.72, win=0.42, ph0=(T/beatTime)*dir;
           for(let i=0;i<n;i++){
-            const off=wave*Math.sin(2*Math.PI*i/lam - wt);         // each card surges toward / eases off its neighbour
-            let x=baseCenter[i]+i*gap-baseAdv+off; x=((x%total)+total)%total; meshes[i].position.x=x-total/2;
+            let s=(((i/lam - ph0)%1)+1)%1;                         // 0..1 this card's shove phase
+            const push = s<win ? -amp*Math.pow(Math.sin((s/win)*Math.PI),2) : 0; // rest, then a quick forward shove, then rest
+            let x=baseCenter[i]+i*gap-baseFlow+push; x=((x%total)+total)%total; meshes[i].position.x=x-total/2;
           }
         }
       } };
