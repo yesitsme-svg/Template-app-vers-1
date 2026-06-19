@@ -1217,10 +1217,10 @@ const SCENES = {
     return { loopSeconds:(P.dur+P.hold)*n,
       update(T){
         const sp=state.spacing||1;
-        const depth=15*sp, margin=2.0, travel=depth+margin; // LIVE: spacing deepens the tunnel
-        const spreadX=fr.w*0.95*sp, spreadY=fr.h*0.95*sp;   // LIVE: spacing widens the field
+        const depth=12+6*sp, margin=2.0, travel=depth+margin;        // LIVE but gentle — tunnel never collapses/explodes per slider step
+        const spreadX=fr.w*(0.55+0.45*sp), spreadY=fr.h*(0.55+0.45*sp); // LIVE but gentle lateral spread
         const farZ=camZ-depth;
-        const adv=phase(T)*(travel/n);
+        const adv=T*(travel/((P.dur+P.hold)*n));                      // CONSTANT speed — continuous fly-through, no per-cycle easing pulse
         cards.forEach(m=>{
           const d=m.userData;
           const z=((d.zf*travel+adv)%travel+travel)%travel; // 0 = far fog → travel = behind the camera
@@ -1577,7 +1577,7 @@ const TEMPLATES = [
   {id:'marquee',      name:'Marquee Lanes',         scene:'marquee',      ease:'Linear',   noEase:true, lockEase:true, P:{dur:13.5, hold:0,   corner:1, tiltZ:-6}},
   {id:'grid-pop',     name:'Grid Pop',              scene:'gridPop',      ease:'Snappy',   P:{dur:.55,  hold:1.7, corner:2}},
   {cat:'Space'},
-  {id:'field',        name:'Field Flight',          scene:'field',        ease:'Smooth',   spacing:0.85, fade:60, P:{dur:1.3,  hold:.2,  drift:.35, corner:0, minN:18}},
+  {id:'field',        name:'Field Flight',          scene:'field',        ease:'Linear',   noEase:true, lockEase:true, spacing:0.85, fade:60, P:{dur:1.3,  hold:.2,  drift:.35, corner:0, minN:18}},
   {id:'spiral',       name:'Spiral Vortex',         scene:'spiral',       ease:'Linear',   noEase:true, P:{corner:1.5, turns:1.6, drift:1, minN:12}},
   {id:'globe',        name:'Globe',                 scene:'globe',        ease:'Linear',   noEase:true, P:{dur:14, hold:0, drift:1, corner:1, minN:24}},
   {cat:'Cuts'},
@@ -1743,6 +1743,9 @@ function sceneHasBacks(){
   return false;
 }
 const FLAT_ROT_FADE=new Set(['diagCascade','wreath','scrollCols','scrollRows','gridDrift','filmstrip','vScroll','gridPop','marquee']); // flat at rest, real depth once tilted
+// scenes that use the ON-SCREEN FROZEN fade span (near visible card full-bright, melts to dark, no breathing as
+// cards recycle). = the flat-rot scenes PLUS Field Flight (a fly-through whose visible depth window is constant).
+const FROZEN_SPAN_FADE=new Set([...FLAT_ROT_FADE,'field']);
 function applyDepthFade(){
   const f=state.fade;
   if(f<=0){ forEachCard(o=>{ o.material.uniforms.uFade.value=1; }); return; }
@@ -1757,7 +1760,7 @@ function applyDepthFade(){
   // off-screen. If the fade span is measured across ALL cards, the nearest VISIBLE card sits mid-curve
   // (dimmed) and the gradient is squeezed. Instead measure the span across only the ON-SCREEN cards →
   // nearest visible card is full-bright and it melts smoothly into darkness across exactly the depth seen.
-  const isCascade = state.template && FLAT_ROT_FADE.has(state.template.scene);
+  const isCascade = state.template && FROZEN_SPAN_FADE.has(state.template.scene);
   let near=Infinity, far=-Infinity; const ds=[];
   let vNear=Infinity, vFar=-Infinity;
   for(const o of cards){
