@@ -1121,35 +1121,8 @@ const SCENES = {
         const sp=state.spacing||1;
         const gap=baseGap*Math.max(0,(sp-0.5)/0.5);    // min slider (0.5) = 0 gap (cards touch); grows above, never overlaps
         const total=sumW + n*gap, avgStep=total/n, dir=state.dir;
-        if(state.ease==='Linear'){
-          // constant continuous scroll — one shared advance keeps every gap fixed (no collisions)
-          const adv=(T/beatTime)*avgStep*dir;
-          for(let i=0;i<n;i++){ let x=baseCenter[i]+i*gap-adv; x=((x%total)+total)%total; meshes[i].position.x=x-total/2; }
-        }else{
-          // arqe signature: eased STEP + HOLD with a travelling per-card STAGGER. Each beat the row advances one
-          // card-width via an eased step, then HOLDS (cards stand still). Back cards lead the step a touch, so the
-          // motion ripples front-ward — a card lurches up, then the next, "pushing" along the strip. The stagger is
-          // bounded by the live gap, so it never overlaps. (No constant drift → real holds, like arqe.)
-          const beat=T/beatTime, k=Math.floor(beat), fr=beat-k;
-          const stepWin=0.5, waves=Math.max(1,Math.round(n/4));
-          const delayMax=0.45*clamp01(gap/(avgStep*0.35));         // no stagger when there's no gap (lockstep, safe); domino grows with spacing
-          const w=new Array(n), dx=new Array(n);
-          for(let i=0;i<n;i++){
-            const delay=(delayMax*0.5)*(1-Math.cos(2*Math.PI*waves*i/n)); // periodic step-wave delay → cards lurch in sequence
-            const prog=state.easeFn(clamp01((fr-delay)/stepWin));         // eased step then HOLD (stands)
-            dx[i]=baseCenter[i]+i*gap-(k+prog)*avgStep*dir;
-            w[i]=meshes[i].geometry.parameters.width;
-          }
-          // LOOP-AWARE collision clamp: anchor at the widest gap, then walk the ring clamping each card so it
-          // can't pass the one ahead → cards bump and wait ("the next pushes it"), never overlap, seam intact.
-          let seam=0,maxg=-1e9;
-          for(let i=0;i<n;i++){ const j=(i+1)%n, dj=(j===0?dx[0]+total:dx[j]), g=dj-dx[i]-(w[i]+w[j])/2; if(g>maxg){maxg=g;seam=j;} }
-          const pos=new Array(n); pos[seam]=dx[seam];
-          for(let s=1;s<n;s++){ const i=(seam+s)%n, pi=(seam+s-1)%n;
-            pos[i]=Math.max(dx[i]+(i<seam?total:0), pos[pi]+(w[pi]+w[i])/2);
-          }
-          for(let i=0;i<n;i++){ const x=((pos[i]%total)+total)%total; meshes[i].position.x=x-total/2; }
-        }
+        const adv=(T/beatTime)*avgStep*dir;            // constant continuous scroll — every gap stays fixed, no collisions
+        for(let i=0;i<n;i++){ let x=baseCenter[i]+i*gap-adv; x=((x%total)+total)%total; meshes[i].position.x=x-total/2; }
       } };
   },
 
@@ -1618,7 +1591,7 @@ const TEMPLATES = [
   {id:'scroll-cols',  name:'Scroll Columns',        scene:'scrollCols',   ease:'Linear',   noEase:true, lockEase:true, P:{corner:2, cols:3, cellAsp:0.74}},
   {id:'marquee-rows', name:'Marquee Rows',          scene:'scrollRows',   ease:'Linear',   noEase:true, lockEase:true, P:{corner:2, rows:3, cellAsp:0.7}},
   {id:'grid-drift',   name:'Drifting Wall',         scene:'gridDrift',    ease:'Linear',   noEase:true, lockEase:true, P:{corner:2, cols:3, dx:1, dy:1}},
-  {id:'filmstrip',    name:'Horizontal Filmstrip',  scene:'filmstrip',    ease:'Linear',   eases:['Linear','Smooth'], P:{dur:1.6, hold:0, drift:1, corner:1.5}},
+  {id:'filmstrip',    name:'Horizontal Filmstrip',  scene:'filmstrip',    ease:'Linear',   noEase:true, lockEase:true, P:{dur:1.6, hold:0, drift:1, corner:1.5}},
   {id:'v-scroll',     name:'Vertical Scroll',       scene:'vScroll',      ease:'Linear',   noEase:true, lockEase:true, P:{dur:1.6, hold:0, drift:1, corner:0}},
   {id:'marquee',      name:'Marquee Lanes',         scene:'marquee',      ease:'Linear',   noEase:true, lockEase:true, P:{dur:13.5, hold:0,   corner:1, tiltZ:-6}},
   {id:'grid-pop',     name:'Grid Pop',              scene:'gridPop',      ease:'Snappy',   P:{dur:.55,  hold:1.7, corner:2}},
