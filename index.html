@@ -1083,24 +1083,29 @@ const SCENES = {
     const N=sourceList().length;
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5);
-    const H=fr.h*.52;
-    const gap=Math.max(-H*PA*0.42, H*PA*.26*(1.7*(state.spacing||1)-0.7)); // spacing<1 closes the gap into overlap; >1 spreads
-    let n=Math.max(N, Math.ceil(fr.w/(H*PA+gap))+2);
+    const H=fr.h*.52;                                  // card height fixed (Card-size slider scales separately)
+    const baseGap=H*0.16;                              // gap unit tied to card HEIGHT → aspect-independent (no vertical-image lag)
+    // bake widths at gap=0 (densest) so the strip still fills the frame with NO gap; PITCH is live in update()
+    let avgW=0; for(let i=0;i<N;i++) avgW+=H*entryForSlot(i).asp; avgW=avgW/N||H;
+    let n=Math.max(N, Math.ceil(fr.w/avgW)+3);
     while(n%N) n++; // no duplicate neighbours at the loop seam
-    const meshes=[], cumX=[]; let x0=0;
+    const meshes=[], baseCenter=[]; let pre=0;
     for(let i=0;i<n;i++){
       const e=entryForSlot(i), w=H*e.asp;
-      const m=plane(e.tex,w,H); m.userData.slot=i; m.renderOrder=i; // stable draw order (coplanar strip)
-      cumX.push(x0 + w/2); x0 += w + gap; // place by cumulative width so mixed aspects keep even gaps
+      const m=plane(e.tex,w,H); m.userData={slot:i}; m.renderOrder=i; // stable draw order (coplanar strip)
+      baseCenter.push(pre + w/2); pre += w;            // cumulative WIDTH only — the gap is inserted live below
       root.add(m); meshes.push(m);
     }
-    const total=x0, avgStep=total/n, phase=makePhase(P);
+    const sumW=pre, phase=makePhase(P);
     return { loopSeconds:(P.dur+P.hold)*n,
       update(T){
+        const sp=state.spacing||1;
+        const gap=baseGap*Math.max(0,(sp-0.5)/0.5);    // min slider (0.5) = 0 gap (cards touch); grows above, never overlaps
+        const total=sumW + n*gap, avgStep=total/n;
         // lockstep: one shared phase keeps every gap constant — collisions are impossible
         const adv=phase(T)*avgStep*state.dir;
         for(let i=0;i<n;i++){
-          let x=cumX[i]-adv;
+          let x=baseCenter[i] + i*gap - adv;            // LIVE gap between cards
           x=((x%total)+total)%total;
           meshes[i].position.x=x-total/2;
         }
@@ -1557,8 +1562,8 @@ const TEMPLATES = [
   {id:'scroll-cols',  name:'Scroll Columns',        scene:'scrollCols',   ease:'Linear',   noEase:true, lockEase:true, P:{corner:2, cols:3, cellAsp:0.74}},
   {id:'marquee-rows', name:'Marquee Rows',          scene:'scrollRows',   ease:'Linear',   noEase:true, lockEase:true, P:{corner:2, rows:3, cellAsp:0.7}},
   {id:'grid-drift',   name:'Drifting Wall',         scene:'gridDrift',    ease:'Linear',   noEase:true, lockEase:true, P:{corner:2, cols:3, dx:1, dy:1}},
-  {cat:'Walls & Strips'},
   {id:'filmstrip',    name:'Horizontal Filmstrip',  scene:'filmstrip',    ease:'Linear',   noEase:true, P:{dur:1.6, hold:0, drift:1, corner:1.5}},
+  {cat:'Walls & Strips'},
   {id:'v-scroll',     name:'Vertical Scroll',       scene:'vScroll',      ease:'Linear',   noEase:true, P:{dur:1.6, hold:0, drift:1, corner:0}},
   {id:'grid-pop',     name:'Grid Pop',              scene:'gridPop',      ease:'Snappy',   P:{dur:.55,  hold:1.7, corner:2}},
   {id:'marquee',      name:'Marquee Lanes',         scene:'marquee',      ease:'Linear',   noEase:true, P:{dur:13.5, hold:0,   corner:1, tiltZ:-6}},
@@ -1581,7 +1586,7 @@ const state={
 };
 let active=null, animTime=0, builtSpacing=1;
 // presets that read spacing LIVE in their own update() (count baked, pitch/radius live) → smooth, no rebuild
-const LIVE_SPACE=new Set(['scrollCols','scrollRows','gridDrift','spiral','stackReveal','shuffleCards']);
+const LIVE_SPACE=new Set(['scrollCols','scrollRows','gridDrift','spiral','stackReveal','shuffleCards','filmstrip']);
 // fixed-count presets where spacing == a uniform position scale from centre → done live in renderFrame
 // (cards keep their size; at low spacing they cluster/overlap = mush, at high they spread). No rebuild.
 const SCALE_SPACE=new Set(['ring','globe','floating','field','wreath','stackFeed','diagCascade','gridPop']);
@@ -1728,7 +1733,7 @@ function sceneHasBacks(){
   try{ active.update(animTime); }catch(e){}
   return false;
 }
-const FLAT_ROT_FADE=new Set(['diagCascade','wreath','scrollCols','scrollRows','gridDrift']); // flat at rest, real depth once tilted
+const FLAT_ROT_FADE=new Set(['diagCascade','wreath','scrollCols','scrollRows','gridDrift','filmstrip']); // flat at rest, real depth once tilted
 function applyDepthFade(){
   const f=state.fade;
   if(f<=0){ forEachCard(o=>{ o.material.uniforms.uFade.value=1; }); return; }
