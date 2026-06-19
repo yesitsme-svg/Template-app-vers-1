@@ -1130,7 +1130,7 @@ const SCENES = {
           // constant drift so it never fully stops — a gentle, breathing rhythm instead of a freeze-then-jump.
           // A subtle gap-scaled stagger lets trailing cards "catch up" without ever overlapping.
           const beat=T/beatTime, k=Math.floor(beat), fr=beat-k;
-          const drift=0.5, stag=0.14*clamp01(gap/(avgStep*0.4));
+          const drift=0.5, stag=0.34*clamp01(gap/(avgStep*1.0)); // catch-up delay scaled by AVAILABLE gap → grows with spacing, ~0 on wide cards at low spacing (never overlaps)
           for(let i=0;i<n;i++){
             const ph=(((baseCenter[i]/total)%1)+1)%1;               // 0..1 around the strip → travelling-wave phase
             const lf=clamp01((fr-ph*stag)/(1-stag));                // staggered local fraction
