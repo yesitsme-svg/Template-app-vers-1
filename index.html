@@ -1126,17 +1126,20 @@ const SCENES = {
           const adv=(T/beatTime)*avgStep*dir;
           for(let i=0;i<n;i++){ let x=baseCenter[i]+i*gap-adv; x=((x%total)+total)%total; meshes[i].position.x=x-total/2; }
         }else{
-          // SMOOTH FLOW + travelling ACCORDION catch-up: the strip flows steadily left while a wave makes each
-          // card rush up to nearly touch the next, then a fresh gap opens behind it. The edge-gap between
-          // neighbours = gap + (off[i+1]-off[i]) — independent of card width — so this is provably overlap-free
-          // on any aspect, and the catch-up depth is exact. Amplitude scales with the live gap (0 at min spacing).
-          const adv=(T/beatTime)*avgStep*dir;
-          const waves=Math.max(2,Math.round(n/2.6)), lam=n/waves;  // integer cycles → continuous across the wrap seam
-          const wave=gap*0.48, wt=2*Math.PI*(T/(beatTime*1.25))*dir;
+          // DOMINO PUSH: the strip STEPS one card forward per beat (eased swipe + brief settle, with a tiny
+          // drift so it creeps instead of dead-freezing) → discrete, not an infinite flow. On top, a travelling
+          // PULSE makes each card bump up to nearly touch the next, then a fresh gap opens — "card pushes the
+          // next". Edge-gap = gap + (off[i+1]-off[i]) is width-independent and the pulse period divides the
+          // loop, so it's overlap-free on any aspect.
+          const beat=T/beatTime, k=Math.floor(beat), fr=beat-k;
+          const swipeFrac=0.55, drift=0.14;
+          const step=state.easeFn(clamp01(fr/swipeFrac));          // eased step 0→1, then holds
+          const baseAdv=((k+step)*(1-drift)+(k+fr)*drift)*avgStep*dir;
+          const waves=Math.max(2,Math.round(n/3)), lam=n/waves;    // integer cycles → seamless across the wrap
+          const wave=gap*0.46, wt=2*Math.PI*(beat);                // the push travels one card per beat
           for(let i=0;i<n;i++){
-            const off=wave*Math.sin(2*Math.PI*i/lam - wt);         // each card eases toward / away from its neighbour
-            let x=baseCenter[i]+i*gap-adv+off;
-            x=((x%total)+total)%total; meshes[i].position.x=x-total/2;
+            const off=wave*Math.sin(2*Math.PI*i/lam - wt);         // each card surges toward / eases off its neighbour
+            let x=baseCenter[i]+i*gap-baseAdv+off; x=((x%total)+total)%total; meshes[i].position.x=x-total/2;
           }
         }
       } };
