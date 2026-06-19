@@ -1276,15 +1276,18 @@ const SCENES = {
       dirs.push(new THREE.Vector3(Math.cos(th)*rr, y, Math.sin(th)*rr)); // unit-sphere direction (radius applied live)
       inner.add(m); meshes.push(m);
     }
-    // Rtouch = the densest non-overlapping radius (fibonacci neighbours just touch). The slider maps
-    // CONTINUOUSLY from Rtouch upward (no dead zone): min spacing = tightest packed ball, then it spreads.
+    // Rtouch = the radius where fibonacci neighbours just touch. Slider maps CONTINUOUSLY (no dead zone):
+    // the lower half compresses HARD past touching into a dense, slightly-overlapping ball (depth-sort +
+    // fade keep it readable); ×1 is the default framing; the upper half spreads the sphere out.
     const Rtouch=H*Math.sqrt(n)*0.50;
     const Rdef=Rtouch*1.225;                                // radius at the default spacing (×1) — frames like before
     camera.position.set(0,0,Rdef+3.8); camera.lookAt(0,0,0);
     const phase=makePhase(P), q=new THREE.Quaternion();
     return { loopSeconds:P.dur+P.hold,
       update(T){
-        const R=Rtouch*(1+Math.max(0,(state.spacing||1)-0.5)*0.45); // sp 0.5 = touching (tightest), grows smoothly; never overlaps
+        const sp=state.spacing||1;
+        const R = sp<=1 ? Rtouch*(0.66+(sp-0.5)*1.13)        // ×0.5 = dense overlapping ball → tightens hard up to the ×1 default
+                        : Rtouch*(1.225+(sp-1)*0.55);        // above ×1 spreads out
         for(let i=0;i<n;i++) meshes[i].position.copy(dirs[i]).multiplyScalar(R);
         inner.rotation.y=phase(T)*Math.PI*2*state.dir;
         q.copy(inner.quaternion).invert().multiply(camera.quaternion);
