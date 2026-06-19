@@ -1126,18 +1126,29 @@ const SCENES = {
           const adv=(T/beatTime)*avgStep*dir;
           for(let i=0;i<n;i++){ let x=baseCenter[i]+i*gap-adv; x=((x%total)+total)%total; meshes[i].position.x=x-total/2; }
         }else{
-          // DOMINO WITH REST: cards mostly STAND STILL (a slow creep keeps it alive), and a travelling LOCALIZED
-          // shove gives each card a quick forward push toward the next, then it eases back as a fresh gap opens —
-          // "a card stands, the next pushes it, they move". The shove is flat (rest) most of its cycle. Edge-gap =
-          // gap + (off[i+1]-off[i]) is width-independent and the pulse period divides the loop → overlap-free.
-          const baseFlow=(T/(beatTime*3.5))*avgStep*dir;           // gentle creep so it's never dead-frozen
-          const waves=Math.max(2,Math.round(n/3)), lam=n/waves;    // integer cycles → seamless across the wrap
-          const amp=gap*0.72, win=0.42, ph0=(T/beatTime)*dir;
+          // arqe signature: eased STEP + HOLD with a travelling per-card STAGGER. Each beat the row advances one
+          // card-width via an eased step, then HOLDS (cards stand still). Back cards lead the step a touch, so the
+          // motion ripples front-ward — a card lurches up, then the next, "pushing" along the strip. The stagger is
+          // bounded by the live gap, so it never overlaps. (No constant drift → real holds, like arqe.)
+          const beat=T/beatTime, k=Math.floor(beat), fr=beat-k;
+          const stepWin=0.5, waves=Math.max(1,Math.round(n/4));
+          const delayMax=0.45*clamp01(gap/(avgStep*0.35));         // no stagger when there's no gap (lockstep, safe); domino grows with spacing
+          const w=new Array(n), dx=new Array(n);
           for(let i=0;i<n;i++){
-            let s=(((i/lam - ph0)%1)+1)%1;                         // 0..1 this card's shove phase
-            const push = s<win ? -amp*Math.pow(Math.sin((s/win)*Math.PI),2) : 0; // rest, then a quick forward shove, then rest
-            let x=baseCenter[i]+i*gap-baseFlow+push; x=((x%total)+total)%total; meshes[i].position.x=x-total/2;
+            const delay=(delayMax*0.5)*(1-Math.cos(2*Math.PI*waves*i/n)); // periodic step-wave delay → cards lurch in sequence
+            const prog=state.easeFn(clamp01((fr-delay)/stepWin));         // eased step then HOLD (stands)
+            dx[i]=baseCenter[i]+i*gap-(k+prog)*avgStep*dir;
+            w[i]=meshes[i].geometry.parameters.width;
           }
+          // LOOP-AWARE collision clamp: anchor at the widest gap, then walk the ring clamping each card so it
+          // can't pass the one ahead → cards bump and wait ("the next pushes it"), never overlap, seam intact.
+          let seam=0,maxg=-1e9;
+          for(let i=0;i<n;i++){ const j=(i+1)%n, dj=(j===0?dx[0]+total:dx[j]), g=dj-dx[i]-(w[i]+w[j])/2; if(g>maxg){maxg=g;seam=j;} }
+          const pos=new Array(n); pos[seam]=dx[seam];
+          for(let s=1;s<n;s++){ const i=(seam+s)%n, pi=(seam+s-1)%n;
+            pos[i]=Math.max(dx[i]+(i<seam?total:0), pos[pi]+(w[pi]+w[i])/2);
+          }
+          for(let i=0;i<n;i++){ const x=((pos[i]%total)+total)%total; meshes[i].position.x=x-total/2; }
         }
       } };
   },
