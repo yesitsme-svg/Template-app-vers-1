@@ -1565,7 +1565,7 @@ const TEMPLATES = [
   {id:'marquee-rows', name:'Marquee Rows',          scene:'scrollRows',   ease:'Linear',   noEase:true, lockEase:true, P:{corner:2, rows:3, cellAsp:0.7}},
   {id:'grid-drift',   name:'Drifting Wall',         scene:'gridDrift',    ease:'Linear',   noEase:true, lockEase:true, P:{corner:2, cols:3, dx:1, dy:1}},
   {id:'filmstrip',    name:'Horizontal Filmstrip',  scene:'filmstrip',    ease:'Linear',   noEase:true, P:{dur:1.6, hold:0, drift:1, corner:1.5}},
-  {id:'v-scroll',     name:'Vertical Scroll',       scene:'vScroll',      ease:'Linear',   noEase:true, P:{dur:1.6, hold:0, drift:1, corner:0}},
+  {id:'v-scroll',     name:'Vertical Scroll',       scene:'vScroll',      ease:'Linear',   noEase:true, lockEase:true, P:{dur:1.6, hold:0, drift:1, corner:0}},
   {cat:'Walls & Strips'},
   {id:'grid-pop',     name:'Grid Pop',              scene:'gridPop',      ease:'Snappy',   P:{dur:.55,  hold:1.7, corner:2}},
   {id:'marquee',      name:'Marquee Lanes',         scene:'marquee',      ease:'Linear',   noEase:true, P:{dur:13.5, hold:0,   corner:1, tiltZ:-6}},
