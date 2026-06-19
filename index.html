@@ -1276,13 +1276,15 @@ const SCENES = {
       dirs.push(new THREE.Vector3(Math.cos(th)*rr, y, Math.sin(th)*rr)); // unit-sphere direction (radius applied live)
       inner.add(m); meshes.push(m);
     }
-    // floor radius from the fibonacci nearest-neighbour spacing (~3.5/√n) so cards never intersect, even at min spacing
-    const Rmin=H*Math.sqrt(n)*0.54;
-    camera.position.set(0,0,1.65+3.8); camera.lookAt(0,0,0);
+    // Rtouch = the densest non-overlapping radius (fibonacci neighbours just touch). The slider maps
+    // CONTINUOUSLY from Rtouch upward (no dead zone): min spacing = tightest packed ball, then it spreads.
+    const Rtouch=H*Math.sqrt(n)*0.50;
+    const Rdef=Rtouch*1.225;                                // radius at the default spacing (×1) — frames like before
+    camera.position.set(0,0,Rdef+3.8); camera.lookAt(0,0,0);
     const phase=makePhase(P), q=new THREE.Quaternion();
     return { loopSeconds:P.dur+P.hold,
       update(T){
-        const R=Math.max(1.65*(state.spacing||1), Rmin); // LIVE: spacing spreads the sphere; floored → no poke-through
+        const R=Rtouch*(1+Math.max(0,(state.spacing||1)-0.5)*0.45); // sp 0.5 = touching (tightest), grows smoothly; never overlaps
         for(let i=0;i<n;i++) meshes[i].position.copy(dirs[i]).multiplyScalar(R);
         inner.rotation.y=phase(T)*Math.PI*2*state.dir;
         q.copy(inner.quaternion).invert().multiply(camera.quaternion);
@@ -1589,7 +1591,7 @@ const TEMPLATES = [
   {cat:'Carousels 3D'},
   {id:'carousel',     name:'Carousel Slide',        scene:'ring',         ease:'Smooth',   P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'y', tiltX:7,  step:'card', minN:8, chord:1.9}},
   {id:'wheel',        name:'Vertical Wheel',        scene:'ring',         ease:'Smooth',   P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'x', step:'card', minN:6, chord:2.2}},
-  {id:'tilted-ring',  name:'Tilted Ring',           scene:'ring',         ease:'Linear',   noEase:true, P:{dur:16, hold:0, drift:1, corner:0, axis:'y', tiltX:14, tiltZ:16, step:'full', minN:9, chord:1.9, sizeMul:.85}},
+  {id:'tilted-ring',  name:'Tilted Ring',           scene:'ring',         ease:'Linear',   noEase:true, lockEase:true, P:{dur:16, hold:0, drift:1, corner:0, axis:'y', tiltX:14, tiltZ:16, step:'full', minN:9, chord:1.9, sizeMul:.85}},
   {cat:'Cards'},
   {id:'stack-reveal', name:'Smooth Stack Reveal',   scene:'stackReveal',  ease:'Smooth',   P:{dur:1.2,  hold:.15, corner:2.5}},
   {id:'shuffle',      name:'Shuffle Cards',         scene:'shuffleCards', ease:'Snappy',   P:{dur:1.0,  hold:.18, corner:2.5}},
