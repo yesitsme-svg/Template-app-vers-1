@@ -1126,16 +1126,16 @@ const SCENES = {
           const adv=(T/beatTime)*avgStep*dir;
           for(let i=0;i<n;i++){ let x=baseCenter[i]+i*gap-adv; x=((x%total)+total)%total; meshes[i].position.x=x-total/2; }
         }else{
-          // SWIPE: each beat eases the strip one card-width to the left, then settles; a travelling stagger
-          // delays cards along the strip so each one "catches up" to its neighbour → stylish wave swipe.
-          const beat=T/beatTime, k=Math.floor(beat), fr=beat-k, swipe=0.58;
-          // the catch-up stagger only opens up when there's gap to absorb it → at 0 gap it's a clean lockstep
-          // swipe (no overlap), and the wave grows as spacing widens.
-          const stag=0.22*clamp01(gap/(avgStep*0.35));
+          // SMOOTH FLOWING SWIPE: each card-beat is eased (the strip leans into each card) but BLENDED with a
+          // constant drift so it never fully stops — a gentle, breathing rhythm instead of a freeze-then-jump.
+          // A subtle gap-scaled stagger lets trailing cards "catch up" without ever overlapping.
+          const beat=T/beatTime, k=Math.floor(beat), fr=beat-k;
+          const drift=0.5, stag=0.14*clamp01(gap/(avgStep*0.4));
           for(let i=0;i<n;i++){
-            const ph=(((baseCenter[i]/total)%1)+1)%1;               // 0..1 around the strip → wave phase
-            const sw=state.easeFn(clamp01((fr-ph*stag)/swipe));     // eased swipe, holds at 1 until the next beat
-            const adv=(k+sw)*avgStep*dir;
+            const ph=(((baseCenter[i]/total)%1)+1)%1;               // 0..1 around the strip → travelling-wave phase
+            const lf=clamp01((fr-ph*stag)/(1-stag));                // staggered local fraction
+            const phase=(k+state.easeFn(lf))*(1-drift) + (k+fr)*drift; // pulse blended with steady flow → smooth, never stops
+            const adv=phase*avgStep*dir;
             let x=baseCenter[i]+i*gap-adv; x=((x%total)+total)%total; meshes[i].position.x=x-total/2;
           }
         }
