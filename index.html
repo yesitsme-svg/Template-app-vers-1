@@ -157,7 +157,7 @@
   input[type=color]{width:100%; height:32px; border:1px solid var(--border); border-radius:10px; background:var(--panel2); cursor:pointer; padding:3px 5px;}
   /* block separators so the panel sections read as distinct cards (Figma/Framer style) */
   /* full-bleed divider lines (edge-to-edge of the panel) with generous breathing room each side */
-  #setScroll > * + *{border-top:1px solid var(--border); margin-top:26px; padding-top:26px; margin-left:-16px; margin-right:-16px; padding-left:16px; padding-right:16px;}
+  #setScroll > * + *{border-top:1px solid var(--border); margin-top:18px; padding-top:18px; margin-left:-16px; margin-right:-16px; padding-left:16px; padding-right:16px;}
   /* action buttons inside the scroll are not sections: no full-bleed divider, just top spacing */
   #setScroll > button.btn{border-top:none; margin-left:0; margin-right:0; padding-left:10px; padding-right:10px; padding-top:7px; margin-top:18px;}
   /* classic color control: clickable swatch + hex field */
@@ -170,10 +170,10 @@
   .hexInput:focus{border-color:var(--accent);}
   .nativeColor{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;}
   /* stylish on/off switch (dark theme toggle) */
-  .switch{width:42px; height:24px; flex:0 0 auto; border-radius:100px; background:var(--panel2); border:1px solid var(--border); position:relative; cursor:pointer; padding:0; transition:background .2s,border-color .2s;}
-  .switch .knob{position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.3); transition:left .2s;}
+  .switch{width:34px; height:20px; flex:0 0 auto; border-radius:100px; background:var(--panel2); border:1px solid var(--border); position:relative; cursor:pointer; padding:0; transition:background .2s,border-color .2s;}
+  .switch .knob{position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.3); transition:left .2s;}
   .switch.on{background:var(--accent); border-color:var(--accent);}
-  .switch.on .knob{left:21px;}
+  .switch.on .knob{left:16px;}
   .rowBetween{display:flex; align-items:center; justify-content:space-between; gap:10px;}
   /* settings panel = scrollable content + a fixed export footer */
   #settings{padding:0; gap:0; overflow:hidden;}
@@ -631,7 +631,10 @@ function makeTexture(source, key, aspect){
     const VL=1280, W=aspect>=1?VL:Math.round(VL*aspect), H=aspect>=1?Math.round(VL/aspect):VL;
     const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d');
     const tex=new THREE.CanvasTexture(c); tex.colorSpace=THREE.SRGBColorSpace; tex.anisotropy=4;
-    tex.__videoUpdate=()=>{ const v=source; if(v.readyState>=2 && v.videoWidth){ const s=Math.max(W/v.videoWidth,H/v.videoHeight), dw=v.videoWidth*s, dh=v.videoHeight*s; x.drawImage(v,(W-dw)/2,(H-dh)/2,dw,dh); tex.needsUpdate=true; } };
+    tex.__videoUpdate=()=>{ const v=source; if(v.readyState>=2 && v.videoWidth){
+      if(tex.__lastT===v.currentTime) return;                 // frame hasn't advanced (paused / render>video fps) → skip redraw + GPU upload
+      tex.__lastT=v.currentTime;
+      const s=Math.max(W/v.videoWidth,H/v.videoHeight), dw=v.videoWidth*s, dh=v.videoHeight*s; x.drawImage(v,(W-dw)/2,(H-dh)/2,dw,dh); tex.needsUpdate=true; } };
     tex.__videoUpdate();
     texCache.set(ck,tex); return tex;
   }
@@ -687,7 +690,14 @@ function dropCachedTextures(uid){
     if(k.startsWith(uid+'|')){ t.dispose(); texCache.delete(k); }
   }
 }
-function updateVideoTextures(){ for(const t of texCache.values()){ if(t.__videoUpdate) t.__videoUpdate(); } }
+// Only refresh video textures that are ON A VISIBLE CARD this frame (each unique texture once) — not the
+// whole cache. Stops stale clones from other presets, off-screen cards, and duplicate-share redraws from
+// flooding the GPU every frame. Combined with the per-frame dedup above, paused/idle videos cost ~nothing.
+function updateVideoTextures(){
+  const seen=new Set();
+  forEachCard(o=>{ if(!o.visible) return; const t=o.material&&o.material.uniforms&&o.material.uniforms.map&&o.material.uniforms.map.value;
+    if(t && t.__videoUpdate && !seen.has(t)){ seen.add(t); t.__videoUpdate(); } });
+}
 function disposeSource(u){ // free a userSources entry (image bitmap or video element)
   dropCachedTextures(u.uid);
   if(u.isVideo){ try{ u.src.pause(); }catch(e){} if(u._url) URL.revokeObjectURL(u._url); }
@@ -2132,10 +2142,13 @@ let last=performance.now(), fpsAccum=0;
 let rec=null, recChunks=[], recUntil=0;
 let pendingRebuild=false;
 function scheduleRebuild(){ pendingRebuild=true; } // coalesce live slider drags to one rebuild per frame
+let _vidPlay=null;
 function tickFrame(now){
   requestAnimationFrame(tickFrame);
-  if(exporting) return; // export loop drives rendering
+  if(exporting) return; // export loop drives rendering (and must NOT pause the videos)
   if(pendingRebuild){ pendingRebuild=false; rebuild(); }
+  if(_vidPlay!==state.playing){ _vidPlay=state.playing;     // pause clips with the timeline → idle videos cost nothing
+    for(const u of userSources) if(u.isVideo){ try{ _vidPlay?u.src.play():u.src.pause(); }catch(e){} } }
   const dt=Math.min((now-last)/1000,.1); last=now;
   // animTime STEPS at the chosen FPS cadence (24 = choppier, 60 = smoother — matches export), but the
   // step cadence is tied to real time, NOT speed: each step advances animTime by step*speed. So at any
