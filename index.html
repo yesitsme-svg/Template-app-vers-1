@@ -489,6 +489,9 @@
         <button data-v="on">On</button>
         <button data-v="off" class="active">Off</button>
       </div>
+      <div class="slider-row" style="margin-top:8px"><div class="label">Lens (fisheye)</div><div class="val" id="lensVal">0</div></div>
+      <input type="range" id="lens" min="-100" max="100" step="1" value="0">
+      <div class="hint">Just an image warp — convex (+) / concave (−). Doesn't affect the layout.</div>
     </div>
   </details>
 
@@ -737,6 +740,27 @@ const postMat=new THREE.ShaderMaterial({
     }`
 });
 postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2), postMat));
+
+/* fisheye lens — PURE post effect: render the scene to a texture, then resample it with a barrel/pincushion
+   warp. Corners are pinned (rn=1 → factor 1) + clamp-to-edge, so there are never black borders. It does NOT
+   touch template layout/physics — just bends the final image (convex bulge / concave pinch). */
+const sceneRT=new THREE.WebGLRenderTarget(2,2,{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,format:THREE.RGBAFormat});
+const lensScene=new THREE.Scene();
+const lensMat=new THREE.ShaderMaterial({
+  transparent:true, depthTest:false,
+  uniforms:{uScene:{value:sceneRT.texture}, uLens:{value:0}},
+  vertexShader:`varying vec2 vUv; void main(){vUv=uv; gl_Position=vec4(position.xy,0.,1.);}`,
+  fragmentShader:`
+    varying vec2 vUv; uniform sampler2D uScene; uniform float uLens;
+    void main(){
+      vec2 c=vUv-0.5;
+      float rn=length(c)/0.70710678;            // 0 centre … 1 corner
+      float f=(1.0-uLens)+uLens*rn*rn;           // corner pinned → no black edges; centre bulges (+) / pinches (-)
+      gl_FragColor=texture2D(uScene, clamp(0.5+c*f,0.0,1.0));
+    }`
+});
+lensScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2), lensMat));
+const _rtSize=new THREE.Vector2();
 
 /* ================= helpers ================= */
 function frameAt(z){ const h=2*z*Math.tan(THREE.MathUtils.degToRad(camera.fov/2)); return {h, w:h*camera.aspect}; }
@@ -1609,7 +1633,7 @@ const RATIOS={'3:4':[3,4],'9:16':[9,16],'1:1':[1,1],'4:3':[4,3],'16:9':[16,9]};
 const state={
   template:null, P:{}, ease:'Smooth', bez:[.76,0,.24,1], easeFn:null,
   dir:1, bg:'#0d0d0d', bg2:'#2a1a5c', fillMode:'solid', transparent:false, ratio:'3:4',
-  playing:true, grain:false, speed:1, size:1, comp:1,
+  playing:true, grain:false, speed:1, size:1, comp:1, lens:0,
   spacing:1, rotY:0, rotX:0, fade:0, exportRes:'2k', fps:30, dark:false, customW:1080, customH:1080, backface:false,
 };
 let active=null, animTime=0, builtSpacing=1;
@@ -1975,7 +1999,7 @@ function applyTemplate(t){
   state.P={...t.P};
   // #7 full reset of per-preset adjustments. Uploaded images and workspace settings
   // (background, aspect ratio, dark theme, export quality) are intentionally KEPT.
-  state.size=1; state.comp=1; state.fade=(t.fade??0)/100; state.speed=1; state.rotY=0; state.rotX=0; state.dir=1; state.grain=false; state.backface=false;
+  state.size=1; state.comp=1; state.fade=(t.fade??0)/100; state.speed=1; state.rotY=0; state.rotX=0; state.dir=1; state.grain=false; state.backface=false; state.lens=0;
   state.spacing=t.spacing??1;                 // per-preset default spacing (Field Flight = 0.5)
   setEase(t.noEase?'Linear':t.ease);
   $('cardSize').value=1; $('sizeVal').textContent='×1.00';
@@ -1985,6 +2009,7 @@ function applyTemplate(t){
   $('speed').value=1; $('speedVal').textContent='×1.00';
   $('rotY').value=0; $('rotYVal').textContent='0°'; $('rotX').value=0; $('rotXVal').textContent='0°';
   $('corner').value=state.P.corner??0; $('cornerVal').textContent=(state.P.corner??0).toFixed(1);
+  $('lens').value=0; $('lensVal').textContent='0';
   snapshotSliderDefaults();                              // remember this preset's slider values → double-click resets to them
   document.querySelectorAll('#dirSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v==='1'));
   document.querySelectorAll('#grainSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v==='off'));
@@ -2142,8 +2167,17 @@ function renderFrame(){
      (state.template.scene==='diagCascade' && (state.rotY||state.rotX))) sortCardsByDepth(); // overlap → no flicker
   applyDepthFade();
   postMat.uniforms.uTime.value=animTime;
-  renderer.clear();
-  renderer.render(scene,camera);
+  const lens=state.lens||0;
+  if(Math.abs(lens)>0.001){
+    renderer.getDrawingBufferSize(_rtSize);                // match the live canvas / hi-res export buffer
+    if(sceneRT.width!==_rtSize.x||sceneRT.height!==_rtSize.y) sceneRT.setSize(Math.max(2,_rtSize.x),Math.max(2,_rtSize.y));
+    lensMat.uniforms.uLens.value=lens;
+    renderer.setRenderTarget(sceneRT); renderer.clear(); renderer.render(scene,camera);
+    renderer.setRenderTarget(null);   renderer.clear(); renderer.render(lensScene,postCam);
+  }else{
+    renderer.clear();
+    renderer.render(scene,camera);
+  }
   if(state.grain && !state.transparent) renderer.render(postScene,postCam);
 }
 let last=performance.now(), fpsAccum=0;
@@ -2593,6 +2627,7 @@ $('speed').addEventListener('input',e=>{
 $('corner').addEventListener('input',e=>{ state.P.corner=parseFloat(e.target.value); $('cornerVal').textContent=state.P.corner.toFixed(1); refreshCardUniforms(); });
 $('cardSize').addEventListener('input',e=>{ state.size=parseFloat(e.target.value); $('sizeVal').textContent='×'+state.size.toFixed(2); }); // per-card scale — applied live in renderFrame, no rebuild
 $('compScale').addEventListener('input',e=>{ state.comp=parseFloat(e.target.value); $('compVal').textContent='×'+state.comp.toFixed(2); }); // whole-scene camera zoom — live, no rebuild
+$('lens').addEventListener('input',e=>{ const v=parseFloat(e.target.value)||0; state.lens=v/100*0.6; $('lensVal').textContent=Math.round(v); }); // fisheye post-warp (image only)
 let spacingSettle=null;
 $('spacing').addEventListener('input',e=>{
   state.spacing=parseFloat(e.target.value); $('spacingVal').textContent='×'+state.spacing.toFixed(2);
@@ -2614,7 +2649,7 @@ $('rotY').addEventListener('input',e=>{ state.rotY=parseFloat(e.target.value); $
 $('rotX').addEventListener('input',e=>{ state.rotX=parseFloat(e.target.value); $('rotXVal').textContent=state.rotX+'°'; updateDynamicFadeLock(); });
 
 /* slider UX: double-click the label (or slider) → reset to the preset default; click the number → type a value */
-const SLIDER_PAIRS=[['cardSize','sizeVal'],['spacing','spacingVal'],['compScale','compVal'],['speed','speedVal'],['fade','fadeVal'],['rotY','rotYVal'],['rotX','rotXVal'],['corner','cornerVal']];
+const SLIDER_PAIRS=[['cardSize','sizeVal'],['spacing','spacingVal'],['compScale','compVal'],['speed','speedVal'],['fade','fadeVal'],['rotY','rotYVal'],['rotX','rotXVal'],['corner','cornerVal'],['lens','lensVal']];
 const SLIDER_DEFAULTS={};
 function snapshotSliderDefaults(){ for(const [rid] of SLIDER_PAIRS){ const el=$(rid); if(el) SLIDER_DEFAULTS[rid]=el.value; } }
 function sliderLocked(range){ return getComputedStyle(range).pointerEvents==='none'; } // greyed/locked groups
@@ -2646,7 +2681,7 @@ snapshotSliderDefaults();
 
 function resetAdjustments(){
   const t=state.template;
-  state.size=1; state.comp=1; state.spacing=1; state.fade=0; state.rotY=0; state.rotX=0; state.dir=1; state.speed=1;
+  state.size=1; state.comp=1; state.spacing=1; state.fade=0; state.rotY=0; state.rotX=0; state.dir=1; state.speed=1; state.lens=0;
   state.P={...t.P};            // restores corner/drift to the template's stock defaults
   setEase(t.ease);             // and the template's ideal easing
   clearSlotOverrides();        // drop per-card image swaps
@@ -2658,6 +2693,7 @@ function resetAdjustments(){
   $('rotY').value=0; $('rotYVal').textContent='0°';
   $('rotX').value=0; $('rotXVal').textContent='0°';
   $('corner').value=state.P.corner??0; $('cornerVal').textContent=(state.P.corner??0).toFixed(1);
+  $('lens').value=0; $('lensVal').textContent='0';
   document.querySelectorAll('#dirSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v==='1'));
   rebuild(true);
   toast('Settings reset to default.');
@@ -2882,7 +2918,7 @@ function buildShareParams(){
   p.set('sp',state.spacing.toFixed(2)); p.set('fd',Math.round(state.fade*100)); p.set('spd',state.speed.toFixed(2));
   p.set('sz',state.size.toFixed(2)); p.set('z',state.comp.toFixed(2));
   p.set('ry',state.rotY); p.set('rx',state.rotX); p.set('cn',state.P.corner??0); p.set('dir',state.dir);
-  p.set('r',state.ratio); p.set('fps',state.fps); p.set('gr',state.grain?1:0);
+  p.set('r',state.ratio); p.set('fps',state.fps); p.set('gr',state.grain?1:0); p.set('ln',Math.round(state.lens/0.6*100));
   p.set('bg',state.bg.replace('#','')); p.set('bg2',state.bg2.replace('#','')); p.set('fm',state.fillMode);
   if(state.ratio==='custom'){ p.set('cw',state.customW); p.set('ch',state.customH); }
   return p.toString();
@@ -2909,6 +2945,7 @@ function applySharedPreset(){
     if(!t.noEase && p.get('e')) setEase(p.get('e'));
     fire('spacing',num('sp')); fire('fade',num('fd')); fire('speed',num('spd'));
     fire('cardSize',num('sz')); fire('compScale',num('z')); fire('rotY',num('ry')); fire('rotX',num('rx')); fire('corner',num('cn'));
+    fire('lens',num('ln'));
     if(p.get('dir')!=null) clickSeg('#dirSeg',p.get('dir'));
     if(p.get('gr')!=null) clickSeg('#grainSeg',p.get('gr')==='1'?'on':'off');
     const fps=num('fps'); if(fps){ state.fps=fps; const dd=$('ddFps'); if(dd){ dd.dataset.value=fps; const lab=dd.querySelector('.ddval'); if(lab) lab.textContent=fps+' fps'; } }
