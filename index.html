@@ -480,7 +480,7 @@
     <div class="rowBetween"><div class="label">Hide card backs</div>
       <button class="switch" id="backToggle" role="switch" aria-checked="false" title="Hide the rear of cards once they turn away"><span class="knob"></span></button>
     </div>
-    <div class="hint" id="backHint">Hides the rear of cards once they turn away (3D carousels, globe, tilt).</div>
+    <div class="hint" id="backHint">Hides card backs once they turn away.</div>
   </div>
 
   <div class="group" id="easeGroup">
@@ -530,7 +530,9 @@
     <div class="hint" id="bgHint" style="display:none">Transparency is kept in PNG export. MP4 has no alpha — video is rendered on the chosen color.</div>
   </div>
 
-  <button class="btn sm" id="resetBtn">↺ Reset values</button>
+  <div class="group">
+    <button class="btn sm" id="resetBtn" style="width:100%">↺ Reset values</button>
+  </div>
 
   <div class="group">
     <div style="display:flex; gap:8px;">
