@@ -946,12 +946,12 @@ const SCENES = {
             if(e<.58){ const f=e/.58, fe=f*f*(3-2*f); // smoothstep → gentle, readable lift-off (no fast drop)
               m.position.set(0,-fe*.72*H+bob,.6*fe);    // shorter travel + lift toward the viewer
               m.scale.setScalar(1+fe*.08);
-              setCardOpacity(m, 1-clamp01((f-.58)/.42)); // stays fully visible through the move, then fades
+              setCardOpacity(m, 1-THREE.MathUtils.smoothstep(f,.66,1)); // hold fully visible longer, then ease out gently — no blink
               m.renderOrder=n+1;
             }else{ const f=(e-.58)/.42; // fade in at the back of the deck
               m.position.set(0,(n-1)*gy+bob,-(n-1)*gz);
               m.scale.setScalar(1-(n-1)*shrink);
-              setCardOpacity(m,f);
+              setCardOpacity(m, THREE.MathUtils.smoothstep(f,0,1)); // ease the back card in (smoother)
               m.renderOrder=0;
             }
           }else{
@@ -1301,7 +1301,7 @@ const SCENES = {
       const m=plane(e.tex,H*e.asp,H,true); m.userData={slot:i};
       const ang=i*2.39996+rnd()*.7, rad=0.32+rnd()*0.9;  // golden-angle scatter, off the dead centre
       Object.assign(m.userData,{ ux:Math.cos(ang)*rad, uy:Math.sin(ang)*rad, zf:(i+rnd()*.6)/n });
-      m.rotation.z=(rnd()-.5)*0.5;                          // slight per-card roll → less rigid, more stylish
+      m.rotation.z=0;                                       // cards stay aligned straight (no random roll — read cleaner)
       root.add(m); cards.push(m);
     }
     camera.position.set(0,0,camZ); camera.lookAt(0,0,0);
@@ -1678,7 +1678,7 @@ const TEMPLATES = [
   {id:'filmstrip',    name:'Horizontal Filmstrip',  scene:'filmstrip',    ease:'Linear',   noEase:true, lockEase:true, P:{dur:1.6, hold:0, drift:1, corner:1.5}},
   {id:'v-scroll',     name:'Vertical Scroll',       scene:'vScroll',      ease:'Linear',   noEase:true, lockEase:true, P:{dur:1.6, hold:0, drift:1, corner:0}},
   {id:'marquee',      name:'Tilted Marquee',        scene:'marquee',      ease:'Linear',   noEase:true, lockEase:true, P:{dur:13.5, hold:0,   corner:1, tiltZ:-6}},
-  {id:'grid-pop',     name:'Grid Pop',              scene:'gridPop',      ease:'Snappy',   P:{dur:.55,  hold:1.7, corner:2}},
+  {id:'grid-pop',     name:'Grid Pop',              scene:'gridPop',      ease:'Snappy',   comp:.85, P:{dur:.55,  hold:1.7, corner:2}},
   {cat:'3D Space'},
   {id:'field',        name:'Field Flight',          scene:'field',        ease:'Linear',   noEase:true, lockEase:true, spacing:0.85, fade:60, P:{dur:1.3,  hold:.2,  drift:.35, corner:0, minN:18}},
   {id:'spiral',       name:'Spiral Vortex',         scene:'spiral',       ease:'Linear',   noEase:true, lockEase:true, fade:55, P:{corner:1.5, turns:2.1, drift:1, minN:12}},
