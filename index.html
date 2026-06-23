@@ -26,7 +26,6 @@
   body.dark .btn.primary, body.dark .seg button.active, body.dark .chip.active,
   body.dark .ratios button.active, body.dark #tlPlay, body.dark .toast{ color:#141416; }
   body.dark .btn.primary:hover{ background:#fff; }
-  body.dark input[type=range]::-webkit-slider-thumb{ border-color:var(--panel); }
   body.dark #easeCurve{ background:#1b1b1f; }
   body.dark #stage{ box-shadow:0 18px 60px rgba(0,0,0,.55), 0 4px 14px rgba(0,0,0,.4); }
   *{box-sizing:border-box; margin:0; padding:0;}
@@ -106,7 +105,7 @@
   .pv .pvimg{width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:9px; border:1px solid var(--border); background:#1b1b1d; display:block; transition:border-color .15s,box-shadow .15s;}
   .pv span{font-size:10px; color:var(--muted); text-align:center; line-height:1.2;}
   .pv:hover .pvimg{border-color:#bbb;}
-  .pv.active .pvimg{border-color:var(--accent); box-shadow:0 0 0 2px var(--accent);}
+  .pv.active .pvimg{border-color:#b6b6c0; box-shadow:0 0 0 2px #b6b6c0;}
   .pv.active span{color:var(--text); font-weight:500;}
   .disclose{align-self:flex-start; display:inline-flex; align-items:center; gap:6px; background:none; border:none; padding:3px 0; color:var(--muted); font-size:11px; cursor:pointer; font-family:inherit;}
   .disclose:hover{color:var(--text);}
@@ -153,7 +152,8 @@
   .valEdit{width:54px; font:inherit; font-size:11.5px; text-align:right; border:1px solid var(--accent,#a07cff); border-radius:4px; padding:1px 4px; background:#fff; color:#111; outline:none; -moz-appearance:textfield;}
   .valEdit::-webkit-outer-spin-button,.valEdit::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
   input[type=range]{-webkit-appearance:none; width:100%; height:3px; background:#e3e2e8; border-radius:2px; outline:none;}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:15px; height:15px; border-radius:50%; background:var(--dark); cursor:pointer; border:2.5px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.25);}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:11px; height:11px; border-radius:50%; background:var(--dark); cursor:pointer; border:none; box-shadow:none;}
+  input[type=range]::-moz-range-thumb{width:11px; height:11px; border-radius:50%; background:var(--dark); cursor:pointer; border:none; box-shadow:none;}
   input[type=color]{width:100%; height:32px; border:1px solid var(--border); border-radius:10px; background:var(--panel2); cursor:pointer; padding:3px 5px;}
   /* block separators so the panel sections read as distinct cards (Figma/Framer style) */
   /* full-bleed divider lines (edge-to-edge of the panel) with generous breathing room each side */
@@ -292,8 +292,8 @@
   }
   #tlPlay:hover{background:#000;}
   #tlTrack{flex:1; height:6px; background:#e7e7ec; border-radius:3px; position:relative; cursor:pointer; touch-action:none;}
-  #tlFill{position:absolute; left:0; top:0; bottom:0; background:var(--accent); border-radius:3px;}
-  #tlHead{position:absolute; top:50%; left:0; width:15px; height:15px; border-radius:50%; background:#fff; border:2.5px solid var(--accent); transform:translate(-50%,-50%); box-shadow:0 1px 4px rgba(0,0,0,.2);}
+  #tlFill{position:absolute; left:0; top:0; bottom:0; background:var(--dark); border-radius:3px;}
+  #tlHead{position:absolute; top:50%; left:0; width:13px; height:13px; border-radius:50%; background:#fff; border:2px solid var(--dark); transform:translate(-50%,-50%);}
   #tlTime{flex:0 0 auto; min-width:96px; text-align:right; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums;}
   #toasts{position:absolute; bottom:18px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:8px; align-items:center; z-index:50; pointer-events:none;}
   .toast{
