@@ -257,8 +257,9 @@
   .stageWrap{flex:1; position:relative; display:flex; align-items:center; justify-content:center; width:100%; min-height:0;}
   #stage{position:relative; box-shadow:0 18px 60px rgba(0,0,0,.16), 0 4px 14px rgba(0,0,0,.08); border-radius:4px; cursor:pointer;}
   #stage.checker{
-    background-image:conic-gradient(#e8e8ec 0 25%,#f6f6f8 0 50%,#e8e8ec 0 75%,#f6f6f8 0);
-    background-size:20px 20px;
+    background-color:#fff;   /* lighter, lower-contrast checker → card AA edges stay pristine (no perceived rim) */
+    background-image:conic-gradient(#f1f1f4 0 25%,#fcfcfe 0 50%,#f1f1f4 0 75%,#fcfcfe 0);
+    background-size:18px 18px;
   }
   #stage canvas{display:block; width:100%; height:100%; border-radius:4px;}
   .ratios{position:absolute; top:16px; right:16px; display:flex; gap:3px; background:rgba(255,255,255,.92); border:1px solid var(--border); border-radius:100px; padding:4px; backdrop-filter:blur(8px); box-shadow:0 2px 10px rgba(0,0,0,.06);}
