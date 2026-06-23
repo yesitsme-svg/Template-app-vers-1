@@ -278,7 +278,7 @@
   #timeline{
     flex:0 0 auto; display:flex; align-items:center; gap:13px;
     margin:0; padding:11px 24px;
-    background:var(--panel); border-top:1px solid var(--border); border-radius:16px 16px 0 0;
+    background:var(--panel); border-top:1px solid var(--border); border-radius:0;
   }
   body.exporting #timeline{pointer-events:none; opacity:.5;}
   #tlPlay{
@@ -751,6 +751,24 @@ const lensMat=new THREE.ShaderMaterial({
 });
 lensScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2), lensMat));
 const _rtSize=new THREE.Vector2();
+
+/* background pass — solid OR gradient drawn as a fullscreen quad with its own opacity, so at <100%
+   the checker / transparent PNG shows through. scene.background (a texture) is always opaque and
+   can't do this, so BOTH fills go through this one pass → identical, predictable alpha behaviour. */
+const bgScene=new THREE.Scene();
+const bgMat=new THREE.ShaderMaterial({
+  transparent:true, depthTest:false, depthWrite:false,
+  uniforms:{ uColA:{value:new THREE.Vector3(.05,.05,.05)}, uColB:{value:new THREE.Vector3(.165,.102,.36)}, uMode:{value:0}, uAlpha:{value:1} },
+  vertexShader:`varying vec2 vUv; void main(){vUv=uv; gl_Position=vec4(position.xy,0.,1.);}`,
+  fragmentShader:`
+    varying vec2 vUv; uniform vec3 uColA,uColB; uniform float uMode,uAlpha;
+    void main(){
+      vec3 col = uMode>0.5 ? mix(uColA,uColB,vUv.y) : uColA;   // gradient: bottom=colour1 (A) → top=colour2 (B)
+      gl_FragColor=vec4(col,uAlpha);
+    }`
+});
+bgScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2), bgMat));
+let bgDraw=true;   // whether the background pass is rendered this frame (false only when fully transparent)
 
 /* ================= helpers ================= */
 function frameAt(z){ const h=2*z*Math.tan(THREE.MathUtils.degToRad(camera.fov/2)); return {h, w:h*camera.aspect}; }
@@ -1736,12 +1754,14 @@ function gradientTexture(){
 /* apply the chosen background to the live scene + sync the card fade colour */
 function applyBackground(){
   const a=state.bgAlpha==null?1:state.bgAlpha;
-  if(state.transparent){ scene.background=null; renderer.setClearColor(0x000000,0); }
-  else if(a<0.999 && state.fillMode!=='gradient'){       // semi-transparent solid → clear with alpha (checker shows through, kept in PNG)
-    scene.background=null; renderer.setClearColor(new THREE.Color(state.bg), a);
-  }
-  else if(state.fillMode==='gradient'){ scene.background=gradientTexture(); renderer.setClearColor(0x000000,0); }
-  else { scene.background=new THREE.Color(state.bg); renderer.setClearColor(0x000000,0); }
+  scene.background=null;                       // the fill is drawn by the dedicated bg pass now
+  renderer.setClearColor(0x000000,0);          // framebuffer always starts transparent
+  const A=hex01(state.bg), B=hex01(state.bg2);
+  bgMat.uniforms.uColA.value.set(A[0],A[1],A[2]);
+  bgMat.uniforms.uColB.value.set(B[0],B[1],B[2]);
+  bgMat.uniforms.uMode.value = state.fillMode==='gradient' ? 1 : 0;
+  bgMat.uniforms.uAlpha.value = a;             // opacity applies to BOTH solid and gradient
+  bgDraw = !state.transparent;                 // transparent mode skips the pass entirely
   stage.classList.toggle('checker', state.transparent || a<0.999);
   refreshCardUniforms();
 }
@@ -2162,11 +2182,14 @@ function renderFrame(){
     renderer.getDrawingBufferSize(_rtSize);                // match the live canvas / hi-res export buffer
     if(sceneRT.width!==_rtSize.x||sceneRT.height!==_rtSize.y) sceneRT.setSize(Math.max(2,_rtSize.x),Math.max(2,_rtSize.y));
     lensMat.uniforms.uLens.value=lens;
-    renderer.setRenderTarget(sceneRT); renderer.clear(); renderer.render(scene,camera);
-    renderer.setRenderTarget(null);   renderer.clear(); renderer.render(lensScene,postCam);
+    renderer.setRenderTarget(sceneRT); renderer.clear(); renderer.render(scene,camera);   // cards only (transparent)
+    renderer.setRenderTarget(null);   renderer.clear();
+    if(bgDraw) renderer.render(bgScene,postCam);   // flat background behind the warped cards
+    renderer.render(lensScene,postCam);
   }else{
     renderer.clear();
-    renderer.render(scene,camera);
+    if(bgDraw) renderer.render(bgScene,postCam);    // background pass first…
+    renderer.render(scene,camera);                  // …then cards on top
   }
   if(state.grain && !state.transparent) renderer.render(postScene,postCam);
 }
@@ -2279,11 +2302,11 @@ async function exportMP4(){
   }
   exporting=true; exportCancelled=false; setExportUI(true);
   const prevT=animTime, prevPlay=state.playing; state.playing=false;
-  const wasTransparent=state.transparent;
-  const a0=state.bgAlpha==null?1:state.bgAlpha;
-  if(wasTransparent || (a0<0.999 && state.fillMode!=='gradient')){ // MP4 has no alpha → bake an opaque solid bg
-    scene.background=new THREE.Color(state.bg); renderer.setClearColor(0x000000,0);
-  }
+  // MP4 has no alpha channel → force a fully-opaque background pass for the duration of the export.
+  // (transparent mode falls back to a solid fill of colour 1.) applyBackground() restores it afterwards.
+  bgMat.uniforms.uAlpha.value=1;
+  if(state.transparent){ bgMat.uniforms.uMode.value=0; const A=hex01(state.bg); bgMat.uniforms.uColA.value.set(A[0],A[1],A[2]); }
+  bgDraw=true;
   let encoder=null;
   try{
     const {Muxer,ArrayBufferTarget}=await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5/+esm');
@@ -2572,7 +2595,7 @@ function wireColor(swatchId,hexId,key,enableAlpha){
   paint();
 }
 wireColor('bgSwatch','bgHex','bg',true);
-wireColor('bgSwatch2','bgHex2','bg2');
+wireColor('bgSwatch2','bgHex2','bg2',true);   // gradient 2nd stop — same global bg opacity slider
 /* dark theme toggle */
 function applyTheme(){ document.body.classList.toggle('dark',state.dark); const t=$('themeToggle'); t.classList.toggle('on',state.dark); t.setAttribute('aria-checked',state.dark?'true':'false'); }
 $('themeToggle').addEventListener('click',()=>{ state.dark=!state.dark; applyTheme(); });
@@ -2885,7 +2908,7 @@ window.__app={
   scene,camera,root,renderer,state,
   templates:TEMPLATES,
   getActive:()=>active, getTime:()=>animTime, setTime:t=>{animTime=t;},
-  forEachCard, frameAt, rebuild,
+  forEachCard, frameAt, rebuild, renderFrame,
   applyTemplateById:id=>{ const t=TEMPLATES.find(t=>t.id===id); if(t) applyTemplate(t); return !!t; },
   exportMP4, exportPNG, exportPNGSequence, lastExport:null,
   dbgOverrides:()=>[...slotOverrides.keys()],
