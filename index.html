@@ -944,9 +944,9 @@ const SCENES = {
           const b=(((i-c)%n)+n)%n, m=meshes[i];
           if(b===0){ // the revealing card
             if(e<.58){ const f=e/.58, fe=f*f*(3-2*f); // smoothstep → gentle, readable lift-off (no fast drop)
-              m.position.set(0,-fe*.72*H+bob,.6*fe);    // shorter travel + lift toward the viewer
-              m.scale.setScalar(1+fe*.08);
-              setCardOpacity(m, 1-THREE.MathUtils.smoothstep(f,.66,1)); // hold fully visible longer, then ease out gently — no blink
+              m.position.set(0,-fe*1.55*H+bob,.7*fe);   // the top card GLIDES DOWN and out of frame (clears the deck) — a real exit, not an in-place dissolve
+              m.scale.setScalar(1+fe*.12);
+              setCardOpacity(m, 1-THREE.MathUtils.smoothstep(f,.85,1)); // fully opaque until it's basically off-frame, then a quick fade → no blink
               m.renderOrder=n+1;
             }else{ const f=(e-.58)/.42; // fade in at the back of the deck
               m.position.set(0,(n-1)*gy+bob,-(n-1)*gz);
