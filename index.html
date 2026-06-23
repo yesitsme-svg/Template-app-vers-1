@@ -366,7 +366,7 @@
     <button class="switch" id="themeToggle" role="switch" aria-checked="false" title="Toggle dark theme"><span class="knob"></span></button>
   </div>
   <div class="group">
-    <div class="label">Canvas</div>
+    <div class="label">Frame</div>
     <div class="ratioGrid" id="ratios">
       <button data-r="3:4" class="active">3:4</button>
       <button data-r="9:16">9:16</button>
@@ -392,7 +392,7 @@
       <button class="btn sm" id="shuffleBtn">⇄ Shuffle</button>
       <button class="btn sm" id="clearBtn">Clear all</button>
     </div>
-    <div class="hint" id="demoHint">Showing demo posters — drop your own, or click any card on the canvas to replace it.</div>
+    <div class="hint" id="demoHint">Showing demo posters — drop your own, or click any card in the frame to replace it.</div>
   </div>
 
   <div class="group">
@@ -487,7 +487,7 @@
     <div class="hint">Just an image warp — convex (+) / concave (−). Doesn't affect the layout.</div>
   </div>
 
-  <button class="btn sm" id="resetBtn">↺ Reset all settings</button>
+  <button class="btn sm" id="resetBtn">↺ Reset values</button>
 
   <div class="group">
     <div style="display:flex; gap:8px;">
@@ -2026,11 +2026,11 @@ function applyTemplate(t){
   state.size=1; state.comp=1; state.fade=(t.fade??0)/100; state.speed=1; state.rotY=0; state.rotX=0; state.dir=1; state.grain=false; state.backface=false; state.lens=0;
   state.spacing=t.spacing??1;                 // per-preset default spacing (Field Flight = 0.5)
   setEase(t.noEase?'Linear':t.ease);
-  $('cardSize').value=1; $('sizeVal').textContent='×1.00';
-  $('compScale').value=1; $('compVal').textContent='×1.00';
-  $('spacing').value=state.spacing; $('spacingVal').textContent='×'+state.spacing.toFixed(2);
+  $('cardSize').value=1; $('sizeVal').textContent='1.00';
+  $('compScale').value=1; $('compVal').textContent='1.00';
+  $('spacing').value=state.spacing; $('spacingVal').textContent=''+state.spacing.toFixed(2);
   $('fade').value=t.fade??0; $('fadeVal').textContent=(t.fade??0)+'%';
-  $('speed').value=1; $('speedVal').textContent='×1.00';
+  $('speed').value=1; $('speedVal').textContent='1.00';
   $('rotY').value=0; $('rotYVal').textContent='0°'; $('rotX').value=0; $('rotXVal').textContent='0°';
   $('corner').value=state.P.corner??0; $('cornerVal').textContent=(state.P.corner??0).toFixed(1);
   $('lens').value=0; $('lensVal').textContent='0';
@@ -2647,16 +2647,16 @@ $('customH').addEventListener('change',applyCustomRes);
 refreshRatioTooltips();
 $('speed').addEventListener('input',e=>{
   state.speed=parseFloat(e.target.value);
-  $('speedVal').textContent='×'+state.speed.toFixed(2);
+  $('speedVal').textContent=''+state.speed.toFixed(2);
   updateLoopInfo();
 });
 $('corner').addEventListener('input',e=>{ state.P.corner=parseFloat(e.target.value); $('cornerVal').textContent=state.P.corner.toFixed(1); refreshCardUniforms(); });
-$('cardSize').addEventListener('input',e=>{ state.size=parseFloat(e.target.value); $('sizeVal').textContent='×'+state.size.toFixed(2); }); // per-card scale — applied live in renderFrame, no rebuild
-$('compScale').addEventListener('input',e=>{ state.comp=parseFloat(e.target.value); $('compVal').textContent='×'+state.comp.toFixed(2); }); // whole-scene camera zoom — live, no rebuild
+$('cardSize').addEventListener('input',e=>{ state.size=parseFloat(e.target.value); $('sizeVal').textContent=''+state.size.toFixed(2); }); // per-card scale — applied live in renderFrame, no rebuild
+$('compScale').addEventListener('input',e=>{ state.comp=parseFloat(e.target.value); $('compVal').textContent=''+state.comp.toFixed(2); }); // whole-scene camera zoom — live, no rebuild
 $('lens').addEventListener('input',e=>{ const v=parseFloat(e.target.value)||0; state.lens=v/100*0.6; $('lensVal').textContent=Math.round(v); }); // fisheye post-warp (image only)
 let spacingSettle=null;
 $('spacing').addEventListener('input',e=>{
-  state.spacing=parseFloat(e.target.value); $('spacingVal').textContent='×'+state.spacing.toFixed(2);
+  state.spacing=parseFloat(e.target.value); $('spacingVal').textContent=''+state.spacing.toFixed(2);
   // Live-spacing presets (catalog grids + fixed-count scatters/rings) update in realtime with NO
   // rebuild → buttery-smooth drag. The few remaining presets re-bake once the slider settles.
   if(LIVE_SPACE.has(state.template.scene) || SCALE_SPACE.has(state.template.scene)) return;
@@ -2711,11 +2711,18 @@ function resetAdjustments(){
   state.P={...t.P};            // restores corner/drift to the template's stock defaults
   setEase(t.ease);             // and the template's ideal easing
   clearSlotOverrides();        // drop per-card image swaps
-  $('cardSize').value=1; $('sizeVal').textContent='×1.00';
-  $('compScale').value=1; $('compVal').textContent='×1.00';
-  $('spacing').value=1; $('spacingVal').textContent='×1.00';
+  // background back to defaults (solid dark, fully opaque)
+  state.bg='#0d0d0d'; state.bg2='#2a1a5c'; state.fillMode='solid'; state.transparent=false; state.bgAlpha=1; state.bg2Alpha=1;
+  $('bgSwatch').style.background=state.bg; $('bgHex').value=state.bg.toUpperCase();
+  $('bgSwatch2').style.background=state.bg2; $('bgHex2').value=state.bg2.toUpperCase();
+  $('bgField2').style.display='none'; $('bgFill').style.display=''; $('bgHint').style.display='none';
+  $('bgModeSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.v==='solid'));
+  applyBackground();
+  $('cardSize').value=1; $('sizeVal').textContent='1.00';
+  $('compScale').value=1; $('compVal').textContent='1.00';
+  $('spacing').value=1; $('spacingVal').textContent='1.00';
   $('fade').value=0; $('fadeVal').textContent='0%';
-  $('speed').value=1; $('speedVal').textContent='×1.00';
+  $('speed').value=1; $('speedVal').textContent='1.00';
   $('rotY').value=0; $('rotYVal').textContent='0°';
   $('rotX').value=0; $('rotXVal').textContent='0°';
   $('corner').value=state.P.corner??0; $('cornerVal').textContent=(state.P.corner??0).toFixed(1);
@@ -2724,7 +2731,7 @@ function resetAdjustments(){
   document.querySelectorAll('#dirSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v==='1'));
   refreshCardSides();
   rebuild(true);
-  toast('Settings reset to default.');
+  toast('Values reset to default.');
 }
 $('resetBtn').addEventListener('click',resetAdjustments);
 
