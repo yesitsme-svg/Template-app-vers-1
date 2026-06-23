@@ -758,13 +758,15 @@ const _rtSize=new THREE.Vector2();
 const bgScene=new THREE.Scene();
 const bgMat=new THREE.ShaderMaterial({
   transparent:true, depthTest:false, depthWrite:false,
-  uniforms:{ uColA:{value:new THREE.Vector3(.05,.05,.05)}, uColB:{value:new THREE.Vector3(.165,.102,.36)}, uMode:{value:0}, uAlpha:{value:1} },
+  uniforms:{ uColA:{value:new THREE.Vector3(.05,.05,.05)}, uColB:{value:new THREE.Vector3(.165,.102,.36)}, uMode:{value:0}, uAlphaA:{value:1}, uAlphaB:{value:1} },
   vertexShader:`varying vec2 vUv; void main(){vUv=uv; gl_Position=vec4(position.xy,0.,1.);}`,
   fragmentShader:`
-    varying vec2 vUv; uniform vec3 uColA,uColB; uniform float uMode,uAlpha;
+    varying vec2 vUv; uniform vec3 uColA,uColB; uniform float uMode,uAlphaA,uAlphaB;
     void main(){
-      vec3 col = uMode>0.5 ? mix(uColA,uColB,vUv.y) : uColA;   // gradient: bottom=colour1 (A) → top=colour2 (B)
-      gl_FragColor=vec4(col,uAlpha);
+      // gradient: bottom=colour1 (A) → top=colour2 (B); each stop carries its OWN opacity (like Figma)
+      vec3 col = uMode>0.5 ? mix(uColA,uColB,vUv.y) : uColA;
+      float a  = uMode>0.5 ? mix(uAlphaA,uAlphaB,vUv.y) : uAlphaA;
+      gl_FragColor=vec4(col,a);
     }`
 });
 bgScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2), bgMat));
@@ -1640,7 +1642,7 @@ const TEMPLATES = [
 const RATIOS={'3:4':[3,4],'9:16':[9,16],'1:1':[1,1],'4:3':[4,3],'16:9':[16,9]};
 const state={
   template:null, P:{}, ease:'Smooth', bez:[.76,0,.24,1], easeFn:null,
-  dir:1, bg:'#0d0d0d', bg2:'#2a1a5c', fillMode:'solid', transparent:false, bgAlpha:1, ratio:'3:4',
+  dir:1, bg:'#0d0d0d', bg2:'#2a1a5c', fillMode:'solid', transparent:false, bgAlpha:1, bg2Alpha:1, ratio:'3:4',
   playing:true, grain:false, speed:1, size:1, comp:1, lens:0,
   spacing:1, rotY:0, rotX:0, fade:0, exportRes:'2k', fps:30, dark:false, customW:1080, customH:1080, backface:false,
 };
@@ -1753,16 +1755,19 @@ function gradientTexture(){
 }
 /* apply the chosen background to the live scene + sync the card fade colour */
 function applyBackground(){
-  const a=state.bgAlpha==null?1:state.bgAlpha;
+  const a1=state.bgAlpha==null?1:state.bgAlpha, a2=state.bg2Alpha==null?1:state.bg2Alpha;
+  const grad=state.fillMode==='gradient';
   scene.background=null;                       // the fill is drawn by the dedicated bg pass now
   renderer.setClearColor(0x000000,0);          // framebuffer always starts transparent
   const A=hex01(state.bg), B=hex01(state.bg2);
   bgMat.uniforms.uColA.value.set(A[0],A[1],A[2]);
   bgMat.uniforms.uColB.value.set(B[0],B[1],B[2]);
-  bgMat.uniforms.uMode.value = state.fillMode==='gradient' ? 1 : 0;
-  bgMat.uniforms.uAlpha.value = a;             // opacity applies to BOTH solid and gradient
+  bgMat.uniforms.uMode.value = grad ? 1 : 0;
+  bgMat.uniforms.uAlphaA.value = a1;           // colour 1 opacity
+  bgMat.uniforms.uAlphaB.value = grad ? a2 : a1;  // colour 2 opacity (gradient only)
   bgDraw = !state.transparent;                 // transparent mode skips the pass entirely
-  stage.classList.toggle('checker', state.transparent || a<0.999);
+  const semi = a1<0.999 || (grad && a2<0.999);
+  stage.classList.toggle('checker', state.transparent || semi);
   refreshCardUniforms();
 }
 /* arqe-style depth fade: far cards melt toward the background colour.
@@ -2304,7 +2309,7 @@ async function exportMP4(){
   const prevT=animTime, prevPlay=state.playing; state.playing=false;
   // MP4 has no alpha channel → force a fully-opaque background pass for the duration of the export.
   // (transparent mode falls back to a solid fill of colour 1.) applyBackground() restores it afterwards.
-  bgMat.uniforms.uAlpha.value=1;
+  bgMat.uniforms.uAlphaA.value=1; bgMat.uniforms.uAlphaB.value=1;
   if(state.transparent){ bgMat.uniforms.uMode.value=0; const A=hex01(state.bg); bgMat.uniforms.uColA.value.set(A[0],A[1],A[2]); }
   bgDraw=true;
   let encoder=null;
@@ -2565,7 +2570,8 @@ function openPicker(key, swatchEl, paint, enableAlpha){
   const [h,s,v]=rgb2hsv(...hex2rgb(state[key])); cpState.h=h; cpState.s=s; cpState.v=v;
   cpHex.value=state[key].replace('#','').toUpperCase(); cpRender();
   cpAlphaRow.style.display = enableAlpha ? 'flex' : 'none';
-  if(enableAlpha){ const pct=Math.round((state.bgAlpha==null?1:state.bgAlpha)*100); cpAlpha.value=pct; cpAlphaVal.textContent=pct+'%'; }
+  cpState.alphaKey = enableAlpha ? (key==='bg' ? 'bgAlpha' : 'bg2Alpha') : null;  // each colour edits its OWN opacity
+  if(enableAlpha){ const av=state[cpState.alphaKey]; const pct=Math.round((av==null?1:av)*100); cpAlpha.value=pct; cpAlphaVal.textContent=pct+'%'; }
   const r=swatchEl.getBoundingClientRect();
   cpop.style.display='flex'; const pw=cpop.offsetWidth, ph=cpop.offsetHeight;
   let left=r.left, top=r.bottom+8;
@@ -2581,7 +2587,7 @@ function hueDrag(e){ const r=cpHue.getBoundingClientRect(); const x=(e.clientX-r
 function dragStart(el,handler){ el.addEventListener('pointerdown',e=>{ e.preventDefault(); el.setPointerCapture(e.pointerId); handler(e); const mv=ev=>handler(ev); const up=ev=>{ el.releasePointerCapture(e.pointerId); el.removeEventListener('pointermove',mv); el.removeEventListener('pointerup',up); }; el.addEventListener('pointermove',mv); el.addEventListener('pointerup',up); }); }
 dragStart(cpSV,svDrag); dragStart(cpHue,hueDrag);
 cpHex.addEventListener('input',()=>{ let v='#'+cpHex.value.trim().replace('#',''); if(isHex(v)){ const [h,s,vv]=rgb2hsv(...hex2rgb(v)); cpState.h=h; cpState.s=s; cpState.v=vv; cpRender(); state[cpState.key]=v; if(cpState.paint)cpState.paint(); applyBackground(); } });
-cpAlpha.addEventListener('input',()=>{ const pct=parseInt(cpAlpha.value,10); state.bgAlpha=pct/100; cpAlphaVal.textContent=pct+'%'; applyBackground(); });
+cpAlpha.addEventListener('input',()=>{ const pct=parseInt(cpAlpha.value,10); if(cpState.alphaKey) state[cpState.alphaKey]=pct/100; cpAlphaVal.textContent=pct+'%'; applyBackground(); });
 cpop.addEventListener('pointerdown',e=>e.stopPropagation());
 document.addEventListener('pointerdown',()=>{ if(cpop.classList.contains('show')) closePicker(); });
 
@@ -2939,6 +2945,7 @@ function buildShareParams(){
   p.set('r',state.ratio); p.set('fps',state.fps); p.set('ln',Math.round(state.lens/0.6*100));
   p.set('bg',state.bg.replace('#','')); p.set('bg2',state.bg2.replace('#','')); p.set('fm',state.fillMode);
   p.set('tr',state.transparent?1:0); p.set('ba',Math.round((state.bgAlpha==null?1:state.bgAlpha)*100));
+  p.set('ba2',Math.round((state.bg2Alpha==null?1:state.bg2Alpha)*100));
   if(state.ratio==='custom'){ p.set('cw',state.customW); p.set('ch',state.customH); }
   return p.toString();
 }
@@ -2969,6 +2976,7 @@ function applySharedPreset(){
     const fps=num('fps'); if(fps){ state.fps=fps; const dd=$('ddFps'); if(dd){ dd.dataset.value=fps; const lab=dd.querySelector('.ddval'); if(lab) lab.textContent=fps+' fps'; } }
     if(p.get('bg')) state.bg='#'+p.get('bg'); if(p.get('bg2')) state.bg2='#'+p.get('bg2'); if(p.get('fm')) state.fillMode=p.get('fm');
     const ba=num('ba'); if(ba!=null) state.bgAlpha=Math.max(0,Math.min(1,ba/100));
+    const ba2=num('ba2'); if(ba2!=null) state.bg2Alpha=Math.max(0,Math.min(1,ba2/100));
     ['bg','bg2'].forEach(k=>{ const sw=$(k+'Swatch'), hx=$(k+'Hex'); if(sw)sw.style.background=state[k]; if(hx)hx.value=state[k].replace('#','').toUpperCase(); });
     clickSeg('#bgModeSeg', p.get('tr')==='1' ? 'transparent' : (state.fillMode||'solid'));  // syncs seg active state + applyBackground
     snapshotSliderDefaults();
