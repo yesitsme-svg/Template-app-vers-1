@@ -1575,9 +1575,9 @@ const SCENES = {
     const L=P.loop||(perCol*(P.sec||1.5));
     return { loopSeconds:L,
       update(T){
-        const sp=state.spacing||1;                        // min slider (0.5) = 0 gap (cards touch); grows from there, never overlaps
-        const gap=baseGap*Math.max(0,(sp-0.5)/0.5);       // 0 at floor → baseGap at ×1 → wider above
-        const colPitch=cw+gap, ch=cardH+gap, span=perCol*ch; // LIVE pitch, both axes
+        const g=Math.max(0,((state.spacing||1)-0.5)/0.5);  // 0 at floor (cards touch) → grows
+        // gap PROPORTIONAL to each cell dimension → horizontal AND vertical spacing stay balanced/even
+        const colPitch=cw*(1+0.06*(P.gap||1)*g), ch=cardH*(1+0.06*(P.gap||1)*g), span=perCol*ch;
         const t=(((T/L)%1)+1)%1;
         meshes.forEach(m=>{ const d=m.userData;
           let y=(d.j*ch+d.dir*t*span*state.dir)%span; if(y<0)y+=span;
@@ -1610,9 +1610,9 @@ const SCENES = {
     const L=P.loop||(perRow*(P.sec||1.5));
     return { loopSeconds:L,
       update(T){
-        const sp=state.spacing||1;                        // min slider (0.5) = 0 gap (cards touch); grows from there, never overlaps
-        const gap=baseGap*Math.max(0,(sp-0.5)/0.5);       // 0 at floor → baseGap at ×1 → wider above
-        const rowPitch=rh+gap, cwp=cardW+gap, span=perRow*cwp; // LIVE pitch, both axes
+        const g=Math.max(0,((state.spacing||1)-0.5)/0.5);  // 0 at floor (cards touch) → grows
+        // gap PROPORTIONAL to each cell dimension → row (vertical) and in-row (horizontal) spacing stay balanced
+        const rowPitch=rh*(1+0.06*(P.gap||1)*g), cwp=cardW*(1+0.06*(P.gap||1)*g), span=perRow*cwp;
         const t=(((T/L)%1)+1)%1;
         meshes.forEach(m=>{ const d=m.userData;
           let x=(d.j*cwp+d.dir*t*span*state.dir)%span; if(x<0)x+=span;
@@ -1643,9 +1643,9 @@ const SCENES = {
     const L=P.loop||(GC*(P.sec||1.6)), dx=(P.dx==null?1:P.dx), dy=(P.dy==null?1:P.dy);
     return { loopSeconds:L,
       update(T){
-        const sp=state.spacing||1;                        // min slider (0.5) = 0 gap (cards touch); grows from there, never overlaps
-        const gap=baseGap*Math.max(0,(sp-0.5)/0.5);       // 0 at floor → baseGap at ×1 → wider above
-        const pitchX=cw+gap, pitchY=ch+gap, spanX=GC*pitchX, spanY=GR*pitchY; // LIVE pitch
+        const g=Math.max(0,((state.spacing||1)-0.5)/0.5);  // 0 at floor (cards touch) → grows
+        // gap PROPORTIONAL to each cell dimension → both axes spread evenly (no lopsided vertical/horizontal)
+        const pitchX=cw*(1+0.06*(P.gap||1)*g), pitchY=ch*(1+0.06*(P.gap||1)*g), spanX=GC*pitchX, spanY=GR*pitchY;
         const t=(((T/L)%1)+1)%1;
         meshes.forEach(m=>{ const d=m.userData;
           let x=(d.c*pitchX+t*spanX*dx*state.dir)%spanX; if(x<0)x+=spanX;
