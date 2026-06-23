@@ -741,6 +741,7 @@ const sceneRT=new THREE.WebGLRenderTarget(2,2,{minFilter:THREE.LinearFilter,magF
 const lensScene=new THREE.Scene();
 const lensMat=new THREE.ShaderMaterial({
   transparent:true, depthTest:false,
+  premultipliedAlpha:true,   // sceneRT holds PREMULTIPLIED card pixels → blend as premultiplied (else edges get colour×a² = dark fringe)
   uniforms:{uScene:{value:sceneRT.texture}, uLens:{value:0}},
   vertexShader:`varying vec2 vUv; void main(){vUv=uv; gl_Position=vec4(position.xy,0.,1.);}`,
   fragmentShader:`
