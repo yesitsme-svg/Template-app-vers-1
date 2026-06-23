@@ -31,8 +31,13 @@
   /* ===== dark-theme contrast pass: dim the bright greys; reserve white for the Export action ===== */
   body.dark{ --muted:#6c6c74; }                                  /* secondary text reads softer, not glaring */
   /* scrollbars were near-white → dim */
+  body.dark aside, body.dark #setScroll, body.dark .catStrip{ scrollbar-color:#3a3a42 transparent; }   /* Firefox */
   body.dark aside::-webkit-scrollbar-thumb,
-  body.dark #setScroll::-webkit-scrollbar-thumb{ background:#2a2a30; }
+  body.dark #setScroll::-webkit-scrollbar-thumb,
+  body.dark .catStrip::-webkit-scrollbar-thumb{ background:#3a3a42; }                                   /* visible but muted */
+  body.dark aside::-webkit-scrollbar-thumb:hover,
+  body.dark #setScroll::-webkit-scrollbar-thumb:hover,
+  body.dark .catStrip::-webkit-scrollbar-thumb:hover{ background:#4a4a54; }
   /* slider + timeline tracks/handles: muted, no bright fills */
   body.dark input[type=range]{ background:#2c2c32; }
   body.dark input[type=range]::-webkit-slider-thumb{ background:#8e8e96; }
@@ -123,8 +128,10 @@
   .seeAll .av{display:inline-block; transition:transform .18s; font-size:11px; line-height:1; color:#c8c8cc;}
   .seeAll:hover .av{color:var(--muted);}
   .catSec.expanded .seeAll .av{transform:rotate(90deg);}
-  .catStrip{display:flex; gap:8px; overflow-x:auto; padding-bottom:0; scrollbar-width:none; -ms-overflow-style:none;}
-  .catStrip::-webkit-scrollbar{display:none;}   /* clean strips — no chunky scrollbar; horizontal wheel/trackpad still scrolls, "See all" reveals the rest */
+  .catStrip{display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; scrollbar-width:thin;}
+  .catStrip::-webkit-scrollbar{height:4px;}
+  .catStrip::-webkit-scrollbar-track{background:transparent;}
+  .catStrip::-webkit-scrollbar-thumb{background:#cfcfd4; border-radius:3px;}   /* thin + muted, not chunky */
   .catStrip .pv{flex:0 0 82px;}
   .catSec.expanded .catStrip{flex-wrap:wrap; overflow-x:visible; padding-bottom:0;}
   .catSec.expanded .catStrip .pv{flex:0 0 calc(50% - 4px);}
