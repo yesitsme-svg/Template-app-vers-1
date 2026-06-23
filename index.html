@@ -218,6 +218,7 @@
     background:linear-gradient(to right,#f00 0%,#ff0 17%,#0f0 33%,#0ff 50%,#00f 67%,#f0f 83%,#f00 100%);}
   .cpHueThumb{position:absolute; top:50%; width:14px; height:14px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.45); transform:translate(-50%,-50%); pointer-events:none; background:transparent;}
   .cpRow{display:flex; align-items:center; gap:6px; border:1px solid var(--border); border-radius:8px; padding:0 9px; height:31px;}
+  #cpAlpha{flex:1; min-width:0; accent-color:var(--text); cursor:pointer;}
   .cpHash{color:var(--muted); font-size:12px;}
   #cpHex{flex:1; min-width:0; border:none; background:none; outline:none; color:var(--text); font-family:inherit; font-size:12px; text-transform:uppercase; font-variant-numeric:tabular-nums;}
   .drop{border:1.5px dashed #c8c8c8; border-radius:12px; padding:14px 10px; text-align:center; color:var(--muted); cursor:pointer; font-size:11.5px; line-height:1.5; transition:border-color .15s,color .15s,background .15s;}
@@ -344,6 +345,7 @@
       <div class="cpSV" id="cpSV"><div class="cpSVcur" id="cpSVcur"></div></div>
       <div class="cpHue" id="cpHue"><div class="cpHueThumb" id="cpHueThumb"></div></div>
       <div class="cpRow"><span class="cpHash">#</span><input type="text" id="cpHex" maxlength="6" spellcheck="false"></div>
+      <div class="cpRow" id="cpAlphaRow" style="display:none; gap:9px"><input type="range" id="cpAlpha" min="0" max="100" value="100"><span id="cpAlphaVal" style="font-size:12px; font-variant-numeric:tabular-nums; min-width:34px; text-align:right">100%</span></div>
     </div>
   </div>
   <div id="timeline">
@@ -449,15 +451,12 @@
 
   <div class="group">
     <div class="label">Background</div>
-    <div class="seg" id="bgSeg">
-      <button data-v="color" class="active">Color</button>
+    <div class="seg" id="bgModeSeg">
+      <button data-v="solid" class="active">Solid</button>
+      <button data-v="gradient">Gradient</button>
       <button data-v="transparent">Transparent</button>
     </div>
     <div id="bgFill">
-      <div class="seg" id="fillSeg">
-        <button data-v="solid" class="active">Solid</button>
-        <button data-v="gradient">Gradient</button>
-      </div>
       <div class="colorField" style="margin-top:8px">
         <button class="swatch" id="bgSwatch"></button>
         <input type="text" class="hexInput" id="bgHex" maxlength="7" value="#0D0D0D" spellcheck="false">
@@ -1623,7 +1622,7 @@ const TEMPLATES = [
 const RATIOS={'3:4':[3,4],'9:16':[9,16],'1:1':[1,1],'4:3':[4,3],'16:9':[16,9]};
 const state={
   template:null, P:{}, ease:'Smooth', bez:[.76,0,.24,1], easeFn:null,
-  dir:1, bg:'#0d0d0d', bg2:'#2a1a5c', fillMode:'solid', transparent:false, ratio:'3:4',
+  dir:1, bg:'#0d0d0d', bg2:'#2a1a5c', fillMode:'solid', transparent:false, bgAlpha:1, ratio:'3:4',
   playing:true, grain:false, speed:1, size:1, comp:1, lens:0,
   spacing:1, rotY:0, rotX:0, fade:0, exportRes:'2k', fps:30, dark:false, customW:1080, customH:1080, backface:false,
 };
@@ -1736,9 +1735,14 @@ function gradientTexture(){
 }
 /* apply the chosen background to the live scene + sync the card fade colour */
 function applyBackground(){
-  if(state.transparent){ scene.background=null; }
-  else if(state.fillMode==='gradient'){ scene.background=gradientTexture(); }
-  else { scene.background=new THREE.Color(state.bg); }
+  const a=state.bgAlpha==null?1:state.bgAlpha;
+  if(state.transparent){ scene.background=null; renderer.setClearColor(0x000000,0); }
+  else if(a<0.999 && state.fillMode!=='gradient'){       // semi-transparent solid → clear with alpha (checker shows through, kept in PNG)
+    scene.background=null; renderer.setClearColor(new THREE.Color(state.bg), a);
+  }
+  else if(state.fillMode==='gradient'){ scene.background=gradientTexture(); renderer.setClearColor(0x000000,0); }
+  else { scene.background=new THREE.Color(state.bg); renderer.setClearColor(0x000000,0); }
+  stage.classList.toggle('checker', state.transparent || a<0.999);
   refreshCardUniforms();
 }
 /* arqe-style depth fade: far cards melt toward the background colour.
@@ -1937,7 +1941,7 @@ function rebuild(resetTime=false){
   root.rotation.set(0,0,0);
   _cascNear=_cascFar=null; _cascKey=null; _cascSettle=0;  // drop any stale cascade fade span
   invalidateRotPivot();                                  // re-capture the rotation pivot for the new layout
-  scene.background=state.transparent?null:(state.fillMode==='gradient'?gradientTexture():new THREE.Color(state.bg));
+  applyBackground();            // honour solid / gradient / transparent + bgAlpha
   curBg=bgFadeColor(); cornerNorm=Math.min(0.5,(state.P.corner||0)/12*0.45); // ready before cards are built
   active=SCENES[state.template.scene](state.P);
   builtSpacing=state.spacing;                              // spacing this layout was baked at (for live-drag scaling)
@@ -2276,7 +2280,10 @@ async function exportMP4(){
   exporting=true; exportCancelled=false; setExportUI(true);
   const prevT=animTime, prevPlay=state.playing; state.playing=false;
   const wasTransparent=state.transparent;
-  if(wasTransparent) scene.background=new THREE.Color(state.bg); // MP4 has no alpha
+  const a0=state.bgAlpha==null?1:state.bgAlpha;
+  if(wasTransparent || (a0<0.999 && state.fillMode!=='gradient')){ // MP4 has no alpha → bake an opaque solid bg
+    scene.background=new THREE.Color(state.bg); renderer.setClearColor(0x000000,0);
+  }
   let encoder=null;
   try{
     const {Muxer,ArrayBufferTarget}=await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5/+esm');
@@ -2337,7 +2344,7 @@ async function exportMP4(){
     try{ encoder?.close(); }catch{}
     toast('MP4 export failed: '+(err.message||err));
   }finally{
-    if(wasTransparent) scene.background=null;
+    applyBackground();          // restore preview bg (transparent / alpha) after the opaque MP4 bake
     animTime=prevT; state.playing=prevPlay;
     exporting=false; exportingUI(false);
     resize();                                           // restore on-screen canvas + camera aspect
@@ -2500,16 +2507,13 @@ function bindSeg(id,fn){
 }
 bindSeg('dirSeg',v=>{ state.dir=parseInt(v); });
 $('backToggle').addEventListener('click',()=>{ state.backface=!state.backface; $('backToggle').classList.toggle('on',state.backface); $('backToggle').setAttribute('aria-checked',state.backface?'true':'false'); refreshCardSides(); });
-bindSeg('bgSeg',v=>{
-  state.transparent=v==='transparent';
-  $('bgFill').style.display=state.transparent?'none':'';
-  $('bgHint').style.display=state.transparent?'':'none';
-  stage.classList.toggle('checker',state.transparent);
-  applyBackground();
-});
-bindSeg('fillSeg',v=>{
-  state.fillMode=v;
-  $('bgField2').style.display=v==='gradient'?'flex':'none';
+// one row of tabs: Solid / Gradient / Transparent (was two stacked segs — too busy)
+bindSeg('bgModeSeg',v=>{
+  state.transparent = v==='transparent';
+  if(v==='solid'||v==='gradient'){ state.fillMode=v; $('bgField2').style.display = v==='gradient'?'flex':'none'; }
+  $('bgFill').style.display = state.transparent ? 'none' : '';
+  $('bgHint').style.display = state.transparent ? '' : 'none';
+  stage.classList.toggle('checker', state.transparent || state.bgAlpha<0.999);
   applyBackground();
 });
 /* ===== custom HEX colour picker (no native OS RGB dialog) ===== */
@@ -2520,6 +2524,7 @@ function rgb2hsv(r,g,b){ r/=255;g/=255;b/=255; const mx=Math.max(r,g,b),mn=Math.
 function hsv2rgb(h,s,v){ const c=v*s, x=c*(1-Math.abs((h/60)%2-1)), m=v-c; let r,g,b; if(h<60)[r,g,b]=[c,x,0]; else if(h<120)[r,g,b]=[x,c,0]; else if(h<180)[r,g,b]=[0,c,x]; else if(h<240)[r,g,b]=[0,x,c]; else if(h<300)[r,g,b]=[x,0,c]; else [r,g,b]=[c,0,x]; return [(r+m)*255,(g+m)*255,(b+m)*255]; }
 
 const cpop=$('cpop'), cpSV=$('cpSV'), cpCur=$('cpSVcur'), cpHue=$('cpHue'), cpHueThumb=$('cpHueThumb'), cpHex=$('cpHex');
+const cpAlpha=$('cpAlpha'), cpAlphaRow=$('cpAlphaRow'), cpAlphaVal=$('cpAlphaVal');
 const cpState={key:null, h:0, s:0, v:0, paint:null};
 function cpRender(){
   const {h,s,v}=cpState;
@@ -2532,10 +2537,12 @@ function cpCommit(){
   state[cpState.key]=hex; cpHex.value=hex.replace('#','').toUpperCase();
   if(cpState.paint)cpState.paint(); applyBackground();
 }
-function openPicker(key, swatchEl, paint){
+function openPicker(key, swatchEl, paint, enableAlpha){
   cpState.key=key; cpState.paint=paint;
   const [h,s,v]=rgb2hsv(...hex2rgb(state[key])); cpState.h=h; cpState.s=s; cpState.v=v;
   cpHex.value=state[key].replace('#','').toUpperCase(); cpRender();
+  cpAlphaRow.style.display = enableAlpha ? 'flex' : 'none';
+  if(enableAlpha){ const pct=Math.round((state.bgAlpha==null?1:state.bgAlpha)*100); cpAlpha.value=pct; cpAlphaVal.textContent=pct+'%'; }
   const r=swatchEl.getBoundingClientRect();
   cpop.style.display='flex'; const pw=cpop.offsetWidth, ph=cpop.offsetHeight;
   let left=r.left, top=r.bottom+8;
@@ -2551,19 +2558,20 @@ function hueDrag(e){ const r=cpHue.getBoundingClientRect(); const x=(e.clientX-r
 function dragStart(el,handler){ el.addEventListener('pointerdown',e=>{ e.preventDefault(); el.setPointerCapture(e.pointerId); handler(e); const mv=ev=>handler(ev); const up=ev=>{ el.releasePointerCapture(e.pointerId); el.removeEventListener('pointermove',mv); el.removeEventListener('pointerup',up); }; el.addEventListener('pointermove',mv); el.addEventListener('pointerup',up); }); }
 dragStart(cpSV,svDrag); dragStart(cpHue,hueDrag);
 cpHex.addEventListener('input',()=>{ let v='#'+cpHex.value.trim().replace('#',''); if(isHex(v)){ const [h,s,vv]=rgb2hsv(...hex2rgb(v)); cpState.h=h; cpState.s=s; cpState.v=vv; cpRender(); state[cpState.key]=v; if(cpState.paint)cpState.paint(); applyBackground(); } });
+cpAlpha.addEventListener('input',()=>{ const pct=parseInt(cpAlpha.value,10); state.bgAlpha=pct/100; cpAlphaVal.textContent=pct+'%'; applyBackground(); });
 cpop.addEventListener('pointerdown',e=>e.stopPropagation());
 document.addEventListener('pointerdown',()=>{ if(cpop.classList.contains('show')) closePicker(); });
 
-function wireColor(swatchId,hexId,key){
+function wireColor(swatchId,hexId,key,enableAlpha){
   const sw=$(swatchId), hx=$(hexId);
   const paint=()=>{ sw.style.background=state[key]; hx.value=state[key].toUpperCase(); };
   sw.addEventListener('pointerdown',e=>e.stopPropagation());
-  sw.addEventListener('click',()=>{ if(cpop.classList.contains('show')&&cpState.key===key){ closePicker(); return; } openPicker(key,sw,paint); });
+  sw.addEventListener('click',()=>{ if(cpop.classList.contains('show')&&cpState.key===key){ closePicker(); return; } openPicker(key,sw,paint,enableAlpha); });
   hx.addEventListener('input',e=>{ let v=e.target.value.trim(); if(!v.startsWith('#'))v='#'+v; if(isHex(v)){ state[key]=v; sw.style.background=v; applyBackground(); if(cpState.key===key){ const [h,s,vv]=rgb2hsv(...hex2rgb(v)); cpState.h=h;cpState.s=s;cpState.v=vv; cpHex.value=v.replace('#','').toUpperCase(); cpRender(); } } });
   hx.addEventListener('blur',()=>{ if(!isHex(hx.value)) hx.value=state[key].toUpperCase(); });
   paint();
 }
-wireColor('bgSwatch','bgHex','bg');
+wireColor('bgSwatch','bgHex','bg',true);
 wireColor('bgSwatch2','bgHex2','bg2');
 /* dark theme toggle */
 function applyTheme(){ document.body.classList.toggle('dark',state.dark); const t=$('themeToggle'); t.classList.toggle('on',state.dark); t.setAttribute('aria-checked',state.dark?'true':'false'); }
@@ -2907,6 +2915,7 @@ function buildShareParams(){
   p.set('ry',state.rotY); p.set('rx',state.rotX); p.set('cn',state.P.corner??0); p.set('dir',state.dir);
   p.set('r',state.ratio); p.set('fps',state.fps); p.set('ln',Math.round(state.lens/0.6*100));
   p.set('bg',state.bg.replace('#','')); p.set('bg2',state.bg2.replace('#','')); p.set('fm',state.fillMode);
+  p.set('tr',state.transparent?1:0); p.set('ba',Math.round((state.bgAlpha==null?1:state.bgAlpha)*100));
   if(state.ratio==='custom'){ p.set('cw',state.customW); p.set('ch',state.customH); }
   return p.toString();
 }
@@ -2936,8 +2945,9 @@ function applySharedPreset(){
     if(p.get('dir')!=null) clickSeg('#dirSeg',p.get('dir'));
     const fps=num('fps'); if(fps){ state.fps=fps; const dd=$('ddFps'); if(dd){ dd.dataset.value=fps; const lab=dd.querySelector('.ddval'); if(lab) lab.textContent=fps+' fps'; } }
     if(p.get('bg')) state.bg='#'+p.get('bg'); if(p.get('bg2')) state.bg2='#'+p.get('bg2'); if(p.get('fm')) state.fillMode=p.get('fm');
-    applyBackground();
+    const ba=num('ba'); if(ba!=null) state.bgAlpha=Math.max(0,Math.min(1,ba/100));
     ['bg','bg2'].forEach(k=>{ const sw=$(k+'Swatch'), hx=$(k+'Hex'); if(sw)sw.style.background=state[k]; if(hx)hx.value=state[k].replace('#','').toUpperCase(); });
+    clickSeg('#bgModeSeg', p.get('tr')==='1' ? 'transparent' : (state.fillMode||'solid'));  // syncs seg active state + applyBackground
     snapshotSliderDefaults();
     history.replaceState(null,'',location.pathname);   // tidy the URL once restored
     toast('Preset loaded from link — drop your own images to use it.');
