@@ -53,6 +53,7 @@
   body.dark .drop{ border-color:#404040; }
   body.dark .swatch:hover, body.dark .ratioGrid button:hover, body.dark .ddBtn:hover{ border-color:#525252; }
   body.dark .pv:hover .pvimg{ border-color:#404040; }
+  body.dark .pv.active .pvimg{ border-color:var(--text); box-shadow:0 0 0 1px var(--text); }   /* dark theme: crisp white ring */
   body.dark .chip:hover{ background:#262626; }
   /* popovers / dropdown menus = arqe popover #171717 */
   body.dark .ddPop, body.dark .navmenu{ background:#171717; }
@@ -148,7 +149,7 @@
   .pv span{font-size:10px; color:var(--muted); text-align:center; line-height:1.2; transition:color .15s;}
   .pv:hover .pvimg{border-color:#cfcfd6; transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.10);}
   .pv:hover span{color:var(--text);}
-  .pv.active .pvimg{border-color:var(--text); box-shadow:0 0 0 1px var(--text);}   /* crisp ~2px foreground border, like mockupstudio — no washed-grey halo */
+  .pv.active .pvimg{border-color:#8e8e8e; box-shadow:0 0 0 1px #8e8e8e;}   /* light theme: clear neutral-grey ring — visible on both the dark tile and the white panel */
   .pv.active span{color:var(--text); font-weight:500;}
   .disclose{align-self:flex-start; display:inline-flex; align-items:center; gap:6px; background:none; border:none; padding:3px 0; color:var(--muted); font-size:11px; cursor:pointer; font-family:inherit;}
   .disclose:hover{color:var(--text);}
