@@ -487,7 +487,6 @@
   <button class="btn sm" id="resetBtn">↺ Reset all settings</button>
 
   <div class="group">
-    <div class="loopinfo" id="loopInfo"></div>
     <div style="display:flex; gap:8px;">
       <button class="btn sm" id="shareBtn" style="flex:1" title="Copies a link that reopens this exact preset — template + every setting. Your uploaded images aren't included.">🔗 Share this preset</button>
       <button class="btn sm" id="helpBtn" style="flex:0 0 auto; width:40px" title="How it works">?</button>
@@ -2008,7 +2007,7 @@ renderer.domElement.addEventListener('pointerdown',e=>{
   replaceSlot=slot; replaceInput.click(); // override just this slot
 });
 function updateLoopInfo(){
-  if(active) $('loopInfo').textContent=`Loop ≈ ${(active.loopSeconds/state.speed).toFixed(1)} s · 30 fps`;
+  const el=$('loopInfo'); if(active&&el) el.textContent=`Loop ≈ ${(active.loopSeconds/state.speed).toFixed(1)} s · 30 fps`;
 }
 function applyTemplate(t){
   state.template=t;
