@@ -28,6 +28,34 @@
   body.dark .btn.primary:hover{ background:#fff; }
   body.dark #easeCurve{ background:#1b1b1f; }
   body.dark #stage{ box-shadow:0 18px 60px rgba(0,0,0,.55), 0 4px 14px rgba(0,0,0,.4); }
+  /* ===== dark-theme contrast pass: dim the bright greys; reserve white for the Export action ===== */
+  body.dark{ --muted:#6c6c74; }                                  /* secondary text reads softer, not glaring */
+  /* scrollbars were near-white → dim */
+  body.dark aside::-webkit-scrollbar-thumb,
+  body.dark #setScroll::-webkit-scrollbar-thumb,
+  body.dark .catStrip::-webkit-scrollbar-thumb{ background:#303036; }
+  /* slider + timeline tracks/handles: muted, no bright fills */
+  body.dark input[type=range]{ background:#2c2c32; }
+  body.dark input[type=range]::-webkit-slider-thumb{ background:#8e8e96; }
+  body.dark input[type=range]::-moz-range-thumb{ background:#8e8e96; }
+  body.dark #tlTrack{ background:#2c2c32; }
+  body.dark #tlFill{ background:#54545c; }
+  body.dark #tlHead{ background:#8e8e96; }
+  /* outlines were too bright (drop zone, hovers) → dim */
+  body.dark .drop{ border-color:#34343b; }
+  body.dark .swatch:hover, body.dark .ratioGrid button:hover, body.dark .ddBtn:hover{ border-color:#45454d; }
+  body.dark .pv:hover .pvimg{ border-color:#3d3d44; }
+  body.dark .chip:hover{ background:#26262b; }
+  /* active surfaces stay GREY — only the Export button is allowed to be white */
+  body.dark .chip.active, body.dark .seg button.active, body.dark .ratioGrid button.active{ background:#34343c; color:var(--text); border-color:#3a3a42; }
+  body.dark #tlPlay{ background:#34343c; color:var(--text); }
+  body.dark .switch.on{ background:#4a4a52; border-color:#4a4a52; }
+  /* tiny tertiary labels → softer still */
+  body.dark .hint{ color:#5a5a62; }
+  body.dark .seeAll{ color:#5c5c64; }
+  body.dark .seeAll .av, body.dark .disclose .chev, body.dark .drop .sub{ color:#56565e; }
+  /* transient inline value editor: dark surface, not a white box */
+  body.dark .valEdit{ background:#202024; color:#ececee; border-color:#45454d; }
   *{box-sizing:border-box; margin:0; padding:0;}
   html,body{height:100%;}
   body{
@@ -44,7 +72,7 @@
   #topnav .navleft{display:flex; align-items:center; gap:22px;}
   #topnav .navlogo{display:inline-flex; width:38px; height:38px; flex:0 0 auto;}
   #topnav .navlogo svg{width:100%; height:100%; display:block;}
-  body.dark #topnav .navlogo{filter:invert(1);}            /* white-on-dark in dark theme */
+  /* logo keeps its built-in white disc as a backing in BOTH themes (no invert) — like mockup online */
   #topnav a{color:var(--text); text-decoration:none; font-weight:500; white-space:nowrap; transition:color .15s;}
   #topnav .navleft > a:not(.navlogo), #topnav .navdrop > .navlink{color:var(--muted);}   /* inactive links read grey… */
   #topnav .navleft > a:not(.navlogo):hover, #topnav .navdrop > .navlink:hover{color:var(--text);}  /* …and darken on hover */
