@@ -186,7 +186,8 @@
   .ddBtn{width:100%; height:34px; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:0 11px; background:var(--panel2); border:1px solid var(--border); border-radius:9px; color:var(--text); font-size:12px; font-family:inherit; cursor:pointer;}
   .ddBtn:hover{border-color:#bbb;}
   .dd.open .ddBtn{border-color:var(--accent);}
-  .ddCar{font-size:9px; color:var(--muted); transition:transform .15s;}
+  .ddCar{display:flex; align-items:center; color:var(--muted); transition:transform .15s;}
+  .ddCar svg{width:12px; height:12px; display:block;}
   .dd.open .ddCar{transform:rotate(180deg);}
   .ddPop{position:absolute; left:0; right:0; bottom:calc(100% + 6px); background:var(--panel); border:1px solid var(--border); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.18); padding:5px; display:none; flex-direction:column; gap:2px; z-index:60;}
   .dd.open .ddPop{display:flex;}
@@ -496,7 +497,7 @@
 <div id="exportBar">
   <div class="exrow">
     <div class="dd" id="ddFormat" data-value="mp4">
-      <button class="ddBtn" type="button"><span class="ddVal">MP4</span><span class="ddCar">▾</span></button>
+      <button class="ddBtn" type="button"><span class="ddVal">MP4</span><span class="ddCar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
       <div class="ddPop">
         <button type="button" data-v="mp4">MP4</button>
         <button type="button" data-v="gif">GIF</button>
@@ -505,7 +506,7 @@
       </div>
     </div>
     <div class="dd" id="ddQuality" data-value="2k">
-      <button class="ddBtn" type="button"><span class="ddVal">2K</span><span class="ddCar">▾</span></button>
+      <button class="ddBtn" type="button"><span class="ddVal">2K</span><span class="ddCar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
       <div class="ddPop">
         <button type="button" data-v="1k">1K</button>
         <button type="button" data-v="2k">2K</button>
@@ -513,7 +514,7 @@
       </div>
     </div>
     <div class="dd" id="ddFps" data-value="30">
-      <button class="ddBtn" type="button"><span class="ddVal">30 fps</span><span class="ddCar">▾</span></button>
+      <button class="ddBtn" type="button"><span class="ddVal">30 fps</span><span class="ddCar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
       <div class="ddPop">
         <button type="button" data-v="24">24 fps</button>
         <button type="button" data-v="30">30 fps</button>
