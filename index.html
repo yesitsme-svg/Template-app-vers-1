@@ -276,9 +276,8 @@
   .hint{font-size:10px; color:#aaa; line-height:1.5;}
   #timeline{
     flex:0 0 auto; display:flex; align-items:center; gap:13px;
-    margin:0 26px 18px; padding:9px 16px;
-    background:var(--panel); border:1px solid var(--border); border-radius:100px;
-    box-shadow:0 2px 12px rgba(0,0,0,.05);
+    margin:0; padding:10px 22px;
+    background:var(--panel); border-top:1px solid var(--border);
   }
   body.exporting #timeline{pointer-events:none; opacity:.5;}
   #tlPlay{
@@ -392,28 +391,43 @@
 
   <div class="group">
     <div class="slider-row"><div class="label">Card size</div><div class="val" id="sizeVal">×1.00</div></div>
-    <input type="range" id="cardSize" min="0.15" max="2.5" step="0.05" value="1">
+    <input type="range" id="cardSize" min="0.15" max="2.5" step="0.01" value="1">
   </div>
 
   <div class="group" id="spaceGroup">
     <div class="slider-row"><div class="label">Spacing</div><div class="val" id="spacingVal">×1.00</div></div>
-    <input type="range" id="spacing" min="0.5" max="2.8" step="0.05" value="1">
+    <input type="range" id="spacing" min="0.5" max="2.8" step="0.01" value="1">
   </div>
 
   <div class="group">
     <div class="slider-row"><div class="label">Zoom</div><div class="val" id="compVal">×1.00</div></div>
-    <input type="range" id="compScale" min="0.1" max="2.5" step="0.05" value="1">
+    <input type="range" id="compScale" min="0.1" max="2.5" step="0.01" value="1">
   </div>
 
   <div class="group">
     <div class="slider-row"><div class="label">Speed</div><div class="val" id="speedVal">×1.00</div></div>
-    <input type="range" id="speed" min="0.25" max="2" step="0.05" value="1">
+    <input type="range" id="speed" min="0.25" max="2" step="0.01" value="1">
   </div>
 
   <div class="group" id="fadeGroup">
     <div class="slider-row"><div class="label">Depth fade</div><div class="val" id="fadeVal">0%</div></div>
     <input type="range" id="fade" min="0" max="100" step="1" value="0">
     <div class="hint" id="fadeLockHint" style="display:none">Flat layout — all cards sit on one plane, so there's no depth to fade.</div>
+  </div>
+
+  <div class="group" id="rotGroup">
+    <div class="slider-row"><div class="label">Rotate Y</div><div class="val" id="rotYVal">0°</div></div>
+    <input type="range" id="rotY" min="-45" max="45" step="1" value="0">
+    <div class="slider-row" style="margin-top:4px"><div class="label">Rotate X</div><div class="val" id="rotXVal">0°</div></div>
+    <input type="range" id="rotX" min="-45" max="45" step="1" value="0">
+    <div class="hint" id="rotLockHint" style="display:none">This preset drives its own camera, so manual tilt is off here — it would fling the framing off-screen.</div>
+  </div>
+
+  <div class="group" id="backGroup">
+    <div class="rowBetween"><div class="label">Hide card backs</div>
+      <button class="switch" id="backToggle" role="switch" aria-checked="false" title="Hide the rear of cards once they turn away"><span class="knob"></span></button>
+    </div>
+    <div class="hint" id="backHint">Hides the rear of cards once they turn away (3D carousels, globe, tilt).</div>
   </div>
 
   <div class="group" id="easeGroup">
@@ -426,24 +440,6 @@
       <div class="bezvals" id="bezVals"></div>
       <div class="hint">Drag the two handles to shape the curve.</div>
     </div>
-  </div>
-
-  <div class="group" id="rotGroup">
-    <div class="slider-row"><div class="label">Rotate Y</div><div class="val" id="rotYVal">0°</div></div>
-    <input type="range" id="rotY" min="-45" max="45" step="1" value="0">
-    <div class="slider-row" style="margin-top:4px"><div class="label">Rotate X</div><div class="val" id="rotXVal">0°</div></div>
-    <input type="range" id="rotX" min="-45" max="45" step="1" value="0">
-    <div class="hint" id="rotLockHint" style="display:none">This preset drives its own camera, so manual tilt is off here — it would fling the framing off-screen.</div>
-  </div>
-
-  <div class="group" id="backGroup">
-    <div class="label">Card backs</div>
-    <div class="seg" id="backSeg">
-      <button data-v="show" class="active">Show</button>
-      <button data-v="hide">Hide</button>
-    </div>
-    <div class="hint" id="backLockHint" style="display:none">All cards face forward in this layout — there are no backs to hide.</div>
-    <div class="hint" id="backHint">Hide the rear of cards once they turn away (3D carousels, globe, or any tilt).</div>
   </div>
 
   <div class="group">
@@ -474,26 +470,21 @@
     <div class="hint" id="bgHint" style="display:none">Transparency is kept in PNG export. MP4 has no alpha — video is rendered on the chosen color.</div>
   </div>
 
-  <button class="btn sm" id="resetBtn">↺ Reset settings</button>
-
-  <details>
-    <summary>Advanced</summary>
-    <div class="group" style="margin-top:10px">
-      <div class="label">Direction</div>
-      <div class="seg" id="dirSeg">
-        <button data-v="1" class="active">Forward</button>
-        <button data-v="-1">Reverse</button>
-      </div>
-      <div class="label" style="margin-top:4px">Film grain</div>
-      <div class="seg" id="grainSeg">
-        <button data-v="on">On</button>
-        <button data-v="off" class="active">Off</button>
-      </div>
-      <div class="slider-row" style="margin-top:8px"><div class="label">Lens (fisheye)</div><div class="val" id="lensVal">0</div></div>
-      <input type="range" id="lens" min="-100" max="100" step="1" value="0">
-      <div class="hint">Just an image warp — convex (+) / concave (−). Doesn't affect the layout.</div>
+  <div class="group">
+    <div class="label">Direction</div>
+    <div class="seg" id="dirSeg">
+      <button data-v="1" class="active">Forward</button>
+      <button data-v="-1">Reverse</button>
     </div>
-  </details>
+  </div>
+
+  <div class="group">
+    <div class="slider-row"><div class="label">Lens (fisheye)</div><div class="val" id="lensVal">0</div></div>
+    <input type="range" id="lens" min="-100" max="100" step="1" value="0">
+    <div class="hint">Just an image warp — convex (+) / concave (−). Doesn't affect the layout.</div>
+  </div>
+
+  <button class="btn sm" id="resetBtn">↺ Reset all settings</button>
 
   <div class="group">
     <div class="loopinfo" id="loopInfo"></div>
@@ -2012,8 +2003,7 @@ function applyTemplate(t){
   $('lens').value=0; $('lensVal').textContent='0';
   snapshotSliderDefaults();                              // remember this preset's slider values → double-click resets to them
   document.querySelectorAll('#dirSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v==='1'));
-  document.querySelectorAll('#grainSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v==='off'));
-  document.querySelectorAll('#backSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v==='show'));
+  $('backToggle').classList.remove('on'); $('backToggle').setAttribute('aria-checked','false');
   // #1 locks: easing for continuous loops; rotation for 3D/camera-driven presets. Controls stay
   // VISIBLE but greyed so nothing ever looks like it vanished.
   // easing is never locked — Linear is just the smart default for continuous loops; the client can change it
@@ -2026,10 +2016,9 @@ function applyTemplate(t){
   rebuild(true);
   // depth fade is meaningful only when the layout has real depth → lock it on flat coplanar presets
   $('fadeGroup').classList.toggle('flocked', !sceneHasDepth());
-  // card-backs only matters when some card actually turns away from the camera (3D rings/globe). Flat
-  // layouts (stacks, grids, coplanar) keep every card facing forward even when tilted ≤45°, so there's
-  // nothing to hide → lock it. Rings have away-facing cards at rest → stays available.
-  $('backGroup').classList.toggle('blocked', !sceneHasBacks());
+  // card-backs only matters when some card turns away from the camera (3D rings/globe). On flat layouts
+  // nothing ever shows a back → HIDE the whole control entirely (not just grey it).
+  $('backGroup').style.display = sceneHasBacks() ? '' : 'none';
   refreshCardSides();
   updateLoopInfo();
   document.querySelectorAll('#tpls .pv').forEach(c=>c.classList.toggle('active',c.dataset.id===t.id));
@@ -2038,12 +2027,9 @@ function applyTemplate(t){
    inside each at a glance. "See all" expands that category to a full grid and
    collapses the others (keeps it from getting busy / мельтешить). */
 function toggleExpand(sec){
-  const wasExp=sec.classList.contains('expanded');
-  document.querySelectorAll('.catSec').forEach(s=>{ s.classList.remove('expanded','collapsed'); s.querySelector('.seeAll .lbl').textContent='See all'; });
-  if(!wasExp){
-    sec.classList.add('expanded'); sec.querySelector('.seeAll .lbl').textContent='Show less';
-    document.querySelectorAll('.catSec').forEach(s=>{ if(s!==sec) s.classList.add('collapsed'); });
-  }
+  const exp=!sec.classList.contains('expanded');   // toggle ONLY this category — others stay as they are
+  sec.classList.toggle('expanded', exp);
+  sec.querySelector('.seeAll .lbl').textContent = exp ? 'Show less' : 'See all';
 }
 let curStrip=null;
 TEMPLATES.forEach(t=>{
@@ -2052,7 +2038,7 @@ TEMPLATES.forEach(t=>{
     const head=document.createElement('div'); head.className='catHead';
     const name=document.createElement('span'); name.className='catName'; name.textContent=t.cat;
     const see=document.createElement('button'); see.className='seeAll';
-    see.innerHTML='<span class="lbl">See all</span><span class="av">›</span>';
+    see.innerHTML='<span class="lbl">See all</span>';
     head.appendChild(name); head.appendChild(see);
     const strip=document.createElement('div'); strip.className='catStrip';
     sec.appendChild(head); sec.appendChild(strip); $('tpls').appendChild(sec);
@@ -2513,8 +2499,7 @@ function bindSeg(id,fn){
   }));
 }
 bindSeg('dirSeg',v=>{ state.dir=parseInt(v); });
-bindSeg('grainSeg',v=>{ state.grain=v==='on'; });
-bindSeg('backSeg',v=>{ state.backface=v==='hide'; refreshCardSides(); });
+$('backToggle').addEventListener('click',()=>{ state.backface=!state.backface; $('backToggle').classList.toggle('on',state.backface); $('backToggle').setAttribute('aria-checked',state.backface?'true':'false'); refreshCardSides(); });
 bindSeg('bgSeg',v=>{
   state.transparent=v==='transparent';
   $('bgFill').style.display=state.transparent?'none':'';
@@ -2681,7 +2666,7 @@ snapshotSliderDefaults();
 
 function resetAdjustments(){
   const t=state.template;
-  state.size=1; state.comp=1; state.spacing=1; state.fade=0; state.rotY=0; state.rotX=0; state.dir=1; state.speed=1; state.lens=0;
+  state.size=1; state.comp=1; state.spacing=1; state.fade=0; state.rotY=0; state.rotX=0; state.dir=1; state.speed=1; state.lens=0; state.backface=false;
   state.P={...t.P};            // restores corner/drift to the template's stock defaults
   setEase(t.ease);             // and the template's ideal easing
   clearSlotOverrides();        // drop per-card image swaps
@@ -2694,7 +2679,9 @@ function resetAdjustments(){
   $('rotX').value=0; $('rotXVal').textContent='0°';
   $('corner').value=state.P.corner??0; $('cornerVal').textContent=(state.P.corner??0).toFixed(1);
   $('lens').value=0; $('lensVal').textContent='0';
+  $('backToggle').classList.remove('on'); $('backToggle').setAttribute('aria-checked','false');
   document.querySelectorAll('#dirSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v==='1'));
+  refreshCardSides();
   rebuild(true);
   toast('Settings reset to default.');
 }
@@ -2918,7 +2905,7 @@ function buildShareParams(){
   p.set('sp',state.spacing.toFixed(2)); p.set('fd',Math.round(state.fade*100)); p.set('spd',state.speed.toFixed(2));
   p.set('sz',state.size.toFixed(2)); p.set('z',state.comp.toFixed(2));
   p.set('ry',state.rotY); p.set('rx',state.rotX); p.set('cn',state.P.corner??0); p.set('dir',state.dir);
-  p.set('r',state.ratio); p.set('fps',state.fps); p.set('gr',state.grain?1:0); p.set('ln',Math.round(state.lens/0.6*100));
+  p.set('r',state.ratio); p.set('fps',state.fps); p.set('ln',Math.round(state.lens/0.6*100));
   p.set('bg',state.bg.replace('#','')); p.set('bg2',state.bg2.replace('#','')); p.set('fm',state.fillMode);
   if(state.ratio==='custom'){ p.set('cw',state.customW); p.set('ch',state.customH); }
   return p.toString();
@@ -2947,7 +2934,6 @@ function applySharedPreset(){
     fire('cardSize',num('sz')); fire('compScale',num('z')); fire('rotY',num('ry')); fire('rotX',num('rx')); fire('corner',num('cn'));
     fire('lens',num('ln'));
     if(p.get('dir')!=null) clickSeg('#dirSeg',p.get('dir'));
-    if(p.get('gr')!=null) clickSeg('#grainSeg',p.get('gr')==='1'?'on':'off');
     const fps=num('fps'); if(fps){ state.fps=fps; const dd=$('ddFps'); if(dd){ dd.dataset.value=fps; const lab=dd.querySelector('.ddval'); if(lab) lab.textContent=fps+' fps'; } }
     if(p.get('bg')) state.bg='#'+p.get('bg'); if(p.get('bg2')) state.bg2='#'+p.get('bg2'); if(p.get('fm')) state.fillMode=p.get('fm');
     applyBackground();
