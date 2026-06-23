@@ -1662,7 +1662,7 @@ const TEMPLATES = [
   {id:'carousel',     name:'Carousel Slide',        scene:'ring',         ease:'Smooth',   P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'y', tiltX:7,  step:'card', minN:8, chord:1.9}},
   {id:'wheel',        name:'Vertical Wheel',        scene:'ring',         ease:'Smooth',   P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'x', step:'card', minN:6, chord:2.2}},
   {id:'tilted-ring',  name:'Tilted Ring',           scene:'ring',         ease:'Linear',   noEase:true, lockEase:true, P:{dur:16, hold:0, drift:1, corner:0, axis:'y', tiltX:14, tiltZ:16, step:'full', minN:9, chord:1.9, sizeMul:.85}},
-  {id:'card-arc',     name:'Card Arc',              scene:'ring',         ease:'Smooth',   fade:68, P:{dur:1.6, hold:0, drift:.22, corner:0, axis:'y', tiltX:9, step:'card', minN:14, chord:2.0, sizeMul:.85}},
+  {id:'card-arc',     name:'Card Arc',              scene:'ring',         ease:'Smooth',   size:.90, spacing:.55, speed:.95, rotX:-10, fade:75, P:{dur:1.5, hold:0, drift:.25, corner:0, axis:'y', tiltX:7, step:'card', minN:10, chord:1.9}},
   {cat:'Cards'},
   {id:'stack-reveal', name:'Stack Reveal',          scene:'stackReveal',  ease:'Smooth',   P:{dur:1.2,  hold:.15, corner:2.5}},
   {id:'shuffle',      name:'Shuffle Cards',         scene:'shuffleCards', ease:'Snappy',   P:{dur:1.0,  hold:.18, corner:2.5}},
@@ -2069,15 +2069,16 @@ function applyTemplate(t){
   state.P={...t.P};
   // #7 full reset of per-preset adjustments. Uploaded images and workspace settings
   // (background, aspect ratio, dark theme, export quality) are intentionally KEPT.
-  state.size=1; state.comp=1; state.fade=(t.fade??0)/100; state.speed=1; state.rotY=0; state.rotX=0; state.dir=1; state.grain=false; state.backface=false; state.lens=0;
+  // per-preset default slider values (e.g. Card Arc ships pre-tuned) — fall back to the neutral defaults
+  state.size=t.size??1; state.comp=t.comp??1; state.fade=(t.fade??0)/100; state.speed=t.speed??1; state.rotY=t.rotY??0; state.rotX=t.rotX??0; state.dir=1; state.grain=false; state.backface=false; state.lens=0;
   state.spacing=t.spacing??1;                 // per-preset default spacing (Field Flight = 0.5)
   setEase(t.noEase?'Linear':t.ease);
-  $('cardSize').value=1; $('sizeVal').textContent='1.00';
-  $('compScale').value=1; $('compVal').textContent='1.00';
+  $('cardSize').value=state.size; $('sizeVal').textContent=''+state.size.toFixed(2);
+  $('compScale').value=state.comp; $('compVal').textContent=''+state.comp.toFixed(2);
   $('spacing').value=state.spacing; $('spacingVal').textContent=''+state.spacing.toFixed(2);
   $('fade').value=t.fade??0; $('fadeVal').textContent=(t.fade??0)+'%';
-  $('speed').value=1; $('speedVal').textContent='1.00';
-  $('rotY').value=0; $('rotYVal').textContent='0°'; $('rotX').value=0; $('rotXVal').textContent='0°';
+  $('speed').value=state.speed; $('speedVal').textContent=''+state.speed.toFixed(2);
+  $('rotY').value=state.rotY; $('rotYVal').textContent=state.rotY+'°'; $('rotX').value=state.rotX; $('rotXVal').textContent=state.rotX+'°';
   $('corner').value=state.P.corner??0; $('cornerVal').textContent=(state.P.corner??0).toFixed(1);
   $('lens').value=0; $('lensVal').textContent='0';
   snapshotSliderDefaults();                              // remember this preset's slider values → double-click resets to them
@@ -2753,7 +2754,8 @@ snapshotSliderDefaults();
 
 function resetAdjustments(){
   const t=state.template;
-  state.size=1; state.comp=1; state.spacing=1; state.fade=0; state.rotY=0; state.rotX=0; state.dir=1; state.speed=1; state.lens=0; state.backface=false;
+  // reset to the PRESET's stock defaults (Card Arc etc. ship pre-tuned), not bare neutral
+  state.size=t.size??1; state.comp=t.comp??1; state.spacing=t.spacing??1; state.fade=(t.fade??0)/100; state.rotY=t.rotY??0; state.rotX=t.rotX??0; state.dir=1; state.speed=t.speed??1; state.lens=0; state.backface=false;
   state.P={...t.P};            // restores corner/drift to the template's stock defaults
   setEase(t.ease);             // and the template's ideal easing
   clearSlotOverrides();        // drop per-card image swaps
@@ -2764,13 +2766,13 @@ function resetAdjustments(){
   $('bgField2').style.display='none'; $('bgFill').style.display=''; $('bgHint').style.display='none';
   $('bgModeSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.v==='solid'));
   applyBackground();
-  $('cardSize').value=1; $('sizeVal').textContent='1.00';
-  $('compScale').value=1; $('compVal').textContent='1.00';
-  $('spacing').value=1; $('spacingVal').textContent='1.00';
-  $('fade').value=0; $('fadeVal').textContent='0%';
-  $('speed').value=1; $('speedVal').textContent='1.00';
-  $('rotY').value=0; $('rotYVal').textContent='0°';
-  $('rotX').value=0; $('rotXVal').textContent='0°';
+  $('cardSize').value=state.size; $('sizeVal').textContent=''+state.size.toFixed(2);
+  $('compScale').value=state.comp; $('compVal').textContent=''+state.comp.toFixed(2);
+  $('spacing').value=state.spacing; $('spacingVal').textContent=''+state.spacing.toFixed(2);
+  $('fade').value=Math.round(state.fade*100); $('fadeVal').textContent=Math.round(state.fade*100)+'%';
+  $('speed').value=state.speed; $('speedVal').textContent=''+state.speed.toFixed(2);
+  $('rotY').value=state.rotY; $('rotYVal').textContent=state.rotY+'°';
+  $('rotX').value=state.rotX; $('rotXVal').textContent=state.rotX+'°';
   $('corner').value=state.P.corner??0; $('cornerVal').textContent=(state.P.corner??0).toFixed(1);
   $('lens').value=0; $('lensVal').textContent='0';
   $('backToggle').classList.remove('on'); $('backToggle').setAttribute('aria-checked','false');
