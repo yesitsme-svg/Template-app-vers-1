@@ -199,10 +199,12 @@
   body.dark .ddPop button.sel{color:#141416;}
   .dd.disabled{opacity:.5; pointer-events:none;}
   /* aspect-ratio selector inside the panel */
-  .ratioGrid{display:flex; flex-wrap:wrap; gap:5px;}
-  .ratioGrid button{padding:7px 11px; border:1px solid var(--border); background:var(--panel2); border-radius:8px; color:var(--muted); cursor:pointer; font-size:11.5px; font-family:inherit;}
+  .ratioGrid{display:flex; flex-wrap:nowrap; gap:4px;}
+  .ratioGrid button{flex:1 1 auto; padding:7px 4px; border:1px solid var(--border); background:var(--panel2); border-radius:8px; color:var(--muted); cursor:pointer; font-size:11.5px; font-family:inherit; text-align:center;}
   .ratioGrid button:hover{border-color:#bbb;}
   .ratioGrid button.active{background:var(--dark); color:#fff; border-color:var(--dark); font-weight:500;}
+  .ratioGrid .ratioCustom{flex:0 0 auto; width:32px; padding:0; display:flex; align-items:center; justify-content:center;}
+  .ratioGrid .ratioCustom svg{width:15px; height:15px; display:block;}
   body.dark .ratioGrid button.active{color:#141416;}
   .customRes{display:flex; align-items:center; gap:6px; margin-top:8px;}
   .customRes input{width:64px; height:30px; border:1px solid var(--border); border-radius:7px; background:var(--panel2); color:var(--text); font-family:inherit; font-size:12px; text-align:center; outline:none;}
@@ -375,7 +377,7 @@
       <button data-r="1:1">1:1</button>
       <button data-r="4:3">4:3</button>
       <button data-r="16:9">16:9</button>
-      <button data-r="custom">Custom</button>
+      <button data-r="custom" class="ratioCustom" title="Custom size" aria-label="Custom size"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5.5a1.5 1.5 0 0 1 1.5-1.5H8"/><path d="M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8"/><path d="M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16"/><path d="M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/></svg></button>
     </div>
     <div class="customRes" id="customRes" style="display:none">
       <input type="number" id="customW" min="120" max="4096" step="2" value="1080">
