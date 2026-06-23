@@ -19,47 +19,47 @@
     --text:#1c1c1c; --muted:#888; --dark:#000; --accent:#713ade;
   }
   body.dark{
-    /* near-black neutral scale with clean elevation (bg < panel < panel2), like mockupstudio / Linear */
-    --bg:#0a0a0b; --panel:#121213; --panel2:#1b1b1d; --border:#262628;
-    --text:#ededee; --muted:#76767c; --dark:#fafafa; --accent:#9b6cff;
+    /* PURE neutral near-black scale, equal R=G=B (no blue/purple cast), clean elevation bg<panel<panel2 */
+    --bg:#0a0a0a; --panel:#121212; --panel2:#1b1b1b; --border:#262626;
+    --text:#ededed; --muted:#767676; --dark:#fafafa; --accent:#9b6cff;
   }
   /* in dark mode the "black" active surfaces invert to light, so their text must go dark */
   body.dark .btn.primary, body.dark .seg button.active, body.dark .chip.active,
-  body.dark .ratios button.active, body.dark #tlPlay, body.dark .toast{ color:#141416; }
+  body.dark .ratios button.active, body.dark #tlPlay, body.dark .toast{ color:#141414; }
   body.dark .btn.primary:hover{ background:#fff; }
   body.dark #stage{ box-shadow:0 18px 60px rgba(0,0,0,.55), 0 4px 14px rgba(0,0,0,.4); }
   /* ===== dark-theme contrast pass: clean neutral greys; reserve white for the Export action ===== */
   /* scrollbars — slim, neutral, muted (not bright, not invisible) */
-  body.dark aside, body.dark #setScroll, body.dark .catStrip{ scrollbar-color:#33333a transparent; }   /* Firefox */
+  body.dark aside, body.dark #setScroll, body.dark .catStrip{ scrollbar-color:#333333 transparent; }   /* Firefox */
   body.dark aside::-webkit-scrollbar-thumb,
   body.dark #setScroll::-webkit-scrollbar-thumb,
-  body.dark .catStrip::-webkit-scrollbar-thumb{ background:#33333a; }
+  body.dark .catStrip::-webkit-scrollbar-thumb{ background:#333333; }
   body.dark aside::-webkit-scrollbar-thumb:hover,
   body.dark #setScroll::-webkit-scrollbar-thumb:hover,
-  body.dark .catStrip::-webkit-scrollbar-thumb:hover{ background:#45454c; }
+  body.dark .catStrip::-webkit-scrollbar-thumb:hover{ background:#454545; }
   /* slider + timeline tracks/handles — neutral, no bright fills */
-  body.dark input[type=range]{ background:#242427; }
-  body.dark input[type=range]::-webkit-slider-thumb{ background:#6f6f76; }
-  body.dark input[type=range]::-moz-range-thumb{ background:#6f6f76; }
-  body.dark #tlTrack{ background:#242427; }
-  body.dark #tlFill{ background:#46464b; }
-  body.dark #tlHead{ background:#6f6f76; }
+  body.dark input[type=range]{ background:#242424; }
+  body.dark input[type=range]::-webkit-slider-thumb{ background:#6f6f6f; }
+  body.dark input[type=range]::-moz-range-thumb{ background:#6f6f6f; }
+  body.dark #tlTrack{ background:#242424; }
+  body.dark #tlFill{ background:#464646; }
+  body.dark #tlHead{ background:#6f6f6f; }
   /* outlines — subtle (drop zone, hovers) */
-  body.dark .drop{ border-color:#2c2c2f; }
-  body.dark .swatch:hover, body.dark .ratioGrid button:hover, body.dark .ddBtn:hover{ border-color:#3a3a3e; }
-  body.dark .pv:hover .pvimg{ border-color:#34343a; }
-  body.dark .chip:hover{ background:#242427; }
-  /* active surfaces = a clean elevated grey (only the Export button is white) */
-  body.dark .chip.active, body.dark .seg button.active, body.dark .ratioGrid button.active{ background:#2f2f33; color:var(--text); border-color:#3a3a3e; }
-  body.dark #tlPlay{ background:#2f2f33; color:var(--text); }
-  body.dark .switch.on{ background:#3c3c41; border-color:#3c3c41; }
+  body.dark .drop{ border-color:#2c2c2c; }
+  body.dark .swatch:hover, body.dark .ratioGrid button:hover, body.dark .ddBtn:hover{ border-color:#3a3a3a; }
+  body.dark .pv:hover .pvimg{ border-color:#343434; }
+  body.dark .chip:hover{ background:#242424; }
+  /* active surfaces = a clean elevated neutral grey (only the Export button is white) */
+  body.dark .chip.active, body.dark .seg button.active, body.dark .ratioGrid button.active{ background:#2e2e2e; color:var(--text); border-color:#3a3a3a; }
+  body.dark #tlPlay{ background:#2e2e2e; color:var(--text); }
+  body.dark .switch.on{ background:#3c3c3c; border-color:#3c3c3c; }
   /* tiny tertiary labels → softer still */
-  body.dark .hint{ color:#56565b; }
-  body.dark .seeAll{ color:#56565b; }
-  body.dark .seeAll .av, body.dark .disclose .chev, body.dark .drop .sub{ color:#505055; }
+  body.dark .hint{ color:#565656; }
+  body.dark .seeAll{ color:#565656; }
+  body.dark .seeAll .av, body.dark .disclose .chev, body.dark .drop .sub{ color:#505050; }
   /* transient inline value editor: dark surface, not a white box */
-  body.dark .valEdit{ background:#1b1b1d; color:#ededee; border-color:#3a3a3e; }
-  body.dark #easeCurve{ background:#161617; }
+  body.dark .valEdit{ background:#1b1b1b; color:#ededed; border-color:#3a3a3a; }
+  body.dark #easeCurve{ background:#161616; }
   *{box-sizing:border-box; margin:0; padding:0;}
   html,body{height:100%;}
   body{
