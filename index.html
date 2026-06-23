@@ -32,8 +32,7 @@
   body.dark{ --muted:#6c6c74; }                                  /* secondary text reads softer, not glaring */
   /* scrollbars were near-white → dim */
   body.dark aside::-webkit-scrollbar-thumb,
-  body.dark #setScroll::-webkit-scrollbar-thumb,
-  body.dark .catStrip::-webkit-scrollbar-thumb{ background:#303036; }
+  body.dark #setScroll::-webkit-scrollbar-thumb{ background:#2a2a30; }
   /* slider + timeline tracks/handles: muted, no bright fills */
   body.dark input[type=range]{ background:#2c2c32; }
   body.dark input[type=range]::-webkit-slider-thumb{ background:#8e8e96; }
@@ -124,8 +123,8 @@
   .seeAll .av{display:inline-block; transition:transform .18s; font-size:11px; line-height:1; color:#c8c8cc;}
   .seeAll:hover .av{color:var(--muted);}
   .catSec.expanded .seeAll .av{transform:rotate(90deg);}
-  .catStrip{display:flex; gap:8px; overflow-x:auto; padding-bottom:5px; scrollbar-width:thin;}
-  .catStrip::-webkit-scrollbar{height:5px;} .catStrip::-webkit-scrollbar-thumb{background:#dcdce0; border-radius:3px;}
+  .catStrip{display:flex; gap:8px; overflow-x:auto; padding-bottom:0; scrollbar-width:none; -ms-overflow-style:none;}
+  .catStrip::-webkit-scrollbar{display:none;}   /* clean strips — no chunky scrollbar; horizontal wheel/trackpad still scrolls, "See all" reveals the rest */
   .catStrip .pv{flex:0 0 82px;}
   .catSec.expanded .catStrip{flex-wrap:wrap; overflow-x:visible; padding-bottom:0;}
   .catSec.expanded .catStrip .pv{flex:0 0 calc(50% - 4px);}
@@ -135,7 +134,7 @@
   .pv span{font-size:10px; color:var(--muted); text-align:center; line-height:1.2; transition:color .15s;}
   .pv:hover .pvimg{border-color:#cfcfd6; transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.10);}
   .pv:hover span{color:var(--text);}
-  .pv.active .pvimg{border-color:#b6b6c0; box-shadow:0 0 0 2px #b6b6c0;}
+  .pv.active .pvimg{border-color:var(--text); box-shadow:0 0 0 1px var(--text);}   /* crisp ~2px foreground border, like mockupstudio — no washed-grey halo */
   .pv.active span{color:var(--text); font-weight:500;}
   .disclose{align-self:flex-start; display:inline-flex; align-items:center; gap:6px; background:none; border:none; padding:3px 0; color:var(--muted); font-size:11px; cursor:pointer; font-family:inherit;}
   .disclose:hover{color:var(--text);}
