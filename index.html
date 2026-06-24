@@ -150,7 +150,8 @@
   .seeAll:hover .av{color:var(--muted);}
   /* left-panel brand header: Motion Grid mark + name + a sun/moon theme toggle */
   .pvBrand{display:flex; align-items:center; gap:9px;}
-  .pvLogo{font-family:'Garnett','Euclid Circular B',sans-serif; font-weight:700; font-style:italic; font-size:17px; line-height:1; color:var(--text); letter-spacing:-.01em; -webkit-text-stroke:.4px currentColor;}   /* heavy black-italic M, like the ref */
+  .pvLogo{height:11px; width:auto; flex:0 0 auto; color:var(--text); display:block;}   /* exact M mark from the Figma SVG; fill follows currentColor (themes) */
+  .pvDivide{height:1px; flex:0 0 1px; background:var(--border); margin:4px -22px 0 -16px;}   /* full-bleed line under the brand header (Figma divider, x0→panel edge) */
   .pvName{font-size:11.5px; color:var(--muted); font-weight:500;}
   .themeBtn{margin-left:auto; background:none; border:none; padding:4px; cursor:pointer; color:var(--text); display:flex; align-items:center; border-radius:7px; transition:color .15s,background .15s;}   /* sun icon dark, like the ref */
   .themeBtn:hover{background:var(--panel2);}
@@ -407,13 +408,14 @@
 <div id="content">
 <aside id="previews">
   <div class="pvBrand">
-    <span class="pvLogo">M</span>
+    <svg class="pvLogo" viewBox="18.026 72.938 13.052 10.062" fill="currentColor" aria-label="Motion Grid"><path d="M18.026 83L19.625 72.938H23.681L24.474 78.97L27.321 72.938H31.078L29.479 83H26.489L27.334 77.631L25.059 83H22.511L21.861 77.41L20.977 83H18.026Z"/></svg>
     <span class="pvName">Motion Grid</span>
     <button class="themeBtn" id="themeToggle" title="Toggle light / dark" aria-label="Toggle theme">
       <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
       <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     </button>
   </div>
+  <div class="pvDivide"></div>
   <div class="group">
     <div class="label" style="font-size:14px">Templates</div>
     <div class="pvGrid" id="tpls"></div>
