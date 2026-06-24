@@ -185,7 +185,7 @@
   .catSec.collapsed .catStrip{display:none;}
   .pv{display:flex; flex-direction:column; gap:5px; cursor:pointer; background:none; border:none; padding:0; font-family:inherit; min-width:0;}
   .pv .pvimg{width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:9px; border:1px solid var(--border); background:#1b1b1d; display:block; transition:border-color .15s,box-shadow .15s,transform .15s;}
-  .pv span{font-size:10px; color:var(--muted); text-align:center; line-height:1.2; transition:color .15s;}
+  .pv span{font-size:10px; color:var(--muted); text-align:center; line-height:1.2; height:24px; display:flex; align-items:center; justify-content:center; overflow:hidden; transition:color .15s;}   /* reserve 2 lines for every label → all cards & rows are the same height (even rhythm) */
   .pv:hover .pvimg{border-color:#cfcfd6; transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.10);}
   .pv:hover span{color:var(--text);}
   .pv.active .pvimg{border-color:transparent; box-shadow:none;}   /* selected = no ring/border (Figma); inactive keep the light border, active reads via its dark name */
