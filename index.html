@@ -81,17 +81,17 @@
   }
   /* wannathis.one top navigation, ported in */
   #topnav{
-    flex:0 0 52px; height:52px; display:flex; align-items:center; gap:20px;
+    flex:0 0 52px; height:52px; display:flex; align-items:center; gap:24px;
     padding:0 20px; background:var(--panel); border-bottom:1px solid var(--border);
-    position:relative; z-index:200; font-size:12px;
-  }
-  #topnav .navleft{display:flex; align-items:center; gap:18px;}
+    position:relative; z-index:200; font-size:14px;
+  }   /* Figma nav: 14px Medium, items in black */
+  #topnav .navleft{display:flex; align-items:center; gap:24px;}
   #topnav .navlogo{display:inline-flex; width:30px; height:30px; flex:0 0 auto;}
   #topnav .navlogo svg{width:100%; height:100%; display:block;}
   /* logo keeps its built-in white disc as a backing in BOTH themes (no invert) — like mockup online */
   #topnav a{color:var(--text); text-decoration:none; font-weight:500; white-space:nowrap; transition:color .15s;}
-  #topnav .navleft > a:not(.navlogo), #topnav .navdrop > .navlink{color:var(--muted);}   /* inactive links read grey… */
-  #topnav .navleft > a:not(.navlogo):hover, #topnav .navdrop > .navlink:hover{color:var(--text);}  /* …and darken on hover */
+  #topnav .navleft > a:not(.navlogo), #topnav .navdrop > .navlink{color:var(--text);}   /* Figma nav: items black */
+  #topnav .navleft > a:not(.navlogo):hover, #topnav .navdrop > .navlink:hover{color:var(--muted);}  /* lighten on hover */
   #topnav .navdrop{position:relative; display:inline-flex; align-items:center;}
   #topnav .navdrop::after{content:''; position:absolute; top:100%; left:0; right:0; height:14px;} /* hover bridge to the menu */
   #topnav .navlink{display:inline-flex; align-items:center; gap:6px; cursor:pointer;}
@@ -146,7 +146,7 @@
   .catHead:hover .catName{color:var(--text);}
   .seeAll{background:none; border:none; color:var(--muted); font-size:11.5px; letter-spacing:0; text-transform:none; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:4px; padding:0; transition:color .15s; font-weight:400;}
   .catHead:hover .seeAll, .seeAll:hover{color:var(--text);}
-  .seeAll .av{display:inline-block; transition:transform .18s; font-size:11px; line-height:1; color:#c8c8cc;}
+  .seeAll .av{display:inline-block; transition:transform .18s; font-size:11px; line-height:1; color:var(--muted);}   /* same grey as the category name (Figma) */
   .seeAll:hover .av{color:var(--muted);}
   /* left-panel brand header: Motion Grid mark + name + a sun/moon theme toggle */
   .pvBrand{display:flex; align-items:center; gap:9px;}
@@ -234,7 +234,7 @@
   .colorRow .clbl{font-size:11px; color:var(--muted); min-width:14px;}
   .swatch{width:30px; height:30px; flex:0 0 auto; border-radius:7px; border:1px solid var(--border); cursor:pointer; padding:0;}   /* Figma swatch: 30×30, rounded-7 */
   .swatch:hover{border-color:#bbb;}
-  .hexInput{flex:1; height:32px; border:1px solid var(--border); border-radius:8px; background:var(--panel2); color:var(--text); font-family:inherit; font-size:12px; padding:0 10px; outline:none; text-transform:uppercase; font-variant-numeric:tabular-nums;}
+  .hexInput{flex:1; height:30px; border:1px solid var(--border); border-radius:8px; background:var(--panel2); color:var(--text); font-family:inherit; font-size:12px; padding:0 10px; outline:none; text-transform:uppercase; font-variant-numeric:tabular-nums;}   /* Figma: 30px tall — matches the 30px swatch */
   .hexInput:focus{border-color:#b6b6c0;}
   .nativeColor{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;}
   /* stylish on/off switch (dark theme toggle) */
@@ -308,14 +308,14 @@
   .thumb:hover .x{display:block;}
   .thumb .x:hover{background:#e5484d; color:#fff; border-color:#e5484d;}
   .thumb.dragover img{border-color:#9b9ba3;}
-  .btn{padding:10px; border-radius:100px; border:none; background:var(--panel2); color:var(--text); cursor:pointer; font-size:12px; font-family:inherit; font-weight:500; transition:background .15s,color .15s;}   /* Figma grey buttons: pill, #f2f2f2, no border */
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:10px; border-radius:100px; border:none; background:var(--panel2); color:var(--text); cursor:pointer; font-size:12px; font-family:inherit; font-weight:500; transition:background .15s,color .15s;}   /* Figma grey buttons: pill, #f2f2f2, no border */
   .btn:hover{background:#efeff2;}
   .btn.primary{background:var(--dark); color:#fff; border-color:var(--dark);}
   #exportBtn{display:flex; align-items:center; justify-content:center; gap:9px;}
   #exportBtn .expIcon{width:18px; height:18px; display:block; flex:0 0 auto;}
   .btn.primary:hover{background:#000;}
   .btn:disabled{opacity:.45; cursor:default;}
-  .btn.sm{padding:10px; font-size:12px;}
+  .btn.sm{height:40px; padding:0 12px; font-size:11px;}   /* Figma Reset / Share: 40px tall, 11px Medium */
   .row2{display:flex; gap:8px;} .row2 .btn{flex:1;}
   #easeCurve{width:100%; height:150px; background:#fafafa; border:1px solid var(--border); border-radius:12px; display:block; touch-action:none; cursor:crosshair;}
   .bezvals{display:flex; gap:5px;}
