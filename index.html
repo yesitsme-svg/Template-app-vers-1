@@ -178,6 +178,15 @@
   .catStrip::-webkit-scrollbar{display:none; width:0; height:0;}
   .catStrip.dragging{cursor:grabbing;}
   .catStrip.dragging *{cursor:grabbing; pointer-events:none;}
+  /* custom scroll indicator: fades in when you hover ANYWHERE on the category (no fiddly thin zone), reflects position, draggable */
+  .catSec{position:relative;}
+  .scrollHint{position:absolute; left:0; right:0; bottom:-1px; height:4px; opacity:0; transition:opacity .18s; pointer-events:none; z-index:3;}
+  .catSec:hover .scrollHint{opacity:1;}
+  .scrollHint .shThumb{position:absolute; top:0; height:100%; min-width:26px; background:#cfcfd4; border-radius:4px; pointer-events:auto; cursor:grab;}
+  .scrollHint .shThumb:hover{background:#b9b9c2;}
+  .scrollHint .shThumb.grab{cursor:grabbing; background:#a9a9b4;}
+  body.dark .scrollHint .shThumb{background:#3a3a3a;}
+  body.dark .scrollHint .shThumb:hover{background:#4a4a4a;}
   .catStrip .pv{flex:0 0 82px;}
   .catSec.expanded .catStrip{flex-wrap:wrap; overflow-x:visible; padding-bottom:0;}
   .catSec.expanded .catStrip .pv{flex:0 0 calc(50% - 4px);}
@@ -2230,6 +2239,31 @@ document.querySelectorAll('#tpls .catStrip').forEach(s=>{
   s.addEventListener('pointercancel', end);
   s.addEventListener('mouseleave', ()=>{ if(down) end(); });
   s.addEventListener('click', e=>{ if(s._suppressClick){ e.stopPropagation(); e.preventDefault(); s._suppressClick=false; } }, true);
+});
+
+/* slim custom scroll indicator per category — fades in on section hover (no thin zone to hit), shows position, draggable */
+document.querySelectorAll('#tpls .catSec').forEach(sec=>{
+  const strip=sec.querySelector('.catStrip'); if(!strip) return;
+  const hint=document.createElement('div'); hint.className='scrollHint';
+  const thumb=document.createElement('div'); thumb.className='shThumb';
+  hint.appendChild(thumb); sec.appendChild(hint);
+  const update=()=>{
+    const sw=strip.scrollWidth, cw=strip.clientWidth;
+    if(sec.classList.contains('expanded') || sw<=cw+2){ hint.style.display='none'; return; }
+    hint.style.display='';
+    const track=hint.clientWidth||cw;
+    const tw=Math.max(26,(cw/sw)*track); thumb.style.width=tw+'px';
+    const maxScroll=sw-cw, maxThumb=track-tw;
+    thumb.style.left=(maxScroll>0?(strip.scrollLeft/maxScroll)*maxThumb:0)+'px';
+  };
+  strip.addEventListener('scroll', update, {passive:true});
+  if('ResizeObserver' in window) new ResizeObserver(update).observe(strip);   // re-measure on expand/collapse + resize
+  let td=false, tx=0, tsl=0;
+  thumb.addEventListener('pointerdown', e=>{ td=true; tx=e.clientX; tsl=strip.scrollLeft; thumb.classList.add('grab'); thumb.setPointerCapture(e.pointerId); e.stopPropagation(); e.preventDefault(); });
+  thumb.addEventListener('pointermove', e=>{ if(!td) return; const sw=strip.scrollWidth, cw=strip.clientWidth, track=hint.clientWidth||cw, maxThumb=track-thumb.offsetWidth, maxScroll=sw-cw, dx=e.clientX-tx; strip.scrollLeft = tsl + dx*(maxThumb>0?maxScroll/maxThumb:0); });
+  const tend=()=>{ td=false; thumb.classList.remove('grab'); };
+  thumb.addEventListener('pointerup', tend); thumb.addEventListener('pointercancel', tend);
+  update();
 });
 
 /* ================= live template previews (arqe-style) =================
