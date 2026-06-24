@@ -172,16 +172,12 @@
   .themeBtn svg{width:17px; height:17px; display:block;}
   .themeBtn .moon{display:none;}   /* no moon icon — Figma header only ever shows the sun */
   .catSec.expanded .seeAll .av{transform:rotate(90deg);}
-  .catStrip{display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; margin-right:-22px; scrollbar-color:auto;}   /* scrollbar-color:auto un-inherits the panel's color so ::-webkit styling applies again (else Chrome draws a native 15px bar) */
+  .catStrip{display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; margin-right:-22px; scrollbar-width:none; -ms-overflow-style:none;}   /* scrollbar hidden — navigate by dragging the row */
   .catSec.expanded .catStrip{margin-right:0;}
-  /* strip scrollbar: hidden until you hover the strip, then a subtle thin pill (was always-on, looked noisy) */
-  .catStrip::-webkit-scrollbar{height:6px;}
-  .catStrip::-webkit-scrollbar-track{background:transparent;}
-  .catStrip::-webkit-scrollbar-thumb{background:transparent; border-radius:6px; transition:background .2s;}
-  .catStrip:hover::-webkit-scrollbar-thumb{background:#d2d2d8;}
-  .catStrip::-webkit-scrollbar-thumb:hover{background:#bcbcc4;}
-  body.dark .catStrip:hover::-webkit-scrollbar-thumb{background:#3f3f3f;}
-  body.dark .catStrip::-webkit-scrollbar-thumb:hover{background:#525252;}
+  /* strip scrollbar fully hidden — drag the row to scroll (carousel); trackpad / shift-wheel also work; "See all" opens the full grid */
+  .catStrip::-webkit-scrollbar{display:none; width:0; height:0;}
+  .catStrip.dragging{cursor:grabbing;}
+  .catStrip.dragging *{cursor:grabbing; pointer-events:none;}
   .catStrip .pv{flex:0 0 82px;}
   .catSec.expanded .catStrip{flex-wrap:wrap; overflow-x:visible; padding-bottom:0;}
   .catSec.expanded .catStrip .pv{flex:0 0 calc(50% - 4px);}
@@ -2215,6 +2211,25 @@ TEMPLATES.forEach(t=>{
   b.appendChild(cv); b.appendChild(span);
   b.addEventListener('click',()=>applyTemplate(t));
   curStrip.appendChild(b);
+});
+
+/* drag-to-scroll the template rows (scrollbar is hidden). A small movement threshold keeps plain clicks = select. */
+document.querySelectorAll('#tpls .catStrip').forEach(s=>{
+  let down=false, startX=0, startScroll=0, moved=0;
+  s.addEventListener('pointerdown', e=>{
+    if(e.button!==0 || s.closest('.catSec').classList.contains('expanded')) return;
+    down=true; startX=e.clientX; startScroll=s.scrollLeft; moved=0;
+  });
+  s.addEventListener('pointermove', e=>{
+    if(!down) return;
+    const dx=e.clientX-startX; if(Math.abs(dx)>moved) moved=Math.abs(dx);
+    if(moved>4){ s.classList.add('dragging'); s.scrollLeft=startScroll-dx; }
+  });
+  const end=()=>{ if(!down) return; down=false; s._suppressClick=moved>4; setTimeout(()=>s.classList.remove('dragging'),0); };
+  s.addEventListener('pointerup', end);
+  s.addEventListener('pointercancel', end);
+  s.addEventListener('mouseleave', ()=>{ if(down) end(); });
+  s.addEventListener('click', e=>{ if(s._suppressClick){ e.stopPropagation(); e.preventDefault(); s._suppressClick=false; } }, true);
 });
 
 /* ================= live template previews (arqe-style) =================
