@@ -39,13 +39,11 @@
   body.dark #stage{ box-shadow:0 18px 60px rgba(0,0,0,.55), 0 4px 14px rgba(0,0,0,.4); }
   /* ===== dark-theme contrast pass: clean neutral greys; reserve white for the Export action ===== */
   /* scrollbars — slim, neutral, muted (not bright, not invisible) */
-  body.dark aside, body.dark #setScroll, body.dark .catStrip{ scrollbar-color:#404040 transparent; }   /* Firefox — arqe input grey */
+  body.dark aside, body.dark #setScroll{ scrollbar-color:#404040 transparent; }   /* Firefox — arqe input grey */
   body.dark aside::-webkit-scrollbar-thumb,
-  body.dark #setScroll::-webkit-scrollbar-thumb,
-  body.dark .catStrip::-webkit-scrollbar-thumb{ background:#404040; }
+  body.dark #setScroll::-webkit-scrollbar-thumb{ background:#404040; }
   body.dark aside::-webkit-scrollbar-thumb:hover,
-  body.dark #setScroll::-webkit-scrollbar-thumb:hover,
-  body.dark .catStrip::-webkit-scrollbar-thumb:hover{ background:#525252; }
+  body.dark #setScroll::-webkit-scrollbar-thumb:hover{ background:#525252; }
   /* slider + timeline tracks/handles (track = arqe muted #262626, handle = arqe ring #737373) */
   body.dark input[type=range]{ background:#262626; }
   body.dark input[type=range]::-webkit-slider-thumb{ background:#737373; }
@@ -174,11 +172,16 @@
   .themeBtn svg{width:17px; height:17px; display:block;}
   .themeBtn .moon{display:none;}   /* no moon icon — Figma header only ever shows the sun */
   .catSec.expanded .seeAll .av{transform:rotate(90deg);}
-  .catStrip{display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; scrollbar-width:thin; margin-right:-22px;}   /* bleed the strip all the way to the panel edge (past padding + scrollbar) — last thumb cuts at the border */
+  .catStrip{display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; margin-right:-22px;}   /* bleed the strip all the way to the panel edge (past padding + scrollbar) — last thumb cuts at the border */
   .catSec.expanded .catStrip{margin-right:0;}
-  .catStrip::-webkit-scrollbar{height:4px;}
+  /* strip scrollbar: hidden until you hover the strip, then a subtle thin pill (was always-on, looked noisy) */
+  .catStrip::-webkit-scrollbar{height:6px;}
   .catStrip::-webkit-scrollbar-track{background:transparent;}
-  .catStrip::-webkit-scrollbar-thumb{background:#cfcfd4; border-radius:3px;}   /* thin + muted, not chunky */
+  .catStrip::-webkit-scrollbar-thumb{background:transparent; border-radius:6px; transition:background .2s;}
+  .catStrip:hover::-webkit-scrollbar-thumb{background:#d2d2d8;}
+  .catStrip::-webkit-scrollbar-thumb:hover{background:#bcbcc4;}
+  body.dark .catStrip:hover::-webkit-scrollbar-thumb{background:#3f3f3f;}
+  body.dark .catStrip::-webkit-scrollbar-thumb:hover{background:#525252;}
   .catStrip .pv{flex:0 0 82px;}
   .catSec.expanded .catStrip{flex-wrap:wrap; overflow-x:visible; padding-bottom:0;}
   .catSec.expanded .catStrip .pv{flex:0 0 calc(50% - 4px);}
