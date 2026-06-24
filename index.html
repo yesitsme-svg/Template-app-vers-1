@@ -1932,7 +1932,7 @@ function sceneHasBacks(){
 const FLAT_ROT_FADE=new Set(['diagCascade','wreath','scrollCols','scrollRows','gridDrift','filmstrip','vScroll','gridPop','marquee']); // flat at rest, real depth once tilted
 // scenes that use the ON-SCREEN FROZEN fade span (near visible card full-bright, melts to dark, no breathing as
 // cards recycle). = the flat-rot scenes PLUS Field Flight (a fly-through whose visible depth window is constant).
-const FROZEN_SPAN_FADE=new Set([...FLAT_ROT_FADE,'field','globe']); // spiral drives its own p-based fade (see engine)
+const FROZEN_SPAN_FADE=new Set([...FLAT_ROT_FADE,'field','globe','stackReveal','stackFeed']); // spiral drives its own p-based fade (see engine). Decks recycle cards front→back, so freeze the span → no opacity "pop" as a new card resurfaces.
 function applyDepthFade(){
   if(state.template && state.template.scene==='spiral') return; // spiral sets uFade itself from p (depth)
   const f=state.fade;
