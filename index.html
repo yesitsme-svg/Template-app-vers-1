@@ -172,7 +172,7 @@
   .themeBtn svg{width:17px; height:17px; display:block;}
   .themeBtn .moon{display:none;}   /* no moon icon — Figma header only ever shows the sun */
   .catSec.expanded .seeAll .av{transform:rotate(90deg);}
-  .catStrip{display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; margin-right:-22px;}   /* bleed the strip all the way to the panel edge (past padding + scrollbar) — last thumb cuts at the border */
+  .catStrip{display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; margin-right:-22px; scrollbar-color:auto;}   /* scrollbar-color:auto un-inherits the panel's color so ::-webkit styling applies again (else Chrome draws a native 15px bar) */
   .catSec.expanded .catStrip{margin-right:0;}
   /* strip scrollbar: hidden until you hover the strip, then a subtle thin pill (was always-on, looked noisy) */
   .catStrip::-webkit-scrollbar{height:6px;}
