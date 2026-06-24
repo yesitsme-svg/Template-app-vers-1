@@ -2872,7 +2872,11 @@ window.addEventListener('keydown',e=>{
 const tlTrack=$('tlTrack');
 function updateTimeline(){
   if(!active) return;
-  const loop=active.loopSeconds, t=((animTime%loop)+loop)%loop, f=loop>0?t/loop:0;
+  const loop=active.loopSeconds;
+  // playhead rides a CONTINUOUS clock (animTime + the sub-step remainder) so it glides at the display refresh
+  // rate, even though the 3D motion is intentionally stepped at the export FPS. No reflow stutter, no 30fps hop.
+  const tRaw = state.playing ? animTime + fpsAccum*(state.speed||1) : animTime;
+  const t=((tRaw%loop)+loop)%loop, f=loop>0?t/loop:0;
   $('tlFill').style.width=(f*100)+'%';
   $('tlHead').style.left=(f*100)+'%';
   const sp=state.speed||1; // playback time = engine time / speed → reflects the real video duration
