@@ -634,8 +634,8 @@
         <button type="button" data-v="4k">4K</button>
       </div>
     </div>
-    <div class="dd" id="ddFps" data-value="30">
-      <button class="ddBtn" type="button"><span class="ddVal">30 fps</span><span class="ddCar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
+    <div class="dd" id="ddFps" data-value="60">
+      <button class="ddBtn" type="button"><span class="ddVal">60 fps</span><span class="ddCar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
       <div class="ddPop">
         <button type="button" data-v="24">24 fps</button>
         <button type="button" data-v="30">30 fps</button>
@@ -1768,7 +1768,7 @@ const state={
   template:null, P:{}, ease:'Smooth', bez:[.76,0,.24,1], easeFn:null,
   dir:1, bg:'#0d0d0d', bg2:'#2a1a5c', fillMode:'solid', transparent:false, bgAlpha:1, bg2Alpha:1, ratio:'3:4',
   playing:true, grain:false, speed:1, size:1, comp:1, lens:0,
-  spacing:1, rotY:0, rotX:0, fade:0, exportRes:'2k', fps:30, dark:false, customW:1080, customH:1080, backface:false,
+  spacing:1, rotY:0, rotX:0, fade:0, exportRes:'2k', fps:60, dark:false, customW:1080, customH:1080, backface:false,
 };
 let active=null, animTime=0, builtSpacing=1;
 // presets that read spacing LIVE in their own update() (count baked, pitch/radius live) → smooth, no rebuild
@@ -2141,7 +2141,7 @@ renderer.domElement.addEventListener('pointerdown',e=>{
   replaceSlot=slot; replaceInput.click(); // override just this slot
 });
 function updateLoopInfo(){
-  const el=$('loopInfo'); if(active&&el) el.textContent=`Loop ≈ ${(active.loopSeconds/state.speed).toFixed(1)} s · 30 fps`;
+  const el=$('loopInfo'); if(active&&el) el.textContent=`Loop ≈ ${(active.loopSeconds/state.speed).toFixed(1)} s · ${state.fps} fps`;
 }
 function applyTemplate(t){
   state.template=t;
