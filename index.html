@@ -1033,7 +1033,7 @@ const SCENES = {
             m.position.set(0,s*gy+bob,-s*gz);
             m.scale.setScalar(1-s*shrink);
             setCardOpacity(m,1);
-            m.renderOrder=n-Math.round(s);
+            m.renderOrder=n-s;   // CONTINUOUS (was Math.round(s)) — integer rounding made adjacent cards tie/swap draw order each frame → opacity flicker (depthTest is off, so painter's order is everything)
           }
         }
       } };
