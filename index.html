@@ -2064,7 +2064,7 @@ EASINGS.forEach(e=>{
     if(Math.min(d1,d2)>20) return;
     dragH=d1<=d2?0:1;
     dragRange={yMin:curveMap.yMin,yMax:curveMap.yMax};
-    cv.setPointerCapture(e.pointerId);
+    try{ cv.setPointerCapture(e.pointerId); }catch(_){}
   });
   cv.addEventListener('pointermove',e=>{
     if(dragH<0||!curveMap) return;
@@ -2733,7 +2733,7 @@ function closePicker(){ cpop.classList.remove('show'); cpop.style.display='none'
 // SV drag
 function svDrag(e){ const r=cpSV.getBoundingClientRect(); const x=(e.clientX-r.left)/r.width, y=(e.clientY-r.top)/r.height; cpState.s=Math.max(0,Math.min(1,x)); cpState.v=Math.max(0,Math.min(1,1-y)); cpRender(); cpCommit(); }
 function hueDrag(e){ const r=cpHue.getBoundingClientRect(); const x=(e.clientX-r.left)/r.width; cpState.h=Math.max(0,Math.min(360,x*360)); cpRender(); cpCommit(); }
-function dragStart(el,handler){ el.addEventListener('pointerdown',e=>{ e.preventDefault(); el.setPointerCapture(e.pointerId); handler(e); const mv=ev=>handler(ev); const up=ev=>{ el.releasePointerCapture(e.pointerId); el.removeEventListener('pointermove',mv); el.removeEventListener('pointerup',up); }; el.addEventListener('pointermove',mv); el.addEventListener('pointerup',up); }); }
+function dragStart(el,handler){ el.addEventListener('pointerdown',e=>{ e.preventDefault(); try{ el.setPointerCapture(e.pointerId); }catch(_){} handler(e); const mv=ev=>handler(ev); const up=ev=>{ try{ el.releasePointerCapture(e.pointerId); }catch(_){} el.removeEventListener('pointermove',mv); el.removeEventListener('pointerup',up); }; el.addEventListener('pointermove',mv); el.addEventListener('pointerup',up); }); }
 dragStart(cpSV,svDrag); dragStart(cpHue,hueDrag);
 cpHex.addEventListener('input',()=>{ let v='#'+cpHex.value.trim().replace('#',''); if(isHex(v)){ const [h,s,vv]=rgb2hsv(...hex2rgb(v)); cpState.h=h; cpState.s=s; cpState.v=vv; cpRender(); state[cpState.key]=v; if(cpState.paint)cpState.paint(); applyBackground(); } });
 cpAlpha.addEventListener('input',()=>{ const pct=parseInt(cpAlpha.value,10); if(cpState.alphaKey) state[cpState.alphaKey]=pct/100; cpAlphaVal.textContent=pct+'%'; applyBackground(); });
@@ -2937,7 +2937,7 @@ function scrubTo(e){
 tlTrack.addEventListener('pointerdown',e=>{
   if(exporting) return;
   scrubbing=true; state.playing=false; updatePlayBtn();
-  tlTrack.setPointerCapture(e.pointerId); scrubTo(e);
+  try{ tlTrack.setPointerCapture(e.pointerId); }catch(_){} scrubTo(e);
 });
 tlTrack.addEventListener('pointermove',e=>{ if(scrubbing) scrubTo(e); });
 ['pointerup','pointercancel'].forEach(ev=>tlTrack.addEventListener(ev,()=>{ scrubbing=false; }));
