@@ -178,15 +178,16 @@
   .catStrip::-webkit-scrollbar{display:none; width:0; height:0;}
   .catStrip.dragging{cursor:grabbing;}
   .catStrip.dragging *{cursor:grabbing; pointer-events:none;}
-  /* custom scroll indicator: fades in when you hover ANYWHERE on the category (no fiddly thin zone), reflects position, draggable */
+  /* custom scroll indicator: ALWAYS visible but faint (no appear/disappear — predictable), a touch clearer on hover, draggable */
   .catSec{position:relative;}
-  .scrollHint{position:absolute; left:0; right:0; bottom:-1px; height:4px; opacity:0; transition:opacity .18s; pointer-events:none; z-index:3;}
-  .catSec:hover .scrollHint{opacity:1;}
-  .scrollHint .shThumb{position:absolute; top:0; height:100%; min-width:26px; background:#cfcfd4; border-radius:4px; pointer-events:auto; cursor:grab;}
+  .scrollHint{position:absolute; left:0; right:0; bottom:-1px; height:4px; pointer-events:none; z-index:3;}
+  .scrollHint .shThumb{position:absolute; top:0; height:100%; min-width:26px; background:#e6e6ec; border-radius:4px; pointer-events:auto; cursor:grab; transition:background .18s;}   /* faint at rest */
+  .catSec:hover .scrollHint .shThumb{background:#cfcfd4;}                 /* a bit clearer while you're in this category */
   .scrollHint .shThumb:hover{background:#b9b9c2;}
   .scrollHint .shThumb.grab{cursor:grabbing; background:#a9a9b4;}
-  body.dark .scrollHint .shThumb{background:#3a3a3a;}
-  body.dark .scrollHint .shThumb:hover{background:#4a4a4a;}
+  body.dark .scrollHint .shThumb{background:#262626;}
+  body.dark .catSec:hover .scrollHint .shThumb{background:#383838;}
+  body.dark .scrollHint .shThumb:hover{background:#484848;}
   .catStrip .pv{flex:0 0 82px;}
   .catSec.expanded .catStrip{flex-wrap:wrap; overflow-x:visible; padding-bottom:0;}
   .catSec.expanded .catStrip .pv{flex:0 0 calc(50% - 4px);}
