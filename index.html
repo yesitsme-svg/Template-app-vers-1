@@ -142,10 +142,8 @@
   .pvGrid{display:flex; flex-direction:column; gap:15px;}
   .catSec{display:flex; flex-direction:column; gap:7px;}
   .catHead{display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none;}
-  .catName{font-size:11px; letter-spacing:0; text-transform:none; color:var(--muted); font-weight:500;}
-  .catHead:hover .catName{color:var(--text);}
-  .seeAll{background:none; border:none; color:var(--muted); font-size:11.5px; letter-spacing:0; text-transform:none; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:4px; padding:0; transition:color .15s; font-weight:400;}
-  .catHead:hover .seeAll, .seeAll:hover{color:var(--text);}
+  .catName{font-size:11px; letter-spacing:0; text-transform:none; color:var(--muted); font-weight:500;}   /* #888 (Figma) — stays #888, no hover darkening */
+  .seeAll{background:none; border:none; color:var(--muted); font-size:11.5px; letter-spacing:0; text-transform:none; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:4px; padding:0; transition:color .15s; font-weight:400;}   /* same grey as the category name — locked at #888 */
   .seeAll .av{display:inline-block; transition:transform .18s; font-size:11px; line-height:1; color:var(--muted);}   /* same grey as the category name (Figma) */
   .seeAll:hover .av{color:var(--muted);}
   /* left-panel brand header: Motion Grid mark + name + a sun/moon theme toggle */
