@@ -124,6 +124,15 @@
   h1{font-size:13px; font-weight:500; letter-spacing:.08em; text-transform:uppercase;}
   h1 span{color:var(--muted); font-weight:400;}
   .group{display:flex; flex-direction:column; gap:8px;}
+  /* collapsible right-panel sections (Layout / Camera / Motion / Cards / Background) */
+  .sec{display:flex; flex-direction:column;}
+  .secHead{display:flex; align-items:center; justify-content:space-between; width:100%; background:none; border:none; padding:0; cursor:pointer; font-family:inherit; color:var(--text); font-size:13px; font-weight:600; user-select:none;}
+  .secHead .secChev{width:16px; height:16px; flex:0 0 auto; color:var(--muted); transition:transform .2s;}
+  .sec.collapsed .secHead .secChev{transform:rotate(-90deg);}
+  .secBody{display:flex; flex-direction:column; gap:16px; padding-top:14px;}
+  .secBody .group{gap:11px;}                 /* a touch more air between the slider name and its track */
+  .sec.collapsed .secBody{display:none;}
+  .slider-row .label{color:var(--muted); font-weight:500;}   /* slider names read grey */
   .label{font-size:11.5px; letter-spacing:0; text-transform:none; color:var(--text); font-weight:500;}
   .label small{color:var(--muted); letter-spacing:0; text-transform:none; font-weight:400;}
   .pvGrid{display:flex; flex-direction:column; gap:15px;}
@@ -174,7 +183,7 @@
   }
   .chip:hover{background:#efeff2;}
   .chip.active{background:var(--dark); color:#fff; border-color:var(--dark); font-weight:500;}
-  .seg{display:flex; background:var(--panel2); border:1px solid var(--border); border-radius:100px; overflow:hidden; padding:3px; gap:3px;}
+  .seg{display:flex; background:var(--panel2); border:none; border-radius:100px; overflow:hidden; padding:3px; gap:3px;}
   .seg button{flex:1; padding:6px 0; background:transparent; border:none; border-radius:100px; color:var(--muted); cursor:pointer; font-size:11.5px; font-family:inherit;}
   .seg button.active{background:var(--dark); color:#fff; font-weight:500;}
   /* easing locked (continuous presets): chips visible but greyed, Linear shown active */
@@ -205,9 +214,9 @@
   .slider-row .label.resettable{cursor:pointer;}
   .valEdit{width:54px; font:inherit; font-size:11.5px; text-align:right; border:1px solid #b6b6c0; border-radius:4px; padding:1px 4px; background:#fff; color:#111; outline:none; -moz-appearance:textfield;}
   .valEdit::-webkit-outer-spin-button,.valEdit::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
-  input[type=range]{-webkit-appearance:none; width:100%; height:3px; background:#e3e2e8; border-radius:2px; outline:none;}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:11px; height:11px; border-radius:50%; background:var(--dark); cursor:pointer; border:none; box-shadow:none;}
-  input[type=range]::-moz-range-thumb{width:11px; height:11px; border-radius:50%; background:var(--dark); cursor:pointer; border:none; box-shadow:none;}
+  input[type=range]{-webkit-appearance:none; width:100%; height:2px; background:#e3e2e8; border-radius:2px; outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:13px; height:13px; border-radius:50%; background:var(--dark); cursor:pointer; border:none; box-shadow:none;}
+  input[type=range]::-moz-range-thumb{width:13px; height:13px; border-radius:50%; background:var(--dark); cursor:pointer; border:none; box-shadow:none;}
   input[type=color]{width:100%; height:32px; border:1px solid var(--border); border-radius:10px; background:var(--panel2); cursor:pointer; padding:3px 5px;}
   /* block separators so the panel sections read as distinct cards (Figma/Framer style) */
   /* full-bleed divider lines (edge-to-edge of the panel) with generous breathing room each side */
@@ -218,7 +227,7 @@
   .colorField{display:flex; align-items:center; gap:8px;}
   .colorRow{display:flex; align-items:center; gap:8px;}
   .colorRow .clbl{font-size:11px; color:var(--muted); min-width:14px;}
-  .swatch{width:34px; height:34px; flex:0 0 auto; border-radius:7px; border:1px solid var(--border); cursor:pointer; padding:0;}
+  .swatch{width:28px; height:28px; flex:0 0 auto; border-radius:7px; border:1px solid var(--border); cursor:pointer; padding:0;}
   .swatch:hover{border-color:#bbb;}
   .hexInput{flex:1; height:32px; border:1px solid var(--border); border-radius:8px; background:var(--panel2); color:var(--text); font-family:inherit; font-size:12px; padding:0 10px; outline:none; text-transform:uppercase; font-variant-numeric:tabular-nums;}
   .hexInput:focus{border-color:#b6b6c0;}
@@ -237,7 +246,8 @@
   #exportBar .exrow{display:flex; gap:8px;}
   /* Figma-style custom dropdowns (open upward — they live at the panel bottom) */
   .dd{position:relative; flex:1;}
-  .ddBtn{width:100%; height:34px; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:0 11px; background:var(--panel2); border:1px solid var(--border); border-radius:9px; color:var(--text); font-size:12px; font-family:inherit; cursor:pointer;}
+  .ddBtn{width:100%; height:34px; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:0 11px; background:#e7e7eb; border:none; border-radius:9px; color:var(--text); font-size:12px; font-family:inherit; cursor:pointer;}
+  body.dark .ddBtn{background:#262626;}
   .ddBtn:hover{border-color:#bbb;}
   .dd.open .ddBtn{border-color:#b6b6c0;}
   .ddCar{display:flex; align-items:center; color:var(--muted); transition:transform .15s;}
@@ -300,7 +310,7 @@
   #exportBtn .expIcon{width:18px; height:18px; display:block; flex:0 0 auto;}
   .btn.primary:hover{background:#000;}
   .btn:disabled{opacity:.45; cursor:default;}
-  .btn.sm{padding:7px; font-size:11px;}
+  .btn.sm{padding:10px; font-size:12px;}
   .row2{display:flex; gap:8px;} .row2 .btn{flex:1;}
   #easeCurve{width:100%; height:150px; background:#fafafa; border:1px solid var(--border); border-radius:12px; display:block; touch-action:none; cursor:crosshair;}
   .bezvals{display:flex; gap:5px;}
@@ -461,92 +471,112 @@
     <div class="hint" id="demoHint">Showing demo posters — drop your own, or click any card in the frame to replace it.</div>
   </div>
 
-  <div class="group">
-    <div class="slider-row"><div class="label">Card size</div><div class="val" id="sizeVal">×1.00</div></div>
-    <input type="range" id="cardSize" min="0.15" max="2.5" step="0.01" value="1">
-  </div>
-
-  <div class="group" id="spaceGroup">
-    <div class="slider-row"><div class="label">Spacing</div><div class="val" id="spacingVal">×1.00</div></div>
-    <input type="range" id="spacing" min="0.5" max="2.8" step="0.01" value="1">
-  </div>
-
-  <div class="group">
-    <div class="slider-row"><div class="label">Zoom</div><div class="val" id="compVal">×1.00</div></div>
-    <input type="range" id="compScale" min="0.1" max="2.5" step="0.01" value="1">
-  </div>
-
-  <div class="group">
-    <div class="slider-row"><div class="label">Speed</div><div class="val" id="speedVal">×1.00</div></div>
-    <input type="range" id="speed" min="0.25" max="2" step="0.01" value="1">
-  </div>
-
-  <div class="group" id="fadeGroup">
-    <div class="slider-row"><div class="label">Depth fade</div><div class="val" id="fadeVal">0%</div></div>
-    <input type="range" id="fade" min="0" max="100" step="1" value="0">
-    <div class="hint" id="fadeLockHint" style="display:none">Flat layout — all cards sit on one plane, so there's no depth to fade.</div>
-  </div>
-
-  <div class="group" id="rotGroup">
-    <div class="slider-row"><div class="label">Rotate Y</div><div class="val" id="rotYVal">0°</div></div>
-    <input type="range" id="rotY" min="-45" max="45" step="1" value="0">
-    <div class="slider-row" style="margin-top:4px"><div class="label">Rotate X</div><div class="val" id="rotXVal">0°</div></div>
-    <input type="range" id="rotX" min="-45" max="45" step="1" value="0">
-    <div class="hint" id="rotLockHint" style="display:none">This preset drives its own camera, so manual tilt is off here — it would fling the framing off-screen.</div>
-  </div>
-
-  <div class="group" id="backGroup">
-    <div class="rowBetween"><div class="label">Hide card backs</div>
-      <button class="switch" id="backToggle" role="switch" aria-checked="false" title="Hide the rear of cards once they turn away"><span class="knob"></span></button>
-    </div>
-    <div class="hint" id="backHint">Hides card backs once they turn away.</div>
-  </div>
-
-  <div class="group" id="easeGroup">
-    <div class="label">Easing</div>
-    <div class="chips" id="easeChips"></div>
-    <div class="hint" id="easeLockHint" style="display:none">Continuous loop — Linear keeps it perfectly smooth. Other curves add an ease-in/out each cycle.</div>
-    <button class="disclose" id="easeToggle"><span class="chev">›</span><span id="easeToggleLabel">Adjust curve</span></button>
-    <div id="easeAdvanced" style="display:none">
-      <canvas id="easeCurve"></canvas>
-      <div class="bezvals" id="bezVals"></div>
-      <div class="hint">Drag the two handles to shape the curve.</div>
-    </div>
-  </div>
-
-  <div class="group">
-    <div class="label">Direction</div>
-    <div class="seg" id="dirSeg">
-      <button data-v="1" class="active">Forward</button>
-      <button data-v="-1">Reverse</button>
-    </div>
-  </div>
-
-  <div class="group">
-    <div class="slider-row"><div class="label">Corner radius</div><div class="val" id="cornerVal">0</div></div>
-    <input type="range" id="corner" min="0" max="12" step="0.5" value="0">
-    <div class="slider-row" style="margin-top:7px"><div class="label">Lens (fisheye)</div><div class="val" id="lensVal">0</div></div>
-    <input type="range" id="lens" min="-100" max="100" step="1" value="0">
-  </div>
-
-  <div class="group">
-    <div class="label">Background</div>
-    <div class="seg" id="bgModeSeg">
-      <button data-v="solid" class="active">Solid</button>
-      <button data-v="gradient">Gradient</button>
-      <button data-v="transparent">Transparent</button>
-    </div>
-    <div id="bgFill">
-      <div class="colorField" style="margin-top:8px">
-        <button class="swatch" id="bgSwatch"></button>
-        <input type="text" class="hexInput" id="bgHex" maxlength="7" value="#0D0D0D" spellcheck="false">
+  <div class="sec">
+    <button class="secHead" type="button"><span>Layout</span><svg class="secChev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="secBody">
+      <div class="group">
+        <div class="slider-row"><div class="label">Card size</div><div class="val" id="sizeVal">1.00</div></div>
+        <input type="range" id="cardSize" min="0.15" max="2.5" step="0.01" value="1">
       </div>
-      <div class="colorField" id="bgField2" style="margin-top:7px; display:none">
-        <button class="swatch" id="bgSwatch2"></button>
-        <input type="text" class="hexInput" id="bgHex2" maxlength="7" value="#2A1A5C" spellcheck="false">
+      <div class="group" id="spaceGroup">
+        <div class="slider-row"><div class="label">Spacing</div><div class="val" id="spacingVal">1.00</div></div>
+        <input type="range" id="spacing" min="0.5" max="2.8" step="0.01" value="1">
       </div>
     </div>
-    <div class="hint" id="bgHint" style="display:none">Transparency is kept in PNG export. MP4 has no alpha — video is rendered on the chosen color.</div>
+  </div>
+
+  <div class="sec">
+    <button class="secHead" type="button"><span>Camera</span><svg class="secChev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="secBody">
+      <div class="group">
+        <div class="slider-row"><div class="label">Zoom</div><div class="val" id="compVal">1.00</div></div>
+        <input type="range" id="compScale" min="0.1" max="2.5" step="0.01" value="1">
+      </div>
+      <div class="group" id="rotGroup">
+        <div class="slider-row"><div class="label">Rotate Y</div><div class="val" id="rotYVal">0°</div></div>
+        <input type="range" id="rotY" min="-45" max="45" step="1" value="0">
+        <div class="slider-row" style="margin-top:4px"><div class="label">Rotate X</div><div class="val" id="rotXVal">0°</div></div>
+        <input type="range" id="rotX" min="-45" max="45" step="1" value="0">
+        <div class="hint" id="rotLockHint" style="display:none">This preset drives its own camera, so manual tilt is off here — it would fling the framing off-screen.</div>
+      </div>
+      <div class="group" id="fadeGroup">
+        <div class="slider-row"><div class="label">Depth fade</div><div class="val" id="fadeVal">0%</div></div>
+        <input type="range" id="fade" min="0" max="100" step="1" value="0">
+        <div class="hint" id="fadeLockHint" style="display:none">Flat layout — all cards sit on one plane, so there's no depth to fade.</div>
+      </div>
+      <div class="group">
+        <div class="slider-row"><div class="label">Lens (fisheye)</div><div class="val" id="lensVal">0</div></div>
+        <input type="range" id="lens" min="-100" max="100" step="1" value="0">
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <button class="secHead" type="button"><span>Motion</span><svg class="secChev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="secBody">
+      <div class="group">
+        <div class="slider-row"><div class="label">Speed</div><div class="val" id="speedVal">1.00</div></div>
+        <input type="range" id="speed" min="0.25" max="2" step="0.01" value="1">
+      </div>
+      <div class="group" id="easeGroup">
+        <div class="label">Easing</div>
+        <div class="chips" id="easeChips"></div>
+        <div class="hint" id="easeLockHint" style="display:none">Continuous loop — Linear keeps it perfectly smooth. Other curves add an ease-in/out each cycle.</div>
+        <button class="disclose" id="easeToggle"><span class="chev">›</span><span id="easeToggleLabel">Adjust curve</span></button>
+        <div id="easeAdvanced" style="display:none">
+          <canvas id="easeCurve"></canvas>
+          <div class="bezvals" id="bezVals"></div>
+          <div class="hint">Drag the two handles to shape the curve.</div>
+        </div>
+      </div>
+      <div class="group">
+        <div class="label">Direction</div>
+        <div class="seg" id="dirSeg">
+          <button data-v="1" class="active">Forward</button>
+          <button data-v="-1">Reverse</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <button class="secHead" type="button"><span>Cards</span><svg class="secChev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="secBody">
+      <div class="group">
+        <div class="slider-row"><div class="label">Corner radius</div><div class="val" id="cornerVal">0</div></div>
+        <input type="range" id="corner" min="0" max="12" step="0.5" value="0">
+      </div>
+      <div class="group" id="backGroup">
+        <div class="rowBetween"><div class="label">Hide card backs</div>
+          <button class="switch" id="backToggle" role="switch" aria-checked="false" title="Hide the rear of cards once they turn away"><span class="knob"></span></button>
+        </div>
+        <div class="hint" id="backHint">Hides card backs once they turn away.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <button class="secHead" type="button"><span>Background</span><svg class="secChev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="secBody">
+      <div class="group">
+        <div class="seg" id="bgModeSeg">
+          <button data-v="solid" class="active">Solid</button>
+          <button data-v="gradient">Gradient</button>
+          <button data-v="transparent">Transparent</button>
+        </div>
+        <div id="bgFill">
+          <div class="colorField" style="margin-top:8px">
+            <button class="swatch" id="bgSwatch"></button>
+            <input type="text" class="hexInput" id="bgHex" maxlength="7" value="#0D0D0D" spellcheck="false">
+          </div>
+          <div class="colorField" id="bgField2" style="margin-top:7px; display:none">
+            <button class="swatch" id="bgSwatch2"></button>
+            <input type="text" class="hexInput" id="bgHex2" maxlength="7" value="#2A1A5C" spellcheck="false">
+          </div>
+        </div>
+        <div class="hint" id="bgHint" style="display:none">Transparency is kept in PNG export. MP4 has no alpha — video is rendered on the chosen color.</div>
+      </div>
+    </div>
   </div>
 
   <div class="group">
@@ -2675,6 +2705,8 @@ wireColor('bgSwatch2','bgHex2','bg2',true);   // gradient 2nd stop — same glob
 /* dark theme toggle */
 function applyTheme(){ document.body.classList.toggle('dark',state.dark); const t=$('themeToggle'); t.classList.toggle('on',state.dark); t.setAttribute('aria-checked',state.dark?'true':'false'); }
 $('themeToggle').addEventListener('click',()=>{ state.dark=!state.dark; applyTheme(); });
+// collapsible right-panel sections (Layout / Camera / Motion / Cards / Background)
+document.querySelectorAll('.secHead').forEach(h=>h.addEventListener('click',()=>h.closest('.sec').classList.toggle('collapsed')));
 // #11/#12 aspect ratio in the panel: px tooltip per option + a custom W×H mode
 function exportPxFor(ratioKey){
   if(ratioKey==='custom') return `${state.customW}×${state.customH}px`;
