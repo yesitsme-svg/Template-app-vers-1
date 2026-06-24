@@ -19,7 +19,7 @@
     src:url(https://d2pas86kykpvmq.cloudfront.net/fonts/Garnett-Bold.ttf) format('truetype');
   }
   :root{
-    --bg:#f4f4f6; --panel:#fff; --panel2:#f8f8f8; --border:#e3e2e8;
+    --bg:#f4f4f6; --panel:#fff; --panel2:#f2f2f2; --border:#e3e2e8;
     --text:#1c1c1c; --muted:#888; --dark:#000; --accent:#713ade;
   }
   body.dark{
@@ -83,13 +83,13 @@
   #topnav{
     flex:0 0 52px; height:52px; display:flex; align-items:center; gap:24px;
     padding:0 20px; background:var(--panel); border-bottom:1px solid var(--border);
-    position:relative; z-index:200; font-size:13px;
-  }   /* wannathis nav: delicate — 13px Regular (looked heavy at 14px Medium) */
+    position:relative; z-index:200; font-size:14px;
+  }   /* Figma nav: exactly 14px Medium */
   #topnav .navleft{display:flex; align-items:center; gap:24px;}
   #topnav .navlogo{display:inline-flex; width:30px; height:30px; flex:0 0 auto;}
   #topnav .navlogo svg{width:100%; height:100%; display:block;}
   /* logo keeps its built-in white disc as a backing in BOTH themes (no invert) — like mockup online */
-  #topnav a{color:var(--text); text-decoration:none; font-weight:400; white-space:nowrap; transition:color .15s;}
+  #topnav a{color:var(--text); text-decoration:none; font-weight:500; white-space:nowrap; transition:color .15s;}   /* Figma nav: Medium */
   #topnav .navleft > a:not(.navlogo), #topnav .navdrop > .navlink{color:var(--text);}   /* Figma nav: items black */
   #topnav .navleft > a:not(.navlogo):hover, #topnav .navdrop > .navlink:hover{color:var(--muted);}  /* lighten on hover */
   #topnav .navdrop{position:relative; display:inline-flex; align-items:center;}
@@ -116,11 +116,11 @@
   #topnav .navpro .bolt{color:#f5b50a;}
   #content{flex:1; display:flex; min-height:0; overflow:hidden;}
   aside{
-    height:100%; overflow-y:auto;
+    height:100%; overflow-y:auto; scrollbar-gutter:stable; scrollbar-width:thin; scrollbar-color:#cfcfd4 transparent;
     background:var(--panel);
     padding:18px 16px 40px; display:flex; flex-direction:column; gap:16px;
     transition:opacity .2s;
-  }
+  }   /* stable gutter → content never shifts when the scrollbar appears (no more sun "jump" on theme toggle) */
   #previews{width:222px; min-width:222px; border-right:1px solid var(--border);}
   #settings{width:312px; min-width:312px; border-left:1px solid var(--border);}
   aside.locked{pointer-events:none; opacity:.55;}
@@ -245,7 +245,7 @@
   .rowBetween{display:flex; align-items:center; justify-content:space-between; gap:10px;}
   /* settings panel = scrollable content + a fixed export footer */
   #settings{padding:0; gap:0; overflow:hidden;}
-  #setScroll{flex:1; overflow-y:auto; padding:18px 16px 22px; display:flex; flex-direction:column; gap:0;}
+  #setScroll{flex:1; overflow-y:auto; scrollbar-gutter:stable; scrollbar-width:thin; scrollbar-color:#cfcfd4 transparent; padding:18px 16px 22px; display:flex; flex-direction:column; gap:0;}
   #setScroll::-webkit-scrollbar{width:6px;} #setScroll::-webkit-scrollbar-thumb{background:#ddd; border-radius:3px;}
   #exportBar{flex:0 0 auto; border-top:1px solid var(--border); background:var(--panel); padding:13px 16px 15px; display:flex; flex-direction:column; gap:9px;}
   #exportBar .exrow{display:flex; gap:8px;}
@@ -366,6 +366,7 @@
   #tlTrack{flex:1; height:10px; background:#e8e8e8; border-radius:93px; position:relative; cursor:pointer; touch-action:none;}   /* Figma timeline: 10px pill, #e8e8e8 */
   #tlFill{position:absolute; left:0; top:0; bottom:0; background:#e8e8e8; border-radius:93px;}   /* uniform track — the white grip marks the position */
   #tlHead{position:absolute; top:50%; left:0; width:11px; height:23px; border-radius:4px; background:#fff; border:1px solid #b8b8b8; transform:translate(-50%,-50%); box-shadow:none;}   /* white vertical grip, 11×23, like Figma */
+  #tlHead::after{content:''; position:absolute; left:50%; top:100%; transform:translateX(-50%); width:1.5px; height:13px; background:#b8b8b8; border-radius:1px; pointer-events:none;}   /* thin needle dropping from the grip (Figma) */
   #tlTime{flex:0 0 auto; min-width:96px; text-align:right; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums;}
   #toasts{position:absolute; bottom:18px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:8px; align-items:center; z-index:50; pointer-events:none;}
   .toast{
