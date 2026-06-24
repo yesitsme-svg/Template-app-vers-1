@@ -77,12 +77,12 @@
   }
   /* wannathis.one top navigation, ported in */
   #topnav{
-    flex:0 0 56px; height:56px; display:flex; align-items:center; gap:24px;
-    padding:0 22px; background:var(--panel); border-bottom:1px solid var(--border);
-    position:relative; z-index:200; font-size:13px;
+    flex:0 0 52px; height:52px; display:flex; align-items:center; gap:20px;
+    padding:0 20px; background:var(--panel); border-bottom:1px solid var(--border);
+    position:relative; z-index:200; font-size:12px;
   }
-  #topnav .navleft{display:flex; align-items:center; gap:22px;}
-  #topnav .navlogo{display:inline-flex; width:38px; height:38px; flex:0 0 auto;}
+  #topnav .navleft{display:flex; align-items:center; gap:18px;}
+  #topnav .navlogo{display:inline-flex; width:30px; height:30px; flex:0 0 auto;}
   #topnav .navlogo svg{width:100%; height:100%; display:block;}
   /* logo keeps its built-in white disc as a backing in BOTH themes (no invert) — like mockup online */
   #topnav a{color:var(--text); text-decoration:none; font-weight:500; white-space:nowrap; transition:color .15s;}
@@ -129,14 +129,24 @@
   .pvGrid{display:flex; flex-direction:column; gap:15px;}
   .catSec{display:flex; flex-direction:column; gap:7px;}
   .catHead{display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none;}
-  .catName{font-size:11px; letter-spacing:0; text-transform:none; color:var(--muted); font-weight:500;}
-  .catHead:hover .catName{color:#888;}
-  .seeAll{background:none; border:none; color:#b3b3b8; font-size:10.5px; letter-spacing:0; text-transform:none; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:4px; padding:0; transition:color .15s;}
+  .catName{font-size:13px; letter-spacing:0; text-transform:none; color:var(--muted); font-weight:600;}
+  .catHead:hover .catName{color:var(--text);}
+  .seeAll{background:none; border:none; color:var(--muted); font-size:11px; letter-spacing:0; text-transform:none; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:4px; padding:0; transition:color .15s;}
   .catHead:hover .seeAll, .seeAll:hover{color:var(--text);}
   .seeAll .av{display:inline-block; transition:transform .18s; font-size:11px; line-height:1; color:#c8c8cc;}
   .seeAll:hover .av{color:var(--muted);}
+  /* left-panel brand header: Motion Grid mark + name + a sun/moon theme toggle */
+  .pvBrand{display:flex; align-items:center; gap:9px;}
+  .pvLogo{font-weight:800; font-size:19px; line-height:1; color:var(--text); letter-spacing:-.03em;}
+  .pvName{font-size:13px; color:var(--muted); font-weight:500;}
+  .themeBtn{margin-left:auto; background:none; border:none; padding:4px; cursor:pointer; color:var(--muted); display:flex; align-items:center; border-radius:7px; transition:color .15s,background .15s;}
+  .themeBtn:hover{color:var(--text); background:var(--panel2);}
+  .themeBtn svg{width:17px; height:17px; display:block;}
+  .themeBtn .moon{display:none;}
+  .themeBtn.on .sun{display:none;} .themeBtn.on .moon{display:block;}
   .catSec.expanded .seeAll .av{transform:rotate(90deg);}
-  .catStrip{display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; scrollbar-width:thin;}
+  .catStrip{display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; scrollbar-width:thin; margin-right:-16px;}   /* bleed the strip to the panel edge — last thumb cuts at the border, no empty white gap */
+  .catSec.expanded .catStrip{margin-right:0;}
   .catStrip::-webkit-scrollbar{height:4px;}
   .catStrip::-webkit-scrollbar-track{background:transparent;}
   .catStrip::-webkit-scrollbar-thumb{background:#cfcfd4; border-radius:3px;}   /* thin + muted, not chunky */
@@ -369,14 +379,27 @@
       </div>
     </div>
     <a href="https://wannathis.one/mockups/free">Free mockups</a>
+    <div class="navdrop">
+      <a class="navlink" href="https://wannathis.one/illustrations">Illustrations <span class="navcaret"><svg viewBox="0 0 10 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.46967 2.53033C2.17678 2.23744 2.17678 1.76268 2.46967 1.46978C2.76256 1.17689 3.23732 1.17689 3.53022 1.46978L8.06049 6.00006L3.53022 10.5303C3.23732 10.8232 2.76256 10.8232 2.46967 10.5303C2.17678 10.2374 2.17678 9.76268 2.46967 9.46978L5.9394 6.00006L2.46967 2.53033Z" fill="black"/></svg></span></a>
+      <div class="navmenu">
+        <a href="https://wannathis.one/illustrations">All illustrations</a>
+      </div>
+    </div>
     <a href="https://wannathis.one/online-tools">Online tools</a>
   </div>
-  <div class="navtitle">Motion Grid</div>
   <a class="navpro" href="https://wannathis.one/pro-access"><span class="bolt">⚡</span> Pro Access</a>
 </nav>
 
 <div id="content">
 <aside id="previews">
+  <div class="pvBrand">
+    <span class="pvLogo">M</span>
+    <span class="pvName">Motion Grid</span>
+    <button class="themeBtn" id="themeToggle" title="Toggle light / dark" aria-label="Toggle theme">
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
   <div class="group">
     <div class="label">Templates</div>
     <div class="pvGrid" id="tpls"></div>
@@ -408,10 +431,6 @@
 
 <aside id="settings">
 <div id="setScroll">
-  <div class="rowBetween">
-    <div class="label">Dark theme</div>
-    <button class="switch" id="themeToggle" role="switch" aria-checked="false" title="Toggle dark theme"><span class="knob"></span></button>
-  </div>
   <div class="group">
     <div class="label">Frame</div>
     <div class="ratioGrid" id="ratios">
