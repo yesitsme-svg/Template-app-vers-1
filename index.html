@@ -1979,23 +1979,28 @@ function drawCurve(b){
   const pad=16, iw=W-pad*2, ih=H-pad*2;
   const px=t=>pad+t*iw, py=v=>H-pad-(v-yMin)/(yMax-yMin)*ih;
   curveMap={px,py,pad,iw,ih,yMin,yMax,H};
-  x.strokeStyle='#ececef'; x.lineWidth=1;
+  // theme-aware palette: dark theme draws a WHITE curve on subtle dark grid (light = dark curve on light grid)
+  const dark=document.body.classList.contains('dark');
+  const C = dark
+    ? {grid:'#333', base:'#3a3a3a', guide:'#8b7bbf', curve:'#fafafa', handleFill:'#171717', handleStroke:'#b9a6f0'}
+    : {grid:'#ececef', base:'#d8d8de', guide:'#c9b8ef', curve:'#2e2e2e', handleFill:'#fff', handleStroke:'#713ade'};
+  x.strokeStyle=C.grid; x.lineWidth=1;
   for(let i=0;i<=4;i++){
     x.beginPath(); x.moveTo(px(i/4),py(yMin)); x.lineTo(px(i/4),py(yMax)); x.stroke();
   }
-  [[0,'#d8d8de'],[1,'#d8d8de']].forEach(([v,col])=>{
+  [[0,C.base],[1,C.base]].forEach(([v,col])=>{
     x.strokeStyle=col; x.beginPath(); x.moveTo(px(0),py(v)); x.lineTo(px(1),py(v)); x.stroke();
   });
-  x.strokeStyle='#c9b8ef'; x.setLineDash([3,3]);
+  x.strokeStyle=C.guide; x.setLineDash([3,3]);
   x.beginPath(); x.moveTo(px(0),py(0)); x.lineTo(px(b[0]),py(b[1])); x.stroke();
   x.beginPath(); x.moveTo(px(1),py(1)); x.lineTo(px(b[2]),py(b[3])); x.stroke();
   x.setLineDash([]);
-  x.strokeStyle='#2e2e2e'; x.lineWidth=2;
+  x.strokeStyle=C.curve; x.lineWidth=2;
   x.beginPath(); x.moveTo(px(0),py(0));
   x.bezierCurveTo(px(b[0]),py(b[1]),px(b[2]),py(b[3]),px(1),py(1)); x.stroke();
   [[b[0],b[1]],[b[2],b[3]]].forEach(([hx,hy])=>{
     x.beginPath(); x.arc(px(hx),py(hy),5,0,Math.PI*2);
-    x.fillStyle='#fff'; x.fill(); x.strokeStyle='#713ade'; x.lineWidth=2; x.stroke();
+    x.fillStyle=C.handleFill; x.fill(); x.strokeStyle=C.handleStroke; x.lineWidth=2; x.stroke();
   });
 }
 function refreshEaseUI(){
@@ -2708,7 +2713,9 @@ function wireColor(swatchId,hexId,key,enableAlpha){
 wireColor('bgSwatch','bgHex','bg',true);
 wireColor('bgSwatch2','bgHex2','bg2',true);   // gradient 2nd stop — same global bg opacity slider
 /* dark theme toggle */
-function applyTheme(){ document.body.classList.toggle('dark',state.dark); const t=$('themeToggle'); t.classList.toggle('on',state.dark); t.setAttribute('aria-checked',state.dark?'true':'false'); }
+function applyTheme(){ document.body.classList.toggle('dark',state.dark); const t=$('themeToggle'); t.classList.toggle('on',state.dark); t.setAttribute('aria-checked',state.dark?'true':'false');
+  if($('easeAdvanced') && $('easeAdvanced').style.display!=='none') drawCurve(state.bez);   // repaint the easing curve with the theme palette
+}
 $('themeToggle').addEventListener('click',()=>{ state.dark=!state.dark; applyTheme(); });
 // collapsible right-panel sections (Layout / Camera / Motion / Cards / Background)
 document.querySelectorAll('.secHead').forEach(h=>h.addEventListener('click',()=>h.closest('.sec').classList.toggle('collapsed')));
