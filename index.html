@@ -1332,7 +1332,7 @@ const SCENES = {
     const cellAsp=avgSourceAsp(PA);                    // cells adopt the loaded images' aspect (vertical imgs → narrow cells)
     const baseGap=fr.h*0.02;
     const laneH=(fr.h*1.15)/lanes;                     // lanes overscan the frame height so top/bottom never gap
-    const cardH=laneH, cardW=cardH*cellAsp;            // card FILLS its lane (cover-crop) → lanes touch vertically; size FIXED
+    const cardH=laneH-baseGap, cardW=cardH*cellAsp;    // card a touch shorter than its lane → vertical gap = the default horizontal gap (even grid, equal H/V spacing); size FIXED
     // bake for the densest pitch (= card width, at the spacing floor) + buffer; PITCH is live in update()
     let perLane=Math.ceil(fr.w*1.4/cardW)+2;
     while(perLane%N0) perLane++; // even cycle inside each lane
