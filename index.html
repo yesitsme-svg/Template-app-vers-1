@@ -111,7 +111,7 @@
   #topnav .navmega{
     position:absolute; top:calc(100% + 12px); left:-12px; background:var(--panel);
     border:1px solid var(--border); border-radius:18px; box-shadow:0 20px 55px rgba(0,0,0,.15);
-    padding:16px; display:none; gap:10px; z-index:300; flex-wrap:wrap; max-width:calc(100vw - 40px);
+    padding:16px; display:none; gap:10px; z-index:300; flex-wrap:nowrap; width:max-content; max-width:none;
   }
   #topnav .navdrop:first-of-type .navmega{left:-46px;}   /* wide mockup menu — start near the nav's left edge so 6 cards fit */
   #topnav .navdrop:hover .navmega{display:flex;}
