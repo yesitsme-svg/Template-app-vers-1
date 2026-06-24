@@ -14,6 +14,10 @@
     font-family:'Euclid Circular B'; font-style:normal; font-weight:500; font-display:swap;
     src:url(https://d2pas86kykpvmq.cloudfront.net/fonts/EuclidCircularB-Medium.woff2) format('woff2');
   }
+  @font-face{   /* wannathis brand display font — used for the Motion Grid "M" mark */
+    font-family:'Garnett'; font-style:normal; font-weight:700; font-display:swap;
+    src:url(https://d2pas86kykpvmq.cloudfront.net/fonts/Garnett-Bold.ttf) format('truetype');
+  }
   :root{
     --bg:#f4f4f6; --panel:#fff; --panel2:#f8f8f8; --border:#e3e2e8;
     --text:#1c1c1c; --muted:#888; --dark:#000; --accent:#713ade;
@@ -53,7 +57,7 @@
   body.dark .drop{ border-color:#404040; }
   body.dark .swatch:hover, body.dark .ratioGrid button:hover, body.dark .ddBtn:hover{ border-color:#525252; }
   body.dark .pv:hover .pvimg{ border-color:#404040; }
-  body.dark .pv.active .pvimg{ border-color:var(--text); box-shadow:0 0 0 1px var(--text); }   /* dark theme: crisp white ring */
+  body.dark .pv.active .pvimg{ border-color:transparent; box-shadow:none; }   /* selected = no ring in dark either */
   body.dark .chip:hover{ background:#262626; }
   /* popovers / dropdown menus = arqe popover #171717 */
   body.dark .ddPop, body.dark .navmenu{ background:#171717; }
@@ -146,7 +150,7 @@
   .seeAll:hover .av{color:var(--muted);}
   /* left-panel brand header: Motion Grid mark + name + a sun/moon theme toggle */
   .pvBrand{display:flex; align-items:center; gap:9px;}
-  .pvLogo{font-weight:900; font-style:italic; font-size:13px; line-height:1; color:var(--text); letter-spacing:-.02em;}
+  .pvLogo{font-family:'Garnett','Euclid Circular B',sans-serif; font-weight:700; font-style:italic; font-size:14px; line-height:1; color:var(--text); letter-spacing:-.01em;}
   .pvName{font-size:11.5px; color:var(--muted); font-weight:500;}
   .themeBtn{margin-left:auto; background:none; border:none; padding:4px; cursor:pointer; color:var(--muted); display:flex; align-items:center; border-radius:7px; transition:color .15s,background .15s;}
   .themeBtn:hover{color:var(--text); background:var(--panel2);}
@@ -168,7 +172,7 @@
   .pv span{font-size:10px; color:var(--muted); text-align:center; line-height:1.2; transition:color .15s;}
   .pv:hover .pvimg{border-color:#cfcfd6; transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.10);}
   .pv:hover span{color:var(--text);}
-  .pv.active .pvimg{border-color:#8e8e8e; box-shadow:0 0 0 1px #8e8e8e;}   /* light theme: clear neutral-grey ring — visible on both the dark tile and the white panel */
+  .pv.active .pvimg{border-color:transparent; box-shadow:none;}   /* selected = no ring/border (Figma); inactive keep the light border, active reads via its dark name */
   .pv.active span{color:var(--text); font-weight:500;}
   .disclose{align-self:flex-start; display:inline-flex; align-items:center; gap:6px; background:none; border:none; padding:3px 0; color:var(--muted); font-size:11px; cursor:pointer; font-family:inherit;}
   .disclose:hover{color:var(--text);}
