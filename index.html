@@ -111,19 +111,19 @@
   #topnav .navmega{
     position:absolute; top:calc(100% + 12px); left:-12px; background:var(--panel);
     border:1px solid var(--border); border-radius:18px; box-shadow:0 20px 55px rgba(0,0,0,.15);
-    padding:16px; display:none; gap:10px; z-index:300; flex-wrap:nowrap; width:max-content; max-width:none;
+    padding:20px; display:none; gap:16px; z-index:300; flex-wrap:nowrap; width:max-content; max-width:none;
   }
   #topnav .navdrop:first-of-type .navmega{left:-46px;}   /* wide mockup menu — start near the nav's left edge so 6 cards fit */
   #topnav .navdrop:hover .navmega{display:flex;}
-  #topnav .megaCard{display:flex; flex-direction:column; gap:9px; width:166px; text-decoration:none; padding:8px; border-radius:14px; transition:background .15s;}
+  #topnav .megaCard{display:flex; flex-direction:column; gap:11px; width:206px; text-decoration:none; padding:6px; border-radius:16px; transition:background .15s;}
   #topnav .megaCard:hover{background:var(--panel2);}
-  #topnav .navmega-ill .megaCard{width:200px;}
-  #topnav .megaThumb{display:block; width:100%; aspect-ratio:4/3; border-radius:12px; overflow:hidden; background:var(--panel2);}
+  #topnav .navmega-ill .megaCard{width:224px;}
+  #topnav .megaThumb{display:block; width:100%; aspect-ratio:700/664; border-radius:14px; overflow:hidden; background:var(--panel2);}   /* real wannathis menu image ratio (700×664) */
   #topnav .megaThumb img{width:100%; height:100%; object-fit:cover; display:block;}
-  #topnav .megaCard .mt{display:flex; align-items:center; gap:5px; font-size:14px; font-weight:500; color:var(--text); line-height:1.2; white-space:nowrap;}
-  #topnav .megaCard .mt i{font-style:normal; font-size:13px; color:var(--text); transition:transform .15s;}
+  #topnav .megaCard .mt{display:flex; align-items:center; gap:5px; font-size:15px; font-weight:500; color:var(--text); line-height:1.2; white-space:nowrap;}
+  #topnav .megaCard .mt i{font-style:normal; font-size:14px; color:var(--text); transition:transform .15s;}
   #topnav .megaCard:hover .mt i{transform:translateX(3px);}
-  #topnav .megaCard .md{font-size:12px; font-weight:400; color:var(--muted); line-height:1.35; white-space:normal;}
+  #topnav .megaCard .md{font-size:13px; font-weight:400; color:var(--muted); line-height:1.4; white-space:normal;}
   #topnav .navtitle{position:absolute; left:50%; transform:translateX(-50%); font-weight:500; color:var(--text); pointer-events:none;}
   #topnav .navpro{
     margin-left:auto; display:inline-flex; align-items:center; gap:7px; padding:8px 17px;
@@ -401,21 +401,21 @@
     <div class="navdrop">
       <a class="navlink" href="https://wannathis.one/mockups">Mockup catalog <span class="navcaret"><svg viewBox="0 0 10 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.46967 2.53033C2.17678 2.23744 2.17678 1.76268 2.46967 1.46978C2.76256 1.17689 3.23732 1.17689 3.53022 1.46978L8.06049 6.00006L3.53022 10.5303C3.23732 10.8232 2.76256 10.8232 2.46967 10.5303C2.17678 10.2374 2.17678 9.76268 2.46967 9.46978L5.9394 6.00006L2.46967 2.53033Z" fill="black"/></svg></span></a>
       <div class="navmega">
-        <a class="megaCard" href="https://wannathis.one/mockups/iphone-mockups"><span class="megaThumb"><img src="https://d2pas86kykpvmq.cloudfront.net/images/main/categories/%D1%81-iphone-mockups.png" alt=""></span><span class="mt">iPhone mockups <i>›</i></span><span class="md">Perfect for mobile UI presentations</span></a>
-        <a class="megaCard" href="https://wannathis.one/mockups/macbook-mockups"><span class="megaThumb"><img src="https://d2pas86kykpvmq.cloudfront.net/images/main/categories/c-macbook-mockups.png" alt=""></span><span class="mt">Macbook mockups <i>›</i></span><span class="md">Present web designs in a polished setting</span></a>
-        <a class="megaCard" href="https://wannathis.one/mockups/ipad-mockups"><span class="megaThumb"><img src="https://d2pas86kykpvmq.cloudfront.net/images/main/categories/c-tablet-mockups.png" alt=""></span><span class="mt">iPad mockups <i>›</i></span><span class="md">Striking angles for standout visuals</span></a>
-        <a class="megaCard" href="https://wannathis.one/mockups/desktop-mockups"><span class="megaThumb"><img src="https://d2pas86kykpvmq.cloudfront.net/images/mockups/hero/mockups-hero-desktops.png" alt=""></span><span class="mt">Desktop mockups <i>›</i></span><span class="md">Clean visuals to support your best designs</span></a>
-        <a class="megaCard" href="https://wannathis.one/mockups/print-mockups"><span class="megaThumb"><img src="https://d2pas86kykpvmq.cloudfront.net/images/main/categories/c-print-mockups.png" alt=""></span><span class="mt">Print mockups <i>›</i></span><span class="md">Crisp scenes for branding projects</span></a>
-        <a class="megaCard" href="https://wannathis.one/mockups/billboard-mockups"><span class="megaThumb"><img src="https://d2pas86kykpvmq.cloudfront.net/images/main/categories/c-billboard-mockups.png" alt=""></span><span class="mt">Billboard mockups <i>›</i></span><span class="md">Showcase ads on screens and billboards</span></a>
+        <a class="megaCard" href="https://wannathis.one/mockups/iphone-mockups"><span class="megaThumb"><img src="https://d2pas86kykpvmq.cloudfront.net/images/main/header/header-mockup-phones-v1.png" alt=""></span><span class="mt">iPhone mockups <i>›</i></span><span class="md">Perfect for mobile UI presentations</span></a>
+        <a class="megaCard" href="https://wannathis.one/mockups/macbook-mockups"><span class="megaThumb"><img src="https://d2pas86kykpvmq.cloudfront.net/images/main/header/header-mockup-laptops-v1.png" alt=""></span><span class="mt">Macbook mockups <i>›</i></span><span class="md">Present web designs in a polished setting</span></a>
+        <a class="megaCard" href="https://wannathis.one/mockups/ipad-mockups"><span class="megaThumb"><img src="https://d2pas86kykpvmq.cloudfront.net/images/main/header/header-mockup-tablets-v1.png" alt=""></span><span class="mt">iPad mockups <i>›</i></span><span class="md">Striking angles for standout visuals</span></a>
+        <a class="megaCard" href="https://wannathis.one/mockups/desktop-mockups"><span class="megaThumb"><img src="https://d2pas86kykpvmq.cloudfront.net/images/main/header/header-mockup-desktops-v1.png" alt=""></span><span class="mt">Desktop mockups <i>›</i></span><span class="md">Clean visuals to support your best designs</span></a>
+        <a class="megaCard" href="https://wannathis.one/mockups/print-mockups"><span class="megaThumb"><img src="https://d2pas86kykpvmq.cloudfront.net/images/main/header/header-mockup-prints-v1.png" alt=""></span><span class="mt">Print mockups <i>›</i></span><span class="md">Crisp scenes for branding projects</span></a>
+        <a class="megaCard" href="https://wannathis.one/mockups/billboard-mockups"><span class="megaThumb"><img src="https://d2pas86kykpvmq.cloudfront.net/images/main/header/header-mockup-billboards-v1.png" alt=""></span><span class="mt">Billboard mockups <i>›</i></span><span class="md">Showcase ads on screens and billboards</span></a>
       </div>
     </div>
     <a href="https://wannathis.one/mockups/free">Free mockups</a>
     <div class="navdrop">
       <a class="navlink" href="https://wannathis.one/illustrations">Illustrations <span class="navcaret"><svg viewBox="0 0 10 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.46967 2.53033C2.17678 2.23744 2.17678 1.76268 2.46967 1.46978C2.76256 1.17689 3.23732 1.17689 3.53022 1.46978L8.06049 6.00006L3.53022 10.5303C3.23732 10.8232 2.76256 10.8232 2.46967 10.5303C2.17678 10.2374 2.17678 9.76268 2.46967 9.46978L5.9394 6.00006L2.46967 2.53033Z" fill="black"/></svg></span></a>
       <div class="navmega navmega-ill">
-        <a class="megaCard" href="https://wannathis.one/illustrations/abstract-3d-illustrations?type=collections"><span class="megaThumb"><img src="https://d2pas86kykpvmq.cloudfront.net/images/main/categories/c-abstract.png" alt=""></span><span class="mt">Abstract <i>›</i></span><span class="md">Abstract is good for any design project</span></a>
-        <a class="megaCard" href="https://wannathis.one/illustrations/themed-3d-illustrations?type=collections"><span class="megaThumb"><img src="https://d2pas86kykpvmq.cloudfront.net/images/main/categories/c-themes.png" alt=""></span><span class="mt">Themes <i>›</i></span><span class="md">Themed sets for special purposes</span></a>
-        <a class="megaCard" href="https://wannathis.one/illustrations/3d-characters?type=collections"><span class="megaThumb"><img src="https://d2pas86kykpvmq.cloudfront.net/images/main/categories/c-characters.png" alt=""></span><span class="mt">Characters <i>›</i></span><span class="md">Add character to your design</span></a>
+        <a class="megaCard" href="https://wannathis.one/illustrations/abstract-3d-illustrations?type=collections"><span class="megaThumb"><img src="https://d2pas86kykpvmq.cloudfront.net/images/main/header/header-abstract-v1.png" alt=""></span><span class="mt">Abstract <i>›</i></span><span class="md">Abstract is good for any design project</span></a>
+        <a class="megaCard" href="https://wannathis.one/illustrations/themed-3d-illustrations?type=collections"><span class="megaThumb"><img src="https://d2pas86kykpvmq.cloudfront.net/images/main/header/header-themes-v1.png" alt=""></span><span class="mt">Themes <i>›</i></span><span class="md">Themed sets for special purposes</span></a>
+        <a class="megaCard" href="https://wannathis.one/illustrations/3d-characters?type=collections"><span class="megaThumb"><img src="https://d2pas86kykpvmq.cloudfront.net/images/main/header/header-character-v1.png" alt=""></span><span class="mt">Characters <i>›</i></span><span class="md">Add character to your design</span></a>
       </div>
     </div>
     <a href="https://wannathis.one/online-tools">Online tools</a>
