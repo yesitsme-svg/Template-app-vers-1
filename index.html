@@ -89,7 +89,7 @@
   #topnav .navlogo{display:inline-flex; width:30px; height:30px; flex:0 0 auto;}
   #topnav .navlogo svg{width:100%; height:100%; display:block;}
   /* logo keeps its built-in white disc as a backing in BOTH themes (no invert) — like mockup online */
-  #topnav a{color:var(--text); text-decoration:none; font-weight:500; white-space:nowrap; transition:color .15s;}   /* Figma nav: Medium */
+  #topnav a{color:var(--text); text-decoration:none; font-weight:500; line-height:1.1; white-space:nowrap; transition:color .15s;}   /* Figma nav: Medium, line-height 110% */
   #topnav .navleft > a:not(.navlogo), #topnav .navdrop > .navlink{color:var(--text);}   /* Figma nav: items black */
   #topnav .navleft > a:not(.navlogo):hover, #topnav .navdrop > .navlink:hover{color:var(--muted);}  /* lighten on hover */
   #topnav .navdrop{position:relative; display:inline-flex; align-items:center;}
@@ -110,9 +110,9 @@
   #topnav .navtitle{position:absolute; left:50%; transform:translateX(-50%); font-weight:500; color:var(--text); pointer-events:none;}
   #topnav .navpro{
     margin-left:auto; display:inline-flex; align-items:center; gap:7px; padding:8px 17px;
-    border:1px solid var(--border); border-radius:100px; font-weight:500; color:var(--text); transition:border-color .15s,background .15s;
-  }
-  #topnav .navpro:hover{border-color:var(--text); background:var(--panel2);}
+    border:1px solid #1c1c1c; border-radius:100px; font-weight:500; color:var(--text); transition:border-color .15s,background .15s;
+  }   /* Figma Pro Access: thin BLACK border (was grey) */
+  #topnav .navpro:hover{background:var(--panel2);}
   #topnav .navpro .bolt{color:#f5b50a;}
   #content{flex:1; display:flex; min-height:0; overflow:hidden;}
   aside{
