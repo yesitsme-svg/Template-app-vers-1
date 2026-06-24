@@ -1527,26 +1527,27 @@ const SCENES = {
     const turns=P.turns||2.7;
     const entries=[]; let maxAsp=0.5;
     for(let i=0;i<n;i++){ const e=entryForSlot(i); entries.push(e); maxAsp=Math.max(maxAsp,e.asp); }
-    const H=Math.min(0.44, 1.0/Math.max(maxAsp,1));
+    const H=Math.min(0.58, 1.3/Math.max(maxAsp,1));        // BIG readable cards on the outer arm
     const meshes=[];
     for(let i=0;i<n;i++){ const m=plane(entries[i].tex,H*entries[i].asp,H,true); m.userData={slot:i}; root.add(m); meshes.push(m); }
     const L=P.loop||(n*1.6);
     return { loopSeconds:L,
       update(T){
         const sp=state.spacing||1;
-        const Rmax=D*0.52*sp, Rcore=Rmax*0.06;            // outer rim → tiny open core
+        const Rmax=D*0.5*sp, Rcore=Rmax*0.08;             // outer rim → small open core
+        const depth=3.8*sp;                                // recede into the screen → REAL 3D depth (rim near & big, core deep)
         const flow=((((T/L)%1)+1)%1)*state.dir;
         for(let i=0;i<n;i++){
-          const p=((i/n+flow)%1+1)%1;                      // 0 = rim (big) → 1 = sucked into the core (small)
+          const p=((i/n+flow)%1+1)%1;                      // 0 = rim (big, near) → 1 = sucked into the core (small, deep)
           const r=Rmax*Math.pow(Rcore/Rmax,p);              // log spiral — even, readable coil
           const a=p*turns*Math.PI*2;                        // several turns → a clear spiral ARM
           const m=meshes[i];
-          m.position.set(Math.sin(a)*r, Math.cos(a)*r, -p*0.9);   // near-flat (tiny recede only)
-          m.scale.setScalar(Math.max(0.16, r/Rmax*1.05));         // shrink hard toward centre → reads as coiling IN
+          m.position.set(Math.sin(a)*r, Math.cos(a)*r, -p*depth);   // coils inward AND recedes → pronounced depth
+          m.scale.setScalar(0.5+0.72*(1-p));                // rim cards big & forward, core small (not microscopic)
           m.rotation.z=-a;                                  // cards lie tangent to the arm → the spiral is visible
           m.renderOrder=Math.round((1-p)*1000);             // rim in front, core behind
           setCardOpacity(m, Math.min(clamp01((1-p)/0.10), clamp01(p/0.05))); // fade into the core + soft rim wrap
-          m.material.uniforms.uFade.value = 1 - state.fade*THREE.MathUtils.smoothstep(p,0.5,0.98);
+          m.material.uniforms.uFade.value = 1 - state.fade*THREE.MathUtils.smoothstep(p,0.16,0.9);  // stronger, earlier depth fog toward the core
         }
       } };
   },
@@ -1754,7 +1755,7 @@ const TEMPLATES = [
   {id:'grid-pop',     name:'Grid Pop',              scene:'gridPop',      ease:'Snappy',   comp:.85, P:{dur:.55,  hold:1.7, corner:2}},
   {cat:'3D Space'},
   {id:'field',        name:'Field Flight',          scene:'field',        ease:'Linear',   noEase:true, lockEase:true, spacing:0.85, fade:60, P:{dur:1.3,  hold:.2,  drift:.35, corner:0, minN:18}},
-  {id:'spiral',       name:'Spiral Vortex',         scene:'spiral',       ease:'Linear',   noEase:true, lockEase:true, fade:55, P:{corner:1.5, turns:2.1, drift:1, minN:12}},
+  {id:'spiral',       name:'Spiral Vortex',         scene:'spiral',       ease:'Linear',   noEase:true, lockEase:true, fade:72, P:{corner:1.5, turns:2.3, drift:1, minN:18}},
   {id:'globe',        name:'Globe',                 scene:'globe',        ease:'Linear',   noEase:true, lockEase:true, fade:40, P:{dur:14, hold:0, drift:1, corner:1, minN:24}},
   {cat:'Cuts'},
   {id:'zoom-gallery', name:'Zoom Gallery',          scene:'zoomGallery',  ease:'Smooth',   noRot:true, noSpace:true, eases:['Smooth','Ease Out'], P:{dur:.9,   hold:2.1, corner:0}},
