@@ -1517,38 +1517,36 @@ const SCENES = {
       } };
   },
 
-  /* Spiral Vortex — cards screw inward along a log spiral, fading at the core; infinite (Space) */
+  /* Spiral Vortex — a tilted ring of cards swirling around an open centre (vortex). Bottom rides
+     near & big, top recedes far & small; each card is rolled tangentially so the whole wheel reads
+     as a spiral funnel. Centre stays clear for a headline. Infinite (Space). */
   spiral(P){
-    const N0=sourceList().length, minN=P.minN||12;
+    const N0=sourceList().length, minN=P.minN||14;
     const n=N0>=minN?N0:N0*Math.ceil(minN/N0);
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5), D=Math.min(fr.w,fr.h);
-    const turns=P.turns||1.6;
     const entries=[]; let maxAsp=0.5;
     for(let i=0;i<n;i++){ const e=entryForSlot(i); entries.push(e); maxAsp=Math.max(maxAsp,e.asp); }
-    const H=Math.min(0.66, 1.5/(turns*Math.max(maxAsp,1)));   // uniform card size; arms never collide. Depth does the shrinking.
+    const H=Math.min(0.5, 0.6/Math.max(maxAsp,1));    // uniform card size; perspective + scale do the funnel
     const meshes=[];
     for(let i=0;i<n;i++){ const m=plane(entries[i].tex,H*entries[i].asp,H,true); m.userData={slot:i}; root.add(m); meshes.push(m); }
+    const tilt=0.62, cy=Math.cos(tilt), cz=Math.sin(tilt);   // ring tipped toward camera → vortex funnel
     const L=P.loop||(n*1.6);
     return { loopSeconds:L,
       update(T){
         const sp=state.spacing||1;
-        const Rrim=D*0.46*sp, Rcore=Rrim*0.15;          // 3D funnel: wide mouth (near) → tight core (far). LIVE spacing.
-        const depth=6.5*sp;                              // the vortex recedes into the screen toward the core
-        const flow=((((T/L)%1)+1)%1)*state.dir;          // continuous (Linear-locked) — no eased pulsing
+        const R=D*0.5*sp;                                // cards ride the perimeter → centre stays open
+        const flow=((((T/L)%1)+1)%1)*state.dir;
         for(let i=0;i<n;i++){
-          let p=((i/n+flow)%1+1)%1;                       // 0 = rim (near, big) → 1 = core (far, small)
-          const r=Rrim*Math.pow(Rcore/Rrim,p);           // log spiral
-          const a=p*turns*Math.PI*2;
+          const a=(i/n+flow)*Math.PI*2, sa=Math.sin(a), ca=Math.cos(a);
           const m=meshes[i];
-          m.position.set(Math.sin(a)*r, Math.cos(a)*r, -p*depth);  // spiral winds inward AND recedes → real depth
-          m.scale.setScalar(0.55+0.45*(1-p));            // gentle funnel taper (perspective does the rest)
-          m.rotation.z=0;
-          m.renderOrder=Math.round((1-p)*1000);          // rim (near) drawn in front
-          setCardOpacity(m, Math.min(clamp01(p/0.12), clamp01((1-p)/0.14))); // mask the rim↔core wrap seam
-          // depth fade driven DIRECTLY by p (= depth): near rim cards stay FULLY crisp, then the fog ramps
-          // toward the far core → simple, legible depth. (Spiral handles its own fade; applyDepthFade skips it.)
-          m.material.uniforms.uFade.value = 1 - state.fade*THREE.MathUtils.smoothstep(p,0.18,0.92);
+          m.position.set(sa*R, ca*R*cy, -ca*R*cz);       // tilted ring: bottom (ca<0) near+down, top (ca>0) far+up
+          m.rotation.z=-sa*0.5;                          // tangential roll → swirl (no flip)
+          const depthT=(ca+1)/2;                         // 0 = bottom/near → 1 = top/far
+          m.scale.setScalar(0.72+0.5*(1-depthT));        // near a touch bigger (funnel)
+          m.renderOrder=Math.round((1-depthT)*1000);     // near (bottom) drawn in front
+          setCardOpacity(m,1);
+          m.material.uniforms.uFade.value = 1 - state.fade*THREE.MathUtils.smoothstep(depthT,0.28,0.97); // far rim melts into depth
         }
       } };
   },
