@@ -1733,7 +1733,7 @@ const SCENES = {
 /* ================= templates, grouped like the arqe catalog ================= */
 const TEMPLATES = [
   {cat:'3D Carousels'},
-  {id:'carousel',     name:'Carousel Slide',        scene:'ring',         ease:'Smooth',   P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'y', tiltX:7,  step:'card', minN:8, chord:1.9}},
+  {id:'carousel',     name:'Carousel Slide',        scene:'ring',         ease:'Smooth',   spacing:.95, rotX:-1, fade:88, P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'y', tiltX:7,  step:'card', minN:8, chord:1.9}},
   {id:'wheel',        name:'Vertical Wheel',        scene:'ring',         ease:'Smooth',   P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'x', step:'card', minN:6, chord:2.2}},
   {id:'tilted-ring',  name:'Tilted Ring',           scene:'ring',         ease:'Linear',   noEase:true, lockEase:true, P:{dur:16, hold:0, drift:1, corner:0, axis:'y', tiltX:14, tiltZ:16, step:'full', minN:9, chord:1.9, sizeMul:.85}},
   {id:'card-arc',     name:'Card Arc',              scene:'ring',         ease:'Smooth',   size:.90, spacing:.55, speed:.95, comp:.45, rotX:-10, fade:75, P:{dur:1.5, hold:0, drift:.25, corner:0, axis:'y', tiltX:7, step:'card', minN:10, chord:1.9}},
