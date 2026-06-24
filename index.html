@@ -1517,36 +1517,36 @@ const SCENES = {
       } };
   },
 
-  /* Spiral Vortex — a tilted ring of cards swirling around an open centre (vortex). Bottom rides
-     near & big, top recedes far & small; each card is rolled tangentially so the whole wheel reads
-     as a spiral funnel. Centre stays clear for a headline. Infinite (Space). */
+  /* Spiral Vortex — cards COIL inward along a log spiral, shrinking & fading into an open core; the
+     whole arm rotates so they look sucked toward the centre. A real, readable spiral. Infinite (Space). */
   spiral(P){
-    const N0=sourceList().length, minN=P.minN||14;
+    const N0=sourceList().length, minN=P.minN||18;
     const n=N0>=minN?N0:N0*Math.ceil(minN/N0);
     camera.position.set(0,0,5); camera.lookAt(0,0,0);
     const fr=frameAt(5), D=Math.min(fr.w,fr.h);
+    const turns=P.turns||2.7;
     const entries=[]; let maxAsp=0.5;
     for(let i=0;i<n;i++){ const e=entryForSlot(i); entries.push(e); maxAsp=Math.max(maxAsp,e.asp); }
-    const H=Math.min(0.5, 0.6/Math.max(maxAsp,1));    // uniform card size; perspective + scale do the funnel
+    const H=Math.min(0.44, 1.0/Math.max(maxAsp,1));
     const meshes=[];
     for(let i=0;i<n;i++){ const m=plane(entries[i].tex,H*entries[i].asp,H,true); m.userData={slot:i}; root.add(m); meshes.push(m); }
-    const tilt=0.62, cy=Math.cos(tilt), cz=Math.sin(tilt);   // ring tipped toward camera → vortex funnel
     const L=P.loop||(n*1.6);
     return { loopSeconds:L,
       update(T){
         const sp=state.spacing||1;
-        const R=D*0.5*sp;                                // cards ride the perimeter → centre stays open
+        const Rmax=D*0.52*sp, Rcore=Rmax*0.06;            // outer rim → tiny open core
         const flow=((((T/L)%1)+1)%1)*state.dir;
         for(let i=0;i<n;i++){
-          const a=(i/n+flow)*Math.PI*2, sa=Math.sin(a), ca=Math.cos(a);
+          const p=((i/n+flow)%1+1)%1;                      // 0 = rim (big) → 1 = sucked into the core (small)
+          const r=Rmax*Math.pow(Rcore/Rmax,p);              // log spiral — even, readable coil
+          const a=p*turns*Math.PI*2;                        // several turns → a clear spiral ARM
           const m=meshes[i];
-          m.position.set(sa*R, ca*R*cy, -ca*R*cz);       // tilted ring: bottom (ca<0) near+down, top (ca>0) far+up
-          m.rotation.z=-sa*0.5;                          // tangential roll → swirl (no flip)
-          const depthT=(ca+1)/2;                         // 0 = bottom/near → 1 = top/far
-          m.scale.setScalar(0.72+0.5*(1-depthT));        // near a touch bigger (funnel)
-          m.renderOrder=Math.round((1-depthT)*1000);     // near (bottom) drawn in front
-          setCardOpacity(m,1);
-          m.material.uniforms.uFade.value = 1 - state.fade*THREE.MathUtils.smoothstep(depthT,0.28,0.97); // far rim melts into depth
+          m.position.set(Math.sin(a)*r, Math.cos(a)*r, -p*0.9);   // near-flat (tiny recede only)
+          m.scale.setScalar(Math.max(0.16, r/Rmax*1.05));         // shrink hard toward centre → reads as coiling IN
+          m.rotation.z=-a;                                  // cards lie tangent to the arm → the spiral is visible
+          m.renderOrder=Math.round((1-p)*1000);             // rim in front, core behind
+          setCardOpacity(m, Math.min(clamp01((1-p)/0.10), clamp01(p/0.05))); // fade into the core + soft rim wrap
+          m.material.uniforms.uFade.value = 1 - state.fade*THREE.MathUtils.smoothstep(p,0.5,0.98);
         }
       } };
   },
