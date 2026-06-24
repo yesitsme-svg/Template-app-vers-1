@@ -130,7 +130,7 @@
   .group{display:flex; flex-direction:column; gap:8px;}
   /* collapsible right-panel sections (Layout / Camera / Motion / Cards / Background) */
   .sec{display:flex; flex-direction:column;}
-  .secHead{display:flex; align-items:center; justify-content:space-between; width:100%; background:none; border:none; padding:0; cursor:pointer; font-family:inherit; color:var(--text); font-size:13px; font-weight:600; user-select:none;}
+  .secHead{display:flex; align-items:center; justify-content:space-between; width:100%; background:none; border:none; padding:0; cursor:pointer; font-family:inherit; color:var(--text); font-size:14px; font-weight:500; user-select:none;}   /* Figma section titles: 14px Medium #1c1c1c */
   .secHead .secChev{width:16px; height:16px; flex:0 0 auto; color:var(--muted); transition:transform .2s;}
   .sec.collapsed .secHead .secChev{transform:rotate(-90deg);}
   .secBody{display:flex; flex-direction:column; gap:16px; padding-top:14px;}
@@ -182,15 +182,15 @@
   .disclose.open .chev{transform:rotate(90deg);}
   .chips{display:flex; flex-wrap:wrap; gap:5px;}
   .chip{
-    padding:6px 11px; background:var(--panel2); border:1px solid var(--border);
+    padding:8px 12px; background:var(--panel2); border:none;
     border-radius:100px; cursor:pointer; color:var(--text); font-size:11px;
     transition:background .15s,border-color .15s,color .15s; font-family:inherit;
-  }
+  }   /* Figma easing: h32 pill, #f2f2f2, no border */
   .chip:hover{background:#efeff2;}
   .chip.active{background:var(--dark); color:#fff; border-color:var(--dark); font-weight:500;}
   .seg{display:flex; background:var(--panel2); border:none; border-radius:100px; overflow:hidden; padding:3px; gap:3px;}
   .seg button{flex:1; padding:6px 0; background:transparent; border:none; border-radius:100px; color:var(--muted); cursor:pointer; font-size:11.5px; font-family:inherit;}
-  .seg button.active{background:var(--dark); color:#fff; font-weight:500;}
+  .seg button.active{background:var(--panel); color:var(--text); font-weight:500;}   /* Figma: active segment = white pill, dark text (not black) */
   /* easing locked (continuous presets): chips visible but greyed, Linear shown active */
   #easeGroup.elocked .chips{opacity:.4; pointer-events:none;}
   #easeGroup.elocked #easeToggle{display:none;}
@@ -220,8 +220,8 @@
   .valEdit{width:54px; font:inherit; font-size:11.5px; text-align:right; border:1px solid #b6b6c0; border-radius:4px; padding:1px 4px; background:#fff; color:#111; outline:none; -moz-appearance:textfield;}
   .valEdit::-webkit-outer-spin-button,.valEdit::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
   input[type=range]{-webkit-appearance:none; width:100%; height:2px; background:#e3e2e8; border-radius:2px; outline:none;}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:13px; height:13px; border-radius:50%; background:var(--dark); cursor:pointer; border:none; box-shadow:none;}
-  input[type=range]::-moz-range-thumb{width:13px; height:13px; border-radius:50%; background:var(--dark); cursor:pointer; border:none; box-shadow:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:11px; height:11px; border-radius:50%; background:var(--dark); cursor:pointer; border:none; box-shadow:none;}   /* Figma handle: 11px black */
+  input[type=range]::-moz-range-thumb{width:11px; height:11px; border-radius:50%; background:var(--dark); cursor:pointer; border:none; box-shadow:none;}
   input[type=color]{width:100%; height:32px; border:1px solid var(--border); border-radius:10px; background:var(--panel2); cursor:pointer; padding:3px 5px;}
   /* block separators so the panel sections read as distinct cards (Figma/Framer style) */
   /* full-bleed divider lines (edge-to-edge of the panel) with generous breathing room each side */
@@ -232,7 +232,7 @@
   .colorField{display:flex; align-items:center; gap:8px;}
   .colorRow{display:flex; align-items:center; gap:8px;}
   .colorRow .clbl{font-size:11px; color:var(--muted); min-width:14px;}
-  .swatch{width:28px; height:28px; flex:0 0 auto; border-radius:7px; border:1px solid var(--border); cursor:pointer; padding:0;}
+  .swatch{width:30px; height:30px; flex:0 0 auto; border-radius:7px; border:1px solid var(--border); cursor:pointer; padding:0;}   /* Figma swatch: 30×30, rounded-7 */
   .swatch:hover{border-color:#bbb;}
   .hexInput{flex:1; height:32px; border:1px solid var(--border); border-radius:8px; background:var(--panel2); color:var(--text); font-family:inherit; font-size:12px; padding:0 10px; outline:none; text-transform:uppercase; font-variant-numeric:tabular-nums;}
   .hexInput:focus{border-color:#b6b6c0;}
@@ -251,7 +251,7 @@
   #exportBar .exrow{display:flex; gap:8px;}
   /* Figma-style custom dropdowns (open upward — they live at the panel bottom) */
   .dd{position:relative; flex:1;}
-  .ddBtn{width:100%; height:34px; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:0 11px; background:#e7e7eb; border:none; border-radius:9px; color:var(--text); font-size:12px; font-family:inherit; cursor:pointer;}
+  .ddBtn{width:100%; height:34px; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:0 11px; background:var(--panel2); border:none; border-radius:9px; color:var(--text); font-size:12px; font-family:inherit; cursor:pointer;}   /* Figma export dropdowns: #f2f2f2, rounded-9, h34 */
   body.dark .ddBtn{background:#262626;}
   .ddBtn:hover{border-color:#bbb;}
   .dd.open .ddBtn{border-color:#b6b6c0;}
@@ -267,8 +267,8 @@
   .dd.disabled{opacity:.5; pointer-events:none;}
   /* aspect-ratio selector inside the panel */
   .ratioGrid{display:flex; flex-wrap:nowrap; gap:4px;}
-  .ratioGrid button{flex:1 1 auto; padding:7px 4px; border:1px solid var(--border); background:var(--panel2); border-radius:8px; color:var(--muted); cursor:pointer; font-size:11.5px; font-family:inherit; text-align:center;}
-  .ratioGrid button:hover{border-color:#bbb;}
+  .ratioGrid button{flex:1 1 auto; padding:8px 4px; border:none; background:var(--panel2); border-radius:8px; color:var(--muted); cursor:pointer; font-size:11.5px; font-family:inherit; text-align:center;}   /* Figma: h30, #f2f2f2, no border */
+  .ratioGrid button:hover{background:#e9e9ee;}
   .ratioGrid button.active{background:var(--dark); color:#fff; border-color:var(--dark); font-weight:500;}
   .ratioGrid .ratioCustom{flex:0 0 auto; width:32px; padding:0; display:flex; align-items:center; justify-content:center;}
   .ratioGrid .ratioCustom svg{width:15px; height:15px; display:block;}
@@ -308,7 +308,7 @@
   .thumb:hover .x{display:block;}
   .thumb .x:hover{background:#e5484d; color:#fff; border-color:#e5484d;}
   .thumb.dragover img{border-color:#9b9ba3;}
-  .btn{padding:10px; border-radius:100px; border:1px solid var(--border); background:var(--panel2); color:var(--text); cursor:pointer; font-size:12px; font-family:inherit; font-weight:500; transition:background .15s,color .15s;}
+  .btn{padding:10px; border-radius:100px; border:none; background:var(--panel2); color:var(--text); cursor:pointer; font-size:12px; font-family:inherit; font-weight:500; transition:background .15s,color .15s;}   /* Figma grey buttons: pill, #f2f2f2, no border */
   .btn:hover{background:#efeff2;}
   .btn.primary{background:var(--dark); color:#fff; border-color:var(--dark);}
   #exportBtn{display:flex; align-items:center; justify-content:center; gap:9px;}
@@ -448,7 +448,7 @@
 <aside id="settings">
 <div id="setScroll">
   <div class="group">
-    <div class="label">Frame</div>
+    <div class="label" style="font-size:14px">Frame</div>
     <div class="ratioGrid" id="ratios">
       <button data-r="3:4" class="active">3:4</button>
       <button data-r="9:16">9:16</button>
@@ -465,7 +465,7 @@
     </div>
   </div>
   <div class="group">
-    <div class="label">Images <small id="imgCount"></small></div>
+    <div class="label" style="font-size:14px">Images <small id="imgCount"></small></div>
     <div class="drop" id="drop">Drop images or videos here, or click to browse<br><span class="sub">JPG · PNG · WEBP · MP4 / WEBM — images ≤15 MB, video ≤30 MB</span></div>
     <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" multiple hidden>
     <input type="file" id="replaceInput" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" hidden>
