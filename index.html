@@ -1346,14 +1346,15 @@ const SCENES = {
     return { loopSeconds:P.dur+P.hold,
       update(T){
         const sp=state.spacing||1;                     // min slider (0.5) = 0 gap (cards touch); grows above, never overlaps
-        const gap=baseGap*Math.max(0,(sp-0.5)/0.5);    // LIVE horizontal pitch — 0 at floor → spreads above, no rebuild
+        const gap=baseGap*Math.max(0,(sp-0.5)/0.5);    // LIVE gap — same value drives BOTH axes
         const step=cardW+gap, total=perLane*step, speed=total/(P.dur+P.hold);
+        const vPitch=cardH+gap;                         // LIVE vertical lane pitch = card + same gap → spacing spreads vertical & horizontal evenly
         meshes.forEach(m=>{
           const {l,i}=m.userData;
           const dir=(l%2?-1:1)*state.dir;
           let x=i*step+dir*speed*T;
           x=((x%total)+total)%total;
-          m.position.set(x-total/2+step/2,(l-(lanes-1)/2)*-laneH,0);
+          m.position.set(x-total/2+step/2,(l-(lanes-1)/2)*-vPitch,0);
         });
       } };
   },
