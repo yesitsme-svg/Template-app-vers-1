@@ -51,8 +51,8 @@
   body.dark input[type=range]::-webkit-slider-thumb{ background:#737373; }
   body.dark input[type=range]::-moz-range-thumb{ background:#737373; }
   body.dark #tlTrack{ background:#262626; }
-  body.dark #tlFill{ background:#525252; }
-  body.dark #tlHead{ background:#a1a1a1; }
+  body.dark #tlFill{ background:#262626; }
+  body.dark #tlHead{ background:#d4d4d4; border-color:#555; }
   /* control borders = arqe input #404040 */
   body.dark .drop{ border-color:#404040; }
   body.dark .swatch:hover, body.dark .ratioGrid button:hover, body.dark .ddBtn:hover{ border-color:#525252; }
@@ -83,13 +83,13 @@
   #topnav{
     flex:0 0 52px; height:52px; display:flex; align-items:center; gap:24px;
     padding:0 20px; background:var(--panel); border-bottom:1px solid var(--border);
-    position:relative; z-index:200; font-size:14px;
-  }   /* Figma nav: 14px Medium, items in black */
+    position:relative; z-index:200; font-size:13px;
+  }   /* wannathis nav: delicate — 13px Regular (looked heavy at 14px Medium) */
   #topnav .navleft{display:flex; align-items:center; gap:24px;}
   #topnav .navlogo{display:inline-flex; width:30px; height:30px; flex:0 0 auto;}
   #topnav .navlogo svg{width:100%; height:100%; display:block;}
   /* logo keeps its built-in white disc as a backing in BOTH themes (no invert) — like mockup online */
-  #topnav a{color:var(--text); text-decoration:none; font-weight:500; white-space:nowrap; transition:color .15s;}
+  #topnav a{color:var(--text); text-decoration:none; font-weight:400; white-space:nowrap; transition:color .15s;}
   #topnav .navleft > a:not(.navlogo), #topnav .navdrop > .navlink{color:var(--text);}   /* Figma nav: items black */
   #topnav .navleft > a:not(.navlogo):hover, #topnav .navdrop > .navlink:hover{color:var(--muted);}  /* lighten on hover */
   #topnav .navdrop{position:relative; display:inline-flex; align-items:center;}
@@ -151,13 +151,13 @@
   /* left-panel brand header: Motion Grid mark + name + a sun/moon theme toggle */
   .pvBrand{display:flex; align-items:center; gap:9px;}
   .pvLogo{height:11px; width:auto; flex:0 0 auto; color:var(--text); display:block;}   /* exact M mark from the Figma SVG; fill follows currentColor (themes) */
-  .pvDivide{height:1px; flex:0 0 1px; background:var(--border); margin:4px -22px 0 -16px;}   /* full-bleed line under the brand header (Figma divider, x0→panel edge) */
+  .pvDivide{height:1px; flex:0 0 1px; background:#ededf1; margin:4px -22px 0 -16px;}   /* full-bleed line under the brand header — softer than the section borders so it doesn't read heavy */
+  body.dark .pvDivide{background:#2a2a2a;}
   .pvName{font-size:11.5px; color:var(--muted); font-weight:500;}
   .themeBtn{margin-left:auto; background:none; border:none; padding:4px; cursor:pointer; color:var(--text); display:flex; align-items:center; border-radius:7px; transition:color .15s,background .15s;}   /* sun icon dark, like the ref */
   .themeBtn:hover{background:var(--panel2);}
   .themeBtn svg{width:17px; height:17px; display:block;}
-  .themeBtn .moon{display:none;}
-  .themeBtn.on .sun{display:none;} .themeBtn.on .moon{display:block;}
+  .themeBtn .moon{display:none;}   /* no moon icon — Figma header only ever shows the sun */
   .catSec.expanded .seeAll .av{transform:rotate(90deg);}
   .catStrip{display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; scrollbar-width:thin; margin-right:-22px;}   /* bleed the strip all the way to the panel edge (past padding + scrollbar) — last thumb cuts at the border */
   .catSec.expanded .catStrip{margin-right:0;}
@@ -363,9 +363,9 @@
     display:flex; align-items:center; justify-content:center;
   }
   #tlPlay:hover{background:#000;}
-  #tlTrack{flex:1; height:6px; background:#e7e7ec; border-radius:3px; position:relative; cursor:pointer; touch-action:none;}
-  #tlFill{position:absolute; left:0; top:0; bottom:0; background:#b4b4bc; border-radius:3px;}
-  #tlHead{position:absolute; top:50%; left:0; width:13px; height:13px; border-radius:50%; background:#8b8b93; border:none; transform:translate(-50%,-50%);}
+  #tlTrack{flex:1; height:10px; background:#e8e8e8; border-radius:93px; position:relative; cursor:pointer; touch-action:none;}   /* Figma timeline: 10px pill, #e8e8e8 */
+  #tlFill{position:absolute; left:0; top:0; bottom:0; background:#e8e8e8; border-radius:93px;}   /* uniform track — the white grip marks the position */
+  #tlHead{position:absolute; top:50%; left:0; width:11px; height:23px; border-radius:4px; background:#fff; border:1px solid #b8b8b8; transform:translate(-50%,-50%); box-shadow:none;}   /* white vertical grip, 11×23, like Figma */
   #tlTime{flex:0 0 auto; min-width:96px; text-align:right; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums;}
   #toasts{position:absolute; bottom:18px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:8px; align-items:center; z-index:50; pointer-events:none;}
   .toast{
@@ -586,12 +586,12 @@
   </div>
 
   <div class="group">
-    <button class="btn sm" id="resetBtn" style="width:100%">↺ Reset values</button>
+    <button class="btn sm" id="resetBtn" style="width:100%">Reset values</button>
   </div>
 
   <div class="group">
     <div style="display:flex; gap:8px;">
-      <button class="btn sm" id="shareBtn" style="flex:1" title="Copies a link that reopens this exact preset — template + every setting. Your uploaded images aren't included.">🔗 Share this preset</button>
+      <button class="btn sm" id="shareBtn" style="flex:1" title="Copies a link that reopens this exact preset — template + every setting. Your uploaded images aren't included.">Share this preset</button>
       <button class="btn sm" id="helpBtn" style="flex:0 0 auto; width:40px" title="How it works">?</button>
     </div>
   </div>
