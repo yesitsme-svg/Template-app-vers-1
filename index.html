@@ -2115,9 +2115,10 @@ function roundedRectShape(w,h,r){
 /* a soft, anti-aliased FILLED rounded frame around a card — smooth (no thin-line shimmer), nice vibe */
 function makeCardFrame(mesh, color, opacity){
   const g=mesh.geometry.parameters, w=g.width, h=g.height;
-  const bw=Math.min(w,h)*0.004, ri=Math.min(w,h)*0.06;   // ultra-thin hairline border + inner corner radius
-  const outer=roundedRectShape(w+2*bw, h+2*bw, ri+bw);
-  outer.holes.push(new THREE.Path(roundedRectShape(w, h, ri).getPoints(28)));
+  const bw=Math.min(w,h)*0.004;                          // ultra-thin hairline border
+  const ri=Math.min(cornerNorm*w, w*0.5, h*0.5);         // match the card's ACTUAL corner radius (0 = sharp corners)
+  const outer=roundedRectShape(w+2*bw, h+2*bw, ri>0?ri+bw:0);
+  outer.holes.push(new THREE.Path(roundedRectShape(w, h, ri).getPoints(ri>0?28:5)));
   const m=new THREE.Mesh(new THREE.ShapeGeometry(outer,28),
     new THREE.MeshBasicMaterial({color, transparent:true, opacity, depthTest:false, depthWrite:false}));
   m.position.z=0.02; m.renderOrder=999;
