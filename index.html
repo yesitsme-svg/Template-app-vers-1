@@ -2105,11 +2105,14 @@ let outline=null, highlightTO=null, replaceSlot=null, thumbReplaceIdx=-1;
 function roundedRectShape(w,h,r){
   const hw=w/2, hh=h/2; r=Math.max(0,Math.min(r,Math.min(w,h)/2));
   const s=new THREE.Shape();
+  if(r<=1e-6){ s.moveTo(-hw,-hh); s.lineTo(hw,-hh); s.lineTo(hw,hh); s.lineTo(-hw,hh); s.closePath(); return s; }
+  const P=Math.PI;
   s.moveTo(-hw+r,-hh);
-  s.lineTo(hw-r,-hh); s.quadraticCurveTo(hw,-hh,hw,-hh+r);
-  s.lineTo(hw,hh-r);  s.quadraticCurveTo(hw,hh,hw-r,hh);
-  s.lineTo(-hw+r,hh); s.quadraticCurveTo(-hw,hh,-hw,hh-r);
-  s.lineTo(-hw,-hh+r);s.quadraticCurveTo(-hw,-hh,-hw+r,-hh);
+  s.lineTo(hw-r,-hh);  s.absarc(hw-r,-hh+r, r, -P/2, 0,    false);   // true circular corners → matches the card's SDF rounding exactly
+  s.lineTo(hw,hh-r);   s.absarc(hw-r, hh-r, r, 0,    P/2,  false);
+  s.lineTo(-hw+r,hh);  s.absarc(-hw+r,hh-r, r, P/2,  P,    false);
+  s.lineTo(-hw,-hh+r); s.absarc(-hw+r,-hh+r,r, P,    1.5*P,false);
+  s.closePath();
   return s;
 }
 /* a soft, anti-aliased FILLED rounded frame around a card — smooth (no thin-line shimmer), nice vibe */
