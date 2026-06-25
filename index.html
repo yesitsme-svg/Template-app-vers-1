@@ -256,11 +256,11 @@
   .colorRow .clbl{font-size:11px; color:var(--muted); min-width:14px;}
   .swatch{width:30px; height:30px; flex:0 0 auto; border-radius:7px; border:1px solid var(--border); cursor:pointer; padding:0;}   /* Figma swatch: 30×30, rounded-7 */
   .swatch:hover{border-color:#bbb;}
-  .hexInput{flex:1; height:30px; border:1px solid var(--border); border-radius:8px; background:var(--panel2); color:var(--text); font-family:inherit; font-size:12px; padding:0 10px; outline:none; text-transform:uppercase; font-variant-numeric:tabular-nums;}   /* Figma: 30px tall — matches the 30px swatch */
+  .hexInput{flex:1; height:30px; border:none; border-radius:8px; background:var(--panel2); color:var(--text); font-family:inherit; font-size:12px; padding:0 10px; outline:none; text-transform:uppercase; font-variant-numeric:tabular-nums;}   /* no border — flat grey field (bg distinguishes it) */
   .hexInput:focus, .hexInput:focus-visible{border-color:var(--border); outline:none; box-shadow:none;}   /* no focus ring / border change */
   .nativeColor{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;}
   /* stylish on/off switch (dark theme toggle) */
-  .switch{width:34px; height:20px; flex:0 0 auto; border-radius:100px; background:var(--panel2); border:1px solid var(--border); position:relative; cursor:pointer; padding:0; transition:background .2s,border-color .2s;}
+  .switch{width:34px; height:20px; flex:0 0 auto; border-radius:100px; background:var(--panel2); border:none; position:relative; cursor:pointer; padding:0; transition:background .2s;}   /* no border — flat pill */
   .switch .knob{position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.3); transition:left .2s;}
   .switch.on{background:var(--dark); border-color:var(--dark);}
   .switch.on .knob{left:16px;}
