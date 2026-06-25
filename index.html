@@ -126,8 +126,9 @@
   #topnav .navtitle{position:absolute; left:50%; transform:translateX(-50%); font-weight:500; color:var(--text); pointer-events:none;}
   #topnav .navpro{
     margin-left:auto; display:inline-flex; align-items:center; gap:7px; padding:8px 17px;
-    border:1px solid #1c1c1c; border-radius:100px; font-weight:500; color:var(--text); transition:border-color .15s,background .15s;
-  }   /* Figma Pro Access: thin BLACK border (was grey) */
+    border:1px solid #000; border-radius:100px; font-weight:500; font-size:14px; color:#000; transition:border-color .15s,background .15s;
+  }   /* Figma Pro Access: pure #000 border + text, 14px Medium (matches wannathis.one) */
+  body.dark #topnav .navpro{border-color:var(--text); color:var(--text);}   /* dark theme: white border/text on the dark nav */
   #topnav .navpro:hover{background:var(--panel2);}
   #topnav .navpro .bolt{height:15px; width:auto; flex:0 0 auto; display:block;}   /* real wannathis ic-pro-access bolt (golden #FFCA35, baked into the SVG) */
   #content{flex:1; display:flex; min-height:0; overflow:hidden;}
