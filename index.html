@@ -134,7 +134,7 @@
   aside{
     height:100%; overflow-y:auto; overflow-x:hidden; scrollbar-gutter:stable; scrollbar-width:thin; scrollbar-color:#cfcfd4 transparent;
     background:var(--panel);
-    padding:18px 16px 40px; display:flex; flex-direction:column; gap:16px;
+    padding:18px 16px 24px; display:flex; flex-direction:column; gap:16px;
     transition:opacity .2s;
   }   /* stable gutter → content never shifts when the scrollbar appears (no more sun "jump" on theme toggle) */
   #previews{width:222px; min-width:222px; border-right:1px solid var(--border);}
@@ -159,7 +159,7 @@
   .catSec{display:flex; flex-direction:column; gap:7px;}
   .catHead{display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none;}
   .catName{font-size:12px; letter-spacing:0; text-transform:none; color:var(--muted); font-weight:500;}   /* #888, 12px (panel rule) — no hover darkening */
-  .seeAll{background:none; border:none; color:var(--muted); font-size:12px; letter-spacing:0; text-transform:none; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:4px; padding:0; transition:color .15s; font-weight:400;}   /* same grey as the category name — locked at #888 */
+  .seeAll{background:none; border:none; color:var(--muted); font-size:11px; letter-spacing:0; text-transform:none; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:4px; padding:0; transition:color .15s; font-weight:400;}   /* Figma: See all 11px Regular #888 */
   .seeAll .av{display:inline-block; transition:transform .18s; font-size:11px; line-height:1; color:var(--muted);}   /* same grey as the category name (Figma) */
   .seeAll:hover .av{color:var(--muted);}
   /* left-panel brand header: Motion Grid mark + name + a sun/moon theme toggle */
@@ -167,13 +167,13 @@
   .pvLogo{height:11px; width:auto; flex:0 0 auto; color:var(--text); display:block;}   /* exact M mark from the Figma SVG; fill follows currentColor (themes) */
   .pvDivide{height:1px; flex:0 0 1px; background:#ededf1; margin:4px -22px 0 -16px;}   /* full-bleed line under the brand header — softer than the section borders so it doesn't read heavy */
   body.dark .pvDivide{background:#2a2a2a;}
-  .pvName{font-size:12px; color:var(--muted); font-weight:500;}
+  .pvName{font-size:11.5px; color:var(--muted); font-weight:500;}   /* Figma: Motion Grid 11.5px Medium #888 */
   .themeBtn{margin-left:auto; background:none; border:none; padding:4px; cursor:pointer; color:var(--text); display:flex; align-items:center; border-radius:7px; transition:color .15s,background .15s;}   /* sun icon dark, like the ref */
   .themeBtn:hover{background:var(--panel2);}
   .themeBtn svg{width:17px; height:17px; display:block;}
   .themeBtn .moon{display:none;}   /* no moon icon — Figma header only ever shows the sun */
   .catSec.expanded .seeAll .av{transform:rotate(90deg);}
-  .catStrip{display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; margin-right:-22px; scrollbar-width:none; -ms-overflow-style:none;}   /* scrollbar hidden — navigate by dragging the row */
+  .catStrip{display:flex; gap:8px; overflow-x:auto; padding-bottom:0; margin-right:-22px; scrollbar-width:none; -ms-overflow-style:none;}   /* scrollbar hidden — navigate by dragging the row */
   .catSec.expanded .catStrip{margin-right:0;}
   /* strip scrollbar fully hidden — drag the row to scroll (carousel); trackpad / shift-wheel also work; "See all" opens the full grid */
   .catStrip::-webkit-scrollbar{display:none; width:0; height:0;}
