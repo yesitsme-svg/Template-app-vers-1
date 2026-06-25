@@ -90,7 +90,7 @@
   /* logo keeps its built-in white disc as a backing in BOTH themes (no invert) — like mockup online */
   #topnav a{color:var(--text); text-decoration:none; font-weight:500; line-height:1.1; white-space:nowrap; transition:color .15s;}   /* Figma nav: Medium, line-height 110% */
   #topnav .navleft > a:not(.navlogo), #topnav .navdrop > .navlink{color:var(--text);}   /* Figma nav: items black */
-  #topnav .navleft > a:not(.navlogo):hover, #topnav .navdrop > .navlink:hover{color:var(--muted);}  /* lighten on hover */
+  #topnav .navleft > a:not(.navlogo):hover, #topnav .navdrop > .navlink:hover{color:var(--text);}  /* no color change on hover — stays black */
   #topnav .navdrop{position:relative; display:inline-flex; align-items:center;}
   #topnav .navdrop::after{content:''; position:absolute; top:100%; left:0; right:0; height:14px;} /* hover bridge to the menu */
   #topnav .navlink{display:inline-flex; align-items:center; gap:6px; cursor:pointer;}
