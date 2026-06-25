@@ -24,8 +24,8 @@
   }
   body.dark{
     /* === arqe.ai's exact dark palette (shadcn "neutral", hue 0 / sat 0 — pure neutral) === */
-    --bg:#0a0a0a;        /* arqe background / sidebar (0 0% 4%) */
-    --panel:#0a0a0a;     /* panels = background, separated by borders (arqe sidebar) */
+    --bg:#141414;        /* dark app background — panels & page */
+    --panel:#141414;     /* panels = background, separated by borders */
     --panel2:#1c1c1c;    /* control rest surface */
     --border:#262626;    /* arqe border / card / muted (0 0% 14.9%) */
     --text:#fafafa;      /* arqe foreground (0 0% 98%) */
@@ -134,6 +134,7 @@
   #topnav .navpro:hover{background:var(--panel2);}
   #topnav .navpro .bolt{height:15px; width:auto; flex:0 0 auto; display:block;}   /* real wannathis ic-pro-access bolt (golden #FFCA35, baked into the SVG) */
   #content{flex:1; display:flex; min-height:0; overflow:hidden;}
+  body.dark #content{background:#171717;}   /* dark theme: artwork area a touch lighter than the #141414 panels, so the black bg reads in the artwork */
   aside{
     height:100%; overflow-y:auto; overflow-x:hidden; scrollbar-gutter:stable; scrollbar-width:thin; scrollbar-color:#cfcfd4 transparent;
     background:var(--panel);
