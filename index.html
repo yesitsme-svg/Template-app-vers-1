@@ -187,7 +187,7 @@
   .pv{display:flex; flex-direction:column; gap:5px; cursor:pointer; background:none; border:none; padding:0; font-family:inherit; min-width:0; outline:none; -webkit-tap-highlight-color:transparent;}
   .pv:focus, .pv:focus-visible, .pv:active{outline:none; box-shadow:none;}   /* no focus/click ring when a template is selected (both themes) */
   .pv.active .pvimg, .pv:focus .pvimg, .pv:focus-visible .pvimg{box-shadow:none;}
-  .pv .pvimg{width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:9px; border:0; background:#1b1b1d; background-clip:padding-box; display:block; transition:box-shadow .15s,transform .15s;}   /* dark backdrop kept; border:0 — a transparent 1px border was bleeding the dark bg into a perimeter ring (the "обводка") */
+  .pv .pvimg{width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:9px; border:0; background:transparent; display:block; transition:box-shadow .15s,transform .15s;}   /* rounded corners are baked into the canvas (anti-aliased) — CSS bg transparent so corners show the panel, not dark; border-radius kept only for the hover shadow shape */
   .pv span{font-size:10px; color:var(--muted); text-align:center; line-height:1.2; height:24px; display:flex; align-items:center; justify-content:center; overflow:hidden; transition:color .15s;}   /* reserve 2 lines for every label → all cards & rows are the same height (even rhythm) */
   .pv:hover .pvimg{border-color:transparent; transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.10);}
   .pv:hover span{color:var(--text);}
@@ -2238,6 +2238,18 @@ const pvObserver=('IntersectionObserver'in window)
       const pv=previews.find(p=>p.el===en.target); if(pv) pv.onScreen=en.isIntersecting;
     }),{root:document.getElementById('previews'), rootMargin:'80px'})
   : null;
+// bake anti-aliased rounded corners straight into the thumbnail canvas (CSS border-radius clips a <canvas> raster-jagged at the corners)
+function pvRoundClip(pv){
+  const ctx=pv.ctx; if(!ctx) return;
+  const w=pv.el.width, h=pv.el.height, r=w*0.12;   // ≈9px at display, a touch rounder than the CSS radius so the CSS clip only ever touches transparent pixels
+  ctx.save();
+  ctx.globalCompositeOperation='destination-in';
+  ctx.beginPath();
+  if(ctx.roundRect){ ctx.roundRect(0,0,w,h,r); }
+  else { ctx.moveTo(r,0); ctx.arcTo(w,0,w,h,r); ctx.arcTo(w,h,0,h,r); ctx.arcTo(0,h,0,0,r); ctx.arcTo(0,0,w,0,r); ctx.closePath(); }
+  ctx.fill();
+  ctx.restore();
+}
 function buildPreviews(){
   const sR=root,sC=camera,sS=scene,sE=state.easeFn,sSize=state.size,sDir=state.dir;
   previewMode=true; state.size=1; state.dir=1;
@@ -2255,7 +2267,7 @@ function buildPreviews(){
     previews.push(pv);
     if(el){
       // render one representative still so the thumbnail isn't blank; motion only plays on hover
-      if(api && pv.ctx){ try{ api.update(pv.loop*0.22); }catch(e){} pvRenderer.render(sc,cam); pv.ctx.drawImage(pvRenderer.domElement,0,0,el.width,el.height); }
+      if(api && pv.ctx){ try{ api.update(pv.loop*0.22); }catch(e){} pvRenderer.render(sc,cam); pv.ctx.drawImage(pvRenderer.domElement,0,0,el.width,el.height); pvRoundClip(pv); }
       const card=el.closest('.pv')||el;
       card.addEventListener('pointerenter',()=>{ pv.hover=true; pv.clock=0; });
       card.addEventListener('pointerleave',()=>{ pv.hover=false; pvDrawStill(pv); });
@@ -2271,7 +2283,7 @@ function pvDrawStill(pv){
   previewMode=true; state.size=1; state.dir=1;
   root=pv.root; camera=pv.camera; scene=pv.scene; state.easeFn=pv.ease;
   try{ pv.api.update(pv.loop*0.22); }catch(e){}
-  pvRenderer.render(pv.scene,pv.camera); pv.ctx.drawImage(pvRenderer.domElement,0,0,pv.el.width,pv.el.height);
+  pvRenderer.render(pv.scene,pv.camera); pv.ctx.drawImage(pvRenderer.domElement,0,0,pv.el.width,pv.el.height); pvRoundClip(pv);
   root=sR; camera=sC; scene=sS; state.easeFn=sE; state.size=sSize; state.dir=sDir; previewMode=false;
 }
 let pvAccum=0;
@@ -2287,7 +2299,7 @@ function tickPreviews(dt){
       root=pv.root; camera=pv.camera; scene=pv.scene; state.easeFn=pv.ease;
       try{ pv.api.update(pv.clock % pv.loop); }catch(err){}
       pvRenderer.render(pv.scene,pv.camera);
-      pv.ctx.drawImage(pvRenderer.domElement,0,0,pv.el.width,pv.el.height);
+      pv.ctx.drawImage(pvRenderer.domElement,0,0,pv.el.width,pv.el.height); pvRoundClip(pv);
     }
   } finally {
     root=sR; camera=sC; scene=sS; state.easeFn=sE; state.size=sSize; state.dir=sDir; previewMode=false;
