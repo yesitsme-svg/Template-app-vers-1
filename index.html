@@ -2198,7 +2198,7 @@ TEMPLATES.forEach(t=>{
   const b=document.createElement('button');
   b.className='pv'; b.dataset.id=t.id;
   const cv=document.createElement('canvas'); cv.className='pvimg'; cv.id='pv-'+t.id;
-  cv.width=150; cv.height=200; cv.title=t.name;
+  cv.width=300; cv.height=400; cv.title=t.name;   // 2× super-sample (crisp on hi-DPI, modest perf)
   const span=document.createElement('span'); span.textContent=t.name;
   b.appendChild(cv); b.appendChild(span);
   b.addEventListener('click',()=>applyTemplate(t));
@@ -2230,7 +2230,7 @@ document.querySelectorAll('#tpls .catStrip').forEach(s=>{
    so the left panel shows the real motion of every template, always looping. */
 const pvRenderer=new THREE.WebGLRenderer({antialias:true, alpha:false, preserveDrawingBuffer:true});
 pvRenderer.outputColorSpace=THREE.SRGBColorSpace;
-pvRenderer.setSize(150,200,false);
+pvRenderer.setSize(300,400,false);   // matches the 2× super-sampled thumbnail canvases
 const previews=[];
 let pvClock=0;
 const pvObserver=('IntersectionObserver'in window)
@@ -2239,11 +2239,11 @@ const pvObserver=('IntersectionObserver'in window)
     }),{root:document.getElementById('previews'), rootMargin:'80px'})
   : null;
 function buildPreviews(){
-  const sR=root,sC=camera,sS=scene,sE=state.easeFn,sSize=state.size,sDir=state.dir;
-  previewMode=true; state.size=1; state.dir=1;
+  const sR=root,sC=camera,sS=scene,sE=state.easeFn,sSize=state.size,sDir=state.dir,sSp=state.spacing;
+  previewMode=true; state.size=1; state.dir=1; state.spacing=0.5;   // touch-floor: grid gaps → 0, cards merge into a clean silhouette (no dark backdrop showing through edge gaps)
   for(const t of TEMPLATES){
     if(!t.id) continue;
-    const sc=new THREE.Scene(); sc.background=new THREE.Color('#1b1b1d');   // dark preview backdrop (kept)
+    const sc=new THREE.Scene(); sc.background=new THREE.Color('#1b1b1d');   // dark preview backdrop (unified style — kept)
     const cam=new THREE.PerspectiveCamera(38,PA,.1,500);
     const rt=new THREE.Group(); sc.add(rt);
     root=rt; camera=cam; scene=sc;
@@ -2263,24 +2263,24 @@ function buildPreviews(){
       if(pvObserver) pvObserver.observe(el);
     }
   }
-  root=sR; camera=sC; scene=sS; state.easeFn=sE; state.size=sSize; state.dir=sDir; previewMode=false;
+  root=sR; camera=sC; scene=sS; state.easeFn=sE; state.size=sSize; state.dir=sDir; state.spacing=sSp; previewMode=false;
 }
 // draw a single still frame for one preview (used on hover-out so it settles, not freezes mid-motion)
 function pvDrawStill(pv){
   if(!pv.api||!pv.ctx) return;
-  const sR=root,sC=camera,sS=scene,sE=state.easeFn,sSize=state.size,sDir=state.dir;
-  previewMode=true; state.size=1; state.dir=1;
+  const sR=root,sC=camera,sS=scene,sE=state.easeFn,sSize=state.size,sDir=state.dir,sSp=state.spacing;
+  previewMode=true; state.size=1; state.dir=1; state.spacing=0.5;
   root=pv.root; camera=pv.camera; scene=pv.scene; state.easeFn=pv.ease;
   try{ pv.api.update(pv.loop*0.22); }catch(e){}
   pvRenderer.render(pv.scene,pv.camera); pv.ctx.drawImage(pvRenderer.domElement,0,0,pv.el.width,pv.el.height);
-  root=sR; camera=sC; scene=sS; state.easeFn=sE; state.size=sSize; state.dir=sDir; previewMode=false;
+  root=sR; camera=sC; scene=sS; state.easeFn=sE; state.size=sSize; state.dir=sDir; state.spacing=sSp; previewMode=false;
 }
 let pvAccum=0;
 function tickPreviews(dt){
   pvClock+=dt;
   pvAccum+=dt; if(pvAccum<1/30) return; const fdt=pvAccum; pvAccum=0; // previews run at ~30fps
-  const sR=root,sC=camera,sS=scene,sE=state.easeFn,sSize=state.size,sDir=state.dir;
-  previewMode=true; state.size=1; state.dir=1;
+  const sR=root,sC=camera,sS=scene,sE=state.easeFn,sSize=state.size,sDir=state.dir,sSp=state.spacing;
+  previewMode=true; state.size=1; state.dir=1; state.spacing=0.5;
   try{
     for(const pv of previews){
       if(!pv.api||!pv.ctx||!pv.onScreen||!pv.hover) continue; // only the hovered preview animates → no мельтешение
@@ -2291,7 +2291,7 @@ function tickPreviews(dt){
       pv.ctx.drawImage(pvRenderer.domElement,0,0,pv.el.width,pv.el.height);
     }
   } finally {
-    root=sR; camera=sC; scene=sS; state.easeFn=sE; state.size=sSize; state.dir=sDir; previewMode=false;
+    root=sR; camera=sC; scene=sS; state.easeFn=sE; state.size=sSize; state.dir=sDir; state.spacing=sSp; previewMode=false;
   }
 }
 
