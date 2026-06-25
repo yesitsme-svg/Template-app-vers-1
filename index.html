@@ -2622,7 +2622,7 @@ async function exportPNGSequence(){
   exporting=true; exportCancelled=false; setExportUI(true,'Rendering frames');
   const prevT=animTime, prevPlay=state.playing; state.playing=false;
   try{
-    const {zipSync}=await import('https://cdn.jsdelivr.net/npm/fflate@0.8.2/+esm');
+    const {Zip, ZipPassThrough}=await import('https://cdn.jsdelivr.net/npm/fflate@0.8.2/+esm');
     const cv=renderer.domElement;
     const fps=Math.min(state.fps||30, 30);                                  // ≤30 fps (lighter; full loop kept)
     const loopReal=active.loopSeconds/state.speed;
@@ -2631,36 +2631,40 @@ async function exportPNGSequence(){
     // that fits in memory (4K never; longer loops step down to 1K) instead of trimming the loop.
     const savedRes=state.exportRes;
     let seqRes = savedRes==='4k' ? '2k' : savedRes;
-    if(fullFrames>520) seqRes='1k';                                         // beyond ~17s@30 at 2K → 1K so the full loop still fits
+    if(fullFrames>700) seqRes='1k';                                         // beyond ~23s@30 at 2K → 1K so the full loop still fits
     state.exportRes=seqRes;
     const {W,H,RW,RH}=exportDims(); state.exportRes=savedRes;
     const {ds,dx}=beginHiRes(W,H,RW,RH);
-    const SAFE=1800;                                                        // absolute memory backstop (~60s@30, even at 1K)
+    const SAFE=2400;                                                        // absolute memory backstop (~80s@30 at 1K)
     const totalFrames=Math.min(fullFrames, SAFE), trimmed=fullFrames>SAFE;
     if(seqRes!==savedRes || (state.fps||30)>30 || trimmed)
       toast(trimmed
         ? `Loop too long for an in-browser PNG sequence — trimmed to ${(SAFE/fps)|0}s. MP4 keeps the full loop.`
         : `PNG sequence: ${seqRes.toUpperCase()} @ ${fps}fps to fit the full ${(totalFrames/fps).toFixed(0)}s loop in memory.`);
-    const files={}, folder=`${state.template.id}-sequence`, pad=n=>String(n).padStart(4,'0');
+    const folder=`${state.template.id}-sequence`, pad=n=>String(n).padStart(4,'0');
     const hasVid=exportHasVideo();
+    const zchunks=[]; let zipErr=null;                    // stream each frame straight into the zip → ~half the peak memory of zipSync
+    const zip=new Zip((e,chunk)=>{ if(e) zipErr=e; else zchunks.push(chunk); });
     for(let i=0;i<totalFrames;i++){
-      if(exportCancelled) break;
+      if(exportCancelled||zipErr) break;
       animTime=i*state.speed/fps;
       if(hasVid) await seekVideosTo(i/fps);
       renderFrame();
       dx.clearRect(0,0,W,H); dx.drawImage(cv,0,0,W,H);
       const blob=await new Promise(r=>ds.toBlob(r,'image/png'));
-      files[`${folder}/frame_${pad(i+1)}.png`]=new Uint8Array(await blob.arrayBuffer());
+      const it=new ZipPassThrough(`${folder}/frame_${pad(i+1)}.png`);
+      zip.add(it); it.push(new Uint8Array(await blob.arrayBuffer()), true);   // store-only; the frame is freed after it's written
       if(i%2===0){ setExportProgress(i/totalFrames,'Rendering frames'); await yieldTask(); }
     }
+    if(zipErr) throw zipErr;
     if(!exportCancelled){
       setExportProgress(1,'Zipping'); await yieldTask();
-      const zipped=zipSync(files,{level:0});             // PNGs are already compressed → store-only, fast
-      const blob=new Blob([zipped],{type:'application/zip'});
+      zip.end();
+      const blob=new Blob(zchunks,{type:'application/zip'});
       downloadBlob(blob,fileName('zip'));
       window.__app.lastExport={type:'seq',size:blob.size,frames:totalFrames};
       toast(`PNG sequence saved — ${totalFrames} frames, ${(blob.size/1048576).toFixed(1)} MB`);
-    } else toast('Export cancelled.');
+    } else { try{zip.end();}catch{} toast('Export cancelled.'); }
   }catch(err){ console.error('Sequence export failed:',err); toast('Sequence export failed: '+(err.message||err)); }
   finally{ animTime=prevT; state.playing=prevPlay; exporting=false; exportingUI(false); resize(); }
 }
