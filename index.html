@@ -55,7 +55,7 @@
   body.dark .drop{ border-color:#404040; }
   body.dark .swatch:hover, body.dark .ratioGrid button:hover, body.dark .ddBtn:hover{ border-color:#525252; }
   body.dark .pv:hover .pvimg{ border-color:#404040; }
-  body.dark .pv.active .pvimg{ border-color:transparent; box-shadow:none; }   /* selected = no ring in dark either */
+  body.dark .pv.active .pvimg, body.dark .pv.active:hover .pvimg{ border-color:transparent !important; box-shadow:none !important; }   /* selected = no ring in dark either */
   body.dark .chip:hover{ background:#262626; }
   /* popovers / dropdown menus = arqe popover #171717 */
   body.dark .ddPop, body.dark .navmenu{ background:#171717; }
@@ -184,12 +184,14 @@
   .catSec.expanded .catStrip{flex-wrap:wrap; overflow-x:visible; padding-bottom:0;}
   .catSec.expanded .catStrip .pv{flex:0 0 calc(50% - 4px);}
   .catSec.collapsed .catStrip{display:none;}
-  .pv{display:flex; flex-direction:column; gap:5px; cursor:pointer; background:none; border:none; padding:0; font-family:inherit; min-width:0;}
-  .pv .pvimg{width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:9px; border:1px solid var(--border); background:#1b1b1d; display:block; transition:border-color .15s,box-shadow .15s,transform .15s;}
+  .pv{display:flex; flex-direction:column; gap:5px; cursor:pointer; background:none; border:none; padding:0; font-family:inherit; min-width:0; outline:none; -webkit-tap-highlight-color:transparent;}
+  .pv:focus, .pv:focus-visible, .pv:active{outline:none; box-shadow:none;}   /* no focus/click ring when a template is selected (both themes) */
+  .pv.active .pvimg, .pv:focus .pvimg, .pv:focus-visible .pvimg{box-shadow:none;}
+  .pv .pvimg{width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:9px; border:1px solid transparent; background:#1b1b1d; display:block; transition:border-color .15s,box-shadow .15s,transform .15s;}   /* NO grey/black outline on any template thumbnail */
   .pv span{font-size:10px; color:var(--muted); text-align:center; line-height:1.2; height:24px; display:flex; align-items:center; justify-content:center; overflow:hidden; transition:color .15s;}   /* reserve 2 lines for every label → all cards & rows are the same height (even rhythm) */
-  .pv:hover .pvimg{border-color:#cfcfd6; transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.10);}
+  .pv:hover .pvimg{border-color:transparent; transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.10);}
   .pv:hover span{color:var(--text);}
-  .pv.active .pvimg{border-color:transparent; box-shadow:none;}   /* selected = no ring/border (Figma); inactive keep the light border, active reads via its dark name */
+  .pv.active .pvimg, .pv.active:hover .pvimg{border-color:transparent !important; box-shadow:none !important;}   /* selected = ZERO border/ring in BOTH themes; inactive keep the light border, active reads via its dark name */
   .pv.active span{color:var(--text); font-weight:500;}
   .disclose{align-self:flex-start; display:inline-flex; align-items:center; gap:6px; background:none; border:none; padding:3px 0; color:var(--muted); font-size:12px; cursor:pointer; font-family:inherit;}
   .disclose:hover{color:var(--text);}
