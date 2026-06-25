@@ -733,6 +733,7 @@ const PLACEHOLDERS = [
 const PA=3/4; // default card aspect (also the grey/demo card aspect)
 let userSources = []; // {src, thumb, name, uid, aspect}
 let uidSeq=0;
+let MAX_ANISO=16;   // set from renderer.capabilities once the GL context exists — sharpens angled/tilted cards
 const texCache = new Map();
 const clampAspect=a=>Math.max(0.42, Math.min(2.4, a)); // keep extreme panoramas/strips layout-safe
 function makeTexture(source, key, aspect){
@@ -741,7 +742,7 @@ function makeTexture(source, key, aspect){
   if(source.tagName==='VIDEO'){ // #9 video card: redraw the current frame (cover-fit, capped res) each tick
     const VL=1280, W=aspect>=1?VL:Math.round(VL*aspect), H=aspect>=1?Math.round(VL/aspect):VL;
     const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d');
-    const tex=new THREE.CanvasTexture(c); tex.colorSpace=THREE.SRGBColorSpace; tex.anisotropy=4;
+    const tex=new THREE.CanvasTexture(c); tex.colorSpace=THREE.SRGBColorSpace; tex.anisotropy=MAX_ANISO;
     tex.__videoUpdate=()=>{ const v=source; if(v.readyState>=2 && v.videoWidth){
       if(tex.__lastT===v.currentTime) return;                 // frame hasn't advanced (paused / render>video fps) → skip redraw + GPU upload
       tex.__lastT=v.currentTime;
@@ -758,7 +759,7 @@ function makeTexture(source, key, aspect){
   x.drawImage(source,(W-dw)/2,(H-dh)/2,dw,dh);
   const tex=new THREE.CanvasTexture(c);
   tex.colorSpace=THREE.SRGBColorSpace;
-  tex.anisotropy=4;
+  tex.anisotropy=MAX_ANISO;
   texCache.set(ck,tex);
   return tex;
 }
@@ -819,6 +820,7 @@ function disposeSource(u){ // free a userSources entry (image bitmap or video el
 const stage=document.getElementById('stage');
 const renderer=new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true, alpha:true});
 renderer.outputColorSpace=THREE.SRGBColorSpace;
+MAX_ANISO=renderer.capabilities.getMaxAnisotropy()||16;   // real GPU cap (usually 16) → crisp tilted cards
 renderer.autoClear=false;
 stage.appendChild(renderer.domElement);
 /* scene/camera/root are swappable: the main stage and every live preview
@@ -2664,16 +2666,20 @@ $('exportBtn').addEventListener('click',()=>{
 
 /* ================= sizing ================= */
 function resize(){
-  const [rw,rh]=ratioWH(), maxDim=1080;                 // preview always ~1K on the long side; export uses exportDims
-  let W=rw>=rh?maxDim:Math.round(maxDim*rw/rh);
-  let H=rw>=rh?Math.round(maxDim*rh/rw):maxDim;
-  W&=~1; H&=~1; // H.264 needs even dimensions
+  const [rw,rh]=ratioWH(), ar=rw/rh;
+  const availW=window.innerWidth-222-312-72, availH=window.innerHeight-150-56; // -56 for the top nav bar
+  // CSS display size: fit the aspect ratio into the available area
+  let dispW=availW, dispH=Math.round(availW/ar);
+  if(dispH>availH){ dispH=availH; dispW=Math.round(availH*ar); }
+  stage.style.width=dispW+'px'; stage.style.height=dispH+'px';
+  // render buffer = on-screen device pixels × 1.5 super-sample → crisp uploads (no upscale-blur on hi-DPI). Floor 1080, cap 2560 for perf.
+  const dpr=Math.min(window.devicePixelRatio||1, 2);
+  let W=dispW*dpr*1.5, H=dispH*dpr*1.5, m=Math.max(W,H);
+  if(m<1080){ const k=1080/m; W*=k; H*=k; m=1080; }
+  if(m>2560){ const k=2560/m; W*=k; H*=k; }
+  W=Math.round(W)&~1; H=Math.round(H)&~1; // even dimensions
   renderer.setSize(W,H,false);
   camera.aspect=W/H; camera.updateProjectionMatrix();
-  const availW=window.innerWidth-222-312-72, availH=window.innerHeight-150-56; // -56 for the top nav bar
-  const s=Math.min(availW/W,availH/H,1);
-  stage.style.width=Math.round(W*s)+'px';
-  stage.style.height=Math.round(H*s)+'px';
   if(state.template) rebuild();
 }
 window.addEventListener('resize',resize);
