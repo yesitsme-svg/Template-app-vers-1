@@ -2893,7 +2893,9 @@ window.addEventListener('keydown',e=>{
   const typing=(tag==='input'&&(t.type==='text'||t.type==='number')) || tag==='textarea' || t.isContentEditable;
   if(typing || exporting || e.metaKey || e.ctrlKey || e.altKey) return;
   // spacebar toggles play/pause anywhere
-  if(e.code==='Space'){ e.preventDefault(); togglePlay(); return; }
+  if(e.code==='Space'){ e.preventDefault();
+    const ae=document.activeElement; if(ae&&ae.blur&&ae!==document.body) ae.blur();   // drop focus off the last-clicked chrome button so space doesn't paint a focus ring on it
+    togglePlay(); return; }
   // ← / → scrub by a frame (Shift = 0.5 s); pauses playback so you can step through
   if(e.key==='ArrowLeft' || e.key==='ArrowRight'){
     if(!active) return; e.preventDefault();
