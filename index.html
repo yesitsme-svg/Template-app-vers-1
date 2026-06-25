@@ -627,8 +627,8 @@
         <button type="button" data-v="4k">4K</button>
       </div>
     </div>
-    <div class="dd" id="ddFps" data-value="60">
-      <button class="ddBtn" type="button"><span class="ddVal">60 fps</span><span class="ddCar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
+    <div class="dd" id="ddFps" data-value="30">
+      <button class="ddBtn" type="button"><span class="ddVal">30 fps</span><span class="ddCar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
       <div class="ddPop">
         <button type="button" data-v="24">24 fps</button>
         <button type="button" data-v="30">30 fps</button>
@@ -1763,7 +1763,7 @@ const state={
   template:null, P:{}, ease:'Smooth', bez:[.76,0,.24,1], easeFn:null,
   dir:1, bg:'#0d0d0d', bg2:'#2a1a5c', fillMode:'solid', transparent:false, bgAlpha:1, bg2Alpha:1, ratio:'3:4',
   playing:true, grain:false, speed:1, size:1, comp:1, lens:0,
-  spacing:1, rotY:0, rotX:0, fade:0, exportRes:'2k', fps:60, dark:false, customW:1080, customH:1080, backface:false,
+  spacing:1, rotY:0, rotX:0, fade:0, exportRes:'2k', fps:30, dark:false, customW:1080, customH:1080, backface:false,
 };
 let active=null, animTime=0, builtSpacing=1;
 // presets that read spacing LIVE in their own update() (count baked, pitch/radius live) → smooth, no rebuild
@@ -2520,8 +2520,8 @@ async function exportMP4(){
     const {ds,dx}=beginHiRes(W,H,RW,RH);
     const bitrate=Math.min(60_000_000, Math.round(W*H*fps*0.28)); // scale bitrate to resolution
     const loopReal=active.loopSeconds/state.speed;
-    if(loopReal>30) toast('Loop is longer than 30 s — export is trimmed to 30 s.');
-    const totalFrames=Math.max(fps,Math.min(Math.round(loopReal*fps),fps*30));
+    if(loopReal>60) toast('Loop is longer than 60 s — export is trimmed to 60 s.');
+    const totalFrames=Math.max(fps,Math.min(Math.round(loopReal*fps),fps*60));
     const muxer=new Muxer({
       target:new ArrayBufferTarget(),
       video:{codec:'avc', width:W, height:H, frameRate:fps},
@@ -2562,7 +2562,7 @@ async function exportMP4(){
       const blob=new Blob([muxer.target.buffer],{type:'video/mp4'});
       downloadBlob(blob,fileName('mp4'));
       window.__app.lastExport={type:'mp4',size:blob.size,frames:totalFrames};
-      toast(`MP4 saved — ${(totalFrames/30).toFixed(1)} s, ${(blob.size/1048576).toFixed(1)} MB`);
+      toast(`MP4 saved — ${(totalFrames/fps).toFixed(1)} s, ${(blob.size/1048576).toFixed(1)} MB`);
     }else{
       try{ encoder.close(); }catch{}
       toast('Export cancelled.');
@@ -2623,12 +2623,18 @@ async function exportPNGSequence(){
   const prevT=animTime, prevPlay=state.playing; state.playing=false;
   try{
     const {zipSync}=await import('https://cdn.jsdelivr.net/npm/fflate@0.8.2/+esm');
-    const cv=renderer.domElement, fps=state.fps||30;
-    const {W,H,RW,RH}=exportDims();
+    const cv=renderer.domElement;
+    // PNG sequences hold every frame in memory before zipping → hard caps so it always exports (4K/60 used to OOM):
+    const fps=Math.min(state.fps||30, 30);                                  // ≤30 fps
+    const savedRes=state.exportRes; if(state.exportRes==='4k') state.exportRes='2k';   // ≤2K
+    const {W,H,RW,RH}=exportDims(); state.exportRes=savedRes;
     const {ds,dx}=beginHiRes(W,H,RW,RH);
     const loopReal=active.loopSeconds/state.speed;
-    if(loopReal>30) toast('Loop is longer than 30 s — sequence trimmed to 30 s.');
-    const totalFrames=Math.max(fps,Math.min(Math.round(loopReal*fps),fps*30));
+    const FRAME_CAP=450;                                                    // ≤450 frames (~15s@30) → zip stays in memory safely
+    const wantFrames=Math.round(loopReal*fps);
+    const totalFrames=Math.max(fps,Math.min(wantFrames,FRAME_CAP));
+    if(savedRes==='4k'||(state.fps||30)>30||wantFrames>FRAME_CAP)
+      toast(`PNG sequence capped for reliability — ≤2K, ≤30fps, ${(totalFrames/fps).toFixed(0)}s. Use MP4 for 4K / longer.`);
     const files={}, folder=`${state.template.id}-sequence`, pad=n=>String(n).padStart(4,'0');
     const hasVid=exportHasVideo();
     for(let i=0;i<totalFrames;i++){
