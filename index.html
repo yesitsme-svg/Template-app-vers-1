@@ -187,7 +187,7 @@
   .pv{display:flex; flex-direction:column; gap:5px; cursor:pointer; background:none; border:none; padding:0; font-family:inherit; min-width:0; outline:none; -webkit-tap-highlight-color:transparent;}
   .pv:focus, .pv:focus-visible, .pv:active{outline:none; box-shadow:none;}   /* no focus/click ring when a template is selected (both themes) */
   .pv.active .pvimg, .pv:focus .pvimg, .pv:focus-visible .pvimg{box-shadow:none;}
-  .pv .pvimg{width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:9px; border:1px solid transparent; background:var(--panel); display:block; transition:border-color .15s,box-shadow .15s,transform .15s;}   /* bg = panel colour → thumbnail blends into the panel, NO dark/grey outline (both themes) */
+  .pv .pvimg{width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:9px; border:1px solid transparent; background:#1b1b1d; display:block; transition:border-color .15s,box-shadow .15s,transform .15s;}   /* dark preview backdrop kept; NO border (transparent) in any state/theme */
   .pv span{font-size:10px; color:var(--muted); text-align:center; line-height:1.2; height:24px; display:flex; align-items:center; justify-content:center; overflow:hidden; transition:color .15s;}   /* reserve 2 lines for every label → all cards & rows are the same height (even rhythm) */
   .pv:hover .pvimg{border-color:transparent; transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.10);}
   .pv:hover span{color:var(--text);}
@@ -2228,9 +2228,8 @@ document.querySelectorAll('#tpls .catStrip').forEach(s=>{
    Each template gets its own scene/camera built once with neutral grey cards;
    a shared offscreen renderer blits each one into its card canvas every frame,
    so the left panel shows the real motion of every template, always looping. */
-const pvRenderer=new THREE.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true});
+const pvRenderer=new THREE.WebGLRenderer({antialias:true, alpha:false, preserveDrawingBuffer:true});
 pvRenderer.outputColorSpace=THREE.SRGBColorSpace;
-pvRenderer.setClearColor(0x000000,0);   // transparent → the thumbnail's CSS background (= the panel colour) shows in any gaps/edges, so NO dark frame in either theme
 pvRenderer.setSize(150,200,false);
 const previews=[];
 let pvClock=0;
@@ -2244,7 +2243,7 @@ function buildPreviews(){
   previewMode=true; state.size=1; state.dir=1;
   for(const t of TEMPLATES){
     if(!t.id) continue;
-    const sc=new THREE.Scene(); sc.background=null;   // transparent → CSS panel colour shows through (no dark frame)
+    const sc=new THREE.Scene(); sc.background=new THREE.Color('#1b1b1d');   // dark preview backdrop (kept)
     const cam=new THREE.PerspectiveCamera(38,PA,.1,500);
     const rt=new THREE.Group(); sc.add(rt);
     root=rt; camera=cam; scene=sc;
@@ -2256,7 +2255,7 @@ function buildPreviews(){
     previews.push(pv);
     if(el){
       // render one representative still so the thumbnail isn't blank; motion only plays on hover
-      if(api && pv.ctx){ try{ api.update(pv.loop*0.22); }catch(e){} pvRenderer.render(sc,cam); pv.ctx.clearRect(0,0,el.width,el.height); pv.ctx.drawImage(pvRenderer.domElement,0,0,el.width,el.height); }
+      if(api && pv.ctx){ try{ api.update(pv.loop*0.22); }catch(e){} pvRenderer.render(sc,cam); pv.ctx.drawImage(pvRenderer.domElement,0,0,el.width,el.height); }
       const card=el.closest('.pv')||el;
       card.addEventListener('pointerenter',()=>{ pv.hover=true; pv.clock=0; });
       card.addEventListener('pointerleave',()=>{ pv.hover=false; pvDrawStill(pv); });
@@ -2272,7 +2271,7 @@ function pvDrawStill(pv){
   previewMode=true; state.size=1; state.dir=1;
   root=pv.root; camera=pv.camera; scene=pv.scene; state.easeFn=pv.ease;
   try{ pv.api.update(pv.loop*0.22); }catch(e){}
-  pvRenderer.render(pv.scene,pv.camera); pv.ctx.clearRect(0,0,pv.el.width,pv.el.height); pv.ctx.drawImage(pvRenderer.domElement,0,0,pv.el.width,pv.el.height);
+  pvRenderer.render(pv.scene,pv.camera); pv.ctx.drawImage(pvRenderer.domElement,0,0,pv.el.width,pv.el.height);
   root=sR; camera=sC; scene=sS; state.easeFn=sE; state.size=sSize; state.dir=sDir; previewMode=false;
 }
 let pvAccum=0;
@@ -2288,7 +2287,6 @@ function tickPreviews(dt){
       root=pv.root; camera=pv.camera; scene=pv.scene; state.easeFn=pv.ease;
       try{ pv.api.update(pv.clock % pv.loop); }catch(err){}
       pvRenderer.render(pv.scene,pv.camera);
-      pv.ctx.clearRect(0,0,pv.el.width,pv.el.height);
       pv.ctx.drawImage(pvRenderer.domElement,0,0,pv.el.width,pv.el.height);
     }
   } finally {
