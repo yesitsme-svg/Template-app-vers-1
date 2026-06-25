@@ -244,7 +244,7 @@
   /* block separators so the panel sections read as distinct cards (Figma/Framer style) */
   /* full-bleed divider lines (edge-to-edge of the panel) with generous breathing room each side */
   #setScroll > * + *{border-top:1px solid var(--border); margin-top:18px; padding-top:18px; margin-left:-16px; margin-right:-16px; padding-left:16px; padding-right:16px;}
-  #setScroll > .sec.collapsed{margin-top:24px; padding-top:24px;}   /* folded sections get MORE air — an open, evenly-spaced list when everything is collapsed */
+  /* collapsed & expanded sections share the SAME top spacing → toggling never shifts the header/divider (no jump) */
   /* action buttons inside the scroll are not sections: no full-bleed divider, just top spacing */
   #setScroll > button.btn{border-top:none; margin-left:0; margin-right:0; padding-left:10px; padding-right:10px; padding-top:7px; margin-top:18px;}
   /* classic color control: clickable swatch + hex field */
