@@ -2249,7 +2249,6 @@ function buildPreviews(){
     root=rt; camera=cam; scene=sc;
     const e=(t.noEase?EASINGS.find(x=>x.name==='Linear'):EASINGS.find(x=>x.name===t.ease))||EASINGS[0]; const ef=cubicBezier(...e.b); state.easeFn=ef;
     let api=null; try{ api=SCENES[t.scene]({...t.P}); }catch(err){ console.warn('preview',t.id,err); }
-    rt.scale.setScalar(1.22);   // overscan in the thumbnail so cards cover the edges → the dark backdrop doesn't show as a frame/ring around the perimeter
     const el=document.getElementById('pv-'+t.id);
     const pv={scene:sc, camera:cam, root:rt, api, ease:ef, loop:api?api.loopSeconds:1,
               el, ctx:el?el.getContext('2d'):null, onScreen:true, hover:false, clock:0};
