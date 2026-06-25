@@ -119,7 +119,7 @@
   #topnav .megaThumb{position:relative; display:block; width:100%; aspect-ratio:700/664; border-radius:14px; overflow:hidden; background:var(--panel2);}   /* real wannathis menu image ratio (700×664) */
   #topnav .megaThumb img{width:100%; height:100%; object-fit:cover; display:block;}
   #topnav .megaThumb::after{content:''; position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; transition:opacity .15s ease;}   /* light white overlay on hover */
-  #topnav .megaCard:hover .megaThumb::after{opacity:.15;}   /* image "lights up" ~15% white when you hover the card */
+  #topnav .megaThumb:hover::after{opacity:.15;}   /* image "lights up" ~15% white only when you hover the IMAGE itself (not the text) */
   #topnav .megaCard .mt{display:flex; align-items:center; gap:5px; font-size:15px; font-weight:500; color:var(--text); line-height:1.2; white-space:nowrap;}
   #topnav .megaCard .mt i{font-style:normal; font-size:14px; color:var(--text); transition:transform .22s ease-out;}
   #topnav .megaCard:hover .mt i{transform:translateX(1.5px);}   /* light, subtle nudge — gentle ease-out */
