@@ -2116,8 +2116,7 @@ function highlight(mesh){
   mesh.add(outline);
   highlightTO=setTimeout(clearHighlight,2600);
 }
-renderer.domElement.addEventListener('pointerdown',e=>{
-  if(exporting||!active) return;
+function pickCard(e){
   const rect=renderer.domElement.getBoundingClientRect();
   const ndc=new THREE.Vector2(
     ((e.clientX-rect.left)/rect.width)*2-1,
@@ -2126,8 +2125,35 @@ renderer.domElement.addEventListener('pointerdown',e=>{
   const hits=raycaster.intersectObjects(root.children,true).filter(h=>
     h.object.visible && h.object.geometry?.type==='PlaneGeometry' &&
     (h.object.material?.uniforms?.uOpacity?.value??1)>0.15);
-  if(!hits.length) return;
-  const mesh=hits[0].object;
+  return hits.length?hits[0].object:null;
+}
+/* hover-highlight the card under the cursor on the canvas — like arqe, so it's clear you can click to edit it */
+let hoverOutline=null, hoveredMesh=null;
+function clearHover(){
+  if(hoverOutline){ hoverOutline.parent?.remove(hoverOutline); hoverOutline.geometry.dispose(); hoverOutline.material.dispose(); hoverOutline=null; }
+  hoveredMesh=null;
+}
+renderer.domElement.addEventListener('pointermove',e=>{
+  if(exporting||!active){ if(hoveredMesh)clearHover(); renderer.domElement.style.cursor=''; return; }
+  const mesh=pickCard(e);
+  if(mesh && mesh.userData.slot!=null){
+    renderer.domElement.style.cursor='pointer';
+    if(mesh!==hoveredMesh){
+      clearHover();
+      const g=mesh.geometry.parameters;
+      hoverOutline=new THREE.LineSegments(
+        new THREE.EdgesGeometry(new THREE.PlaneGeometry(g.width*1.02,g.height*1.02)),
+        new THREE.LineBasicMaterial({color:0x713ade, transparent:true, opacity:.9, depthTest:false, depthWrite:false}));
+      hoverOutline.position.z=0.02; hoverOutline.renderOrder=998;
+      mesh.add(hoverOutline); hoveredMesh=mesh;
+    }
+  } else { if(hoveredMesh)clearHover(); renderer.domElement.style.cursor=''; }
+});
+renderer.domElement.addEventListener('pointerleave',()=>{ clearHover(); renderer.domElement.style.cursor=''; });
+renderer.domElement.addEventListener('pointerdown',e=>{
+  if(exporting||!active) return;
+  const mesh=pickCard(e);
+  if(!mesh) return;
   const slot=mesh.userData.slot;
   if(slot==null) return;
   highlight(mesh);
@@ -2138,6 +2164,7 @@ function updateLoopInfo(){
   const el=$('loopInfo'); if(active&&el) el.textContent=`Loop ≈ ${(active.loopSeconds/state.speed).toFixed(1)} s · ${state.fps} fps`;
 }
 function applyTemplate(t){
+  clearHover(); clearHighlight();   // drop any hover/click outline tied to the old scene's cards
   state.template=t;
   state.P={...t.P};
   // #7 full reset of per-preset adjustments. Uploaded images and workspace settings
