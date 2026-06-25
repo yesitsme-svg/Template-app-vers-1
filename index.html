@@ -750,7 +750,7 @@ function makeTexture(source, key, aspect){
     tex.__videoUpdate();
     texCache.set(ck,tex); return tex;
   }
-  const LONG=2048; // long side 2K — matches the upload cap, crisp for full-frame cards / higher-res export
+  const LONG=3072; // long side 3K — matches the upload cap, crisp for full-frame cards / higher-res export
   const W=aspect>=1?LONG:Math.round(LONG*aspect), H=aspect>=1?Math.round(LONG/aspect):LONG;
   const c=document.createElement('canvas'); c.width=W; c.height=H;
   const x=c.getContext('2d');
@@ -2672,11 +2672,11 @@ function resize(){
   let dispW=availW, dispH=Math.round(availW/ar);
   if(dispH>availH){ dispH=availH; dispW=Math.round(availH*ar); }
   stage.style.width=dispW+'px'; stage.style.height=dispH+'px';
-  // render buffer = on-screen device pixels × 1.5 super-sample → crisp uploads (no upscale-blur on hi-DPI). Floor 1080, cap 2560 for perf.
+  // render buffer = on-screen device pixels × 2 super-sample → crisp uploads (no upscale-blur on hi-DPI). Floor 1080, cap 3000 for perf.
   const dpr=Math.min(window.devicePixelRatio||1, 2);
-  let W=dispW*dpr*1.5, H=dispH*dpr*1.5, m=Math.max(W,H);
+  let W=dispW*dpr*2, H=dispH*dpr*2, m=Math.max(W,H);
   if(m<1080){ const k=1080/m; W*=k; H*=k; m=1080; }
-  if(m>2560){ const k=2560/m; W*=k; H*=k; }
+  if(m>3000){ const k=3000/m; W*=k; H*=k; }
   W=Math.round(W)&~1; H=Math.round(H)&~1; // even dimensions
   renderer.setSize(W,H,false);
   camera.aspect=W/H; camera.updateProjectionMatrix();
@@ -2963,7 +2963,7 @@ function toast(msg){
 }
 
 /* ================= uploads ================= */
-const MAX_FILES=20, MAX_FILE_MB=15, MAX_DIM=2048, MAX_VIDEO_MB=30;
+const MAX_FILES=20, MAX_FILE_MB=15, MAX_DIM=3072, MAX_VIDEO_MB=30;
 const OK_TYPES=['image/jpeg','image/png','image/webp'];
 const VIDEO_TYPES=['video/mp4','video/webm','video/quicktime'];
 const drop=$('drop'), fileInput=$('fileInput'), replaceInput=$('replaceInput'), thumbs=$('thumbs');
