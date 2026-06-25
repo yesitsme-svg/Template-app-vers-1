@@ -263,9 +263,9 @@
   .switch.on .knob{left:16px;}
   .rowBetween{display:flex; align-items:center; justify-content:space-between; gap:10px;}
   /* settings panel = scrollable content + a fixed export footer */
-  #settings{padding:0; gap:0; overflow:hidden;}
-  #setScroll{flex:1; overflow-y:auto; scrollbar-gutter:stable; scrollbar-width:thin; scrollbar-color:#cfcfd4 transparent; padding:18px 16px 22px; display:flex; flex-direction:column; gap:0;}
-  #setScroll::-webkit-scrollbar{width:6px;} #setScroll::-webkit-scrollbar-thumb{background:#ddd; border-radius:3px;}
+  #settings{padding:0; gap:0; overflow:hidden; scrollbar-gutter:auto;}   /* kill the phantom gutter inherited from the aside rule (this panel doesn't scroll — #setScroll does) so section dividers reach the right edge evenly */
+  #setScroll{flex:1; overflow-y:auto; overflow-x:hidden; scrollbar-width:none; -ms-overflow-style:none; padding:18px 16px 22px; display:flex; flex-direction:column; gap:0;}   /* scrollbar hidden (like the left panel) so full-bleed dividers stay even; scroll by wheel/trackpad */
+  #setScroll::-webkit-scrollbar{display:none; width:0; height:0;}
   #exportBar{flex:0 0 auto; border-top:1px solid var(--border); background:var(--panel); padding:13px 16px 15px; display:flex; flex-direction:column; gap:9px;}
   #exportBar .exrow{display:flex; gap:8px;}
   /* Figma-style custom dropdowns (open upward — they live at the panel bottom) */
