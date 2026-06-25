@@ -261,9 +261,9 @@
   .nativeColor{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;}
   /* stylish on/off switch (dark theme toggle) */
   .switch{width:34px; height:20px; flex:0 0 auto; border-radius:100px; background:var(--panel2); border:none; position:relative; cursor:pointer; padding:0; transition:background .2s;}   /* no border — flat pill */
-  .switch .knob{position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.3); transition:left .2s;}
+  .switch .knob{position:absolute; top:3px; left:3px; width:14px; height:14px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.3); transition:left .2s;}   /* 3px all-round inset → knob centered in the 20px pill */
   .switch.on{background:var(--dark); border-color:var(--dark);}
-  .switch.on .knob{left:16px;}
+  .switch.on .knob{left:17px;}   /* 34 − 14 − 3 = symmetric 3px inset on the right */
   .switch:focus, .switch:focus-visible, .swatch:focus, .swatch:focus-visible{outline:none; box-shadow:none;}   /* no focus ring on the toggle / color swatch */
   .rowBetween{display:flex; align-items:center; justify-content:space-between; gap:10px;}
   /* settings panel = scrollable content + a fixed export footer */
