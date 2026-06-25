@@ -2520,8 +2520,8 @@ async function exportMP4(){
     const {ds,dx}=beginHiRes(W,H,RW,RH);
     const bitrate=Math.min(60_000_000, Math.round(W*H*fps*0.28)); // scale bitrate to resolution
     const loopReal=active.loopSeconds/state.speed;
-    if(loopReal>60) toast('Loop is longer than 60 s — export is trimmed to 60 s.');
-    const totalFrames=Math.max(fps,Math.min(Math.round(loopReal*fps),fps*60));
+    const totalFrames=Math.max(fps,Math.min(Math.round(loopReal*fps),fps*180));   // FULL loop (seamless) — only a 3-min hard safety, never trims a real loop
+    if(loopReal>180) toast('Loop over 3 min — export trimmed.');
     const muxer=new Muxer({
       target:new ArrayBufferTarget(),
       video:{codec:'avc', width:W, height:H, frameRate:fps},
@@ -2596,7 +2596,7 @@ function exportWebM(){ // fallback for browsers without WebCodecs: realtime capt
     }
     rec=null; exportingUI(false);
   };
-  recUntil=Math.min(active.loopSeconds,30*state.speed);
+  recUntil=Math.min(active.loopSeconds,180*state.speed);   // full loop (WebM is a video — no need to trim)
   rec.start();
   setExportUI(true,'Recording WebM');
   $('ebFill').style.width='100%';
@@ -2624,17 +2624,23 @@ async function exportPNGSequence(){
   try{
     const {zipSync}=await import('https://cdn.jsdelivr.net/npm/fflate@0.8.2/+esm');
     const cv=renderer.domElement;
-    // PNG sequences hold every frame in memory before zipping → hard caps so it always exports (4K/60 used to OOM):
-    const fps=Math.min(state.fps||30, 30);                                  // ≤30 fps
-    const savedRes=state.exportRes; if(state.exportRes==='4k') state.exportRes='2k';   // ≤2K
+    const fps=Math.min(state.fps||30, 30);                                  // ≤30 fps (lighter; full loop kept)
+    const loopReal=active.loopSeconds/state.speed;
+    const fullFrames=Math.max(fps, Math.round(loopReal*fps));               // the FULL loop — kept seamless
+    // PNG sequences hold every frame in memory before zipping. Keep the WHOLE loop, but pick a resolution
+    // that fits in memory (4K never; longer loops step down to 1K) instead of trimming the loop.
+    const savedRes=state.exportRes;
+    let seqRes = savedRes==='4k' ? '2k' : savedRes;
+    if(fullFrames>520) seqRes='1k';                                         // beyond ~17s@30 at 2K → 1K so the full loop still fits
+    state.exportRes=seqRes;
     const {W,H,RW,RH}=exportDims(); state.exportRes=savedRes;
     const {ds,dx}=beginHiRes(W,H,RW,RH);
-    const loopReal=active.loopSeconds/state.speed;
-    const FRAME_CAP=450;                                                    // ≤450 frames (~15s@30) → zip stays in memory safely
-    const wantFrames=Math.round(loopReal*fps);
-    const totalFrames=Math.max(fps,Math.min(wantFrames,FRAME_CAP));
-    if(savedRes==='4k'||(state.fps||30)>30||wantFrames>FRAME_CAP)
-      toast(`PNG sequence capped for reliability — ≤2K, ≤30fps, ${(totalFrames/fps).toFixed(0)}s. Use MP4 for 4K / longer.`);
+    const SAFE=1800;                                                        // absolute memory backstop (~60s@30, even at 1K)
+    const totalFrames=Math.min(fullFrames, SAFE), trimmed=fullFrames>SAFE;
+    if(seqRes!==savedRes || (state.fps||30)>30 || trimmed)
+      toast(trimmed
+        ? `Loop too long for an in-browser PNG sequence — trimmed to ${(SAFE/fps)|0}s. MP4 keeps the full loop.`
+        : `PNG sequence: ${seqRes.toUpperCase()} @ ${fps}fps to fit the full ${(totalFrames/fps).toFixed(0)}s loop in memory.`);
     const files={}, folder=`${state.template.id}-sequence`, pad=n=>String(n).padStart(4,'0');
     const hasVid=exportHasVideo();
     for(let i=0;i<totalFrames;i++){
@@ -2673,7 +2679,8 @@ async function exportGIF(){
     const ds=document.createElement('canvas'); ds.width=gw; ds.height=gh;
     const dx=ds.getContext('2d',{willReadFrequently:true}); dx.imageSmoothingEnabled=true; dx.imageSmoothingQuality='high';
     const loopReal=active.loopSeconds/state.speed;
-    const totalFrames=Math.max(fps,Math.min(Math.round(loopReal*fps),fps*12)); // ≤12 s of GIF
+    const totalFrames=Math.max(fps,Math.min(Math.round(loopReal*fps),fps*30)); // full loop up to 30 s (GIFs balloon beyond that)
+    if(loopReal>30) toast('Loop over 30 s — GIF trimmed (use MP4 for the full loop).');
     const gif=GIFEncoder(), delay=Math.round(1000/fps);
     const hasVid=exportHasVideo();
     for(let i=0;i<totalFrames;i++){
