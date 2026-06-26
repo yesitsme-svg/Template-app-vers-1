@@ -2246,8 +2246,9 @@ function applyTemplate(t){
   // depth fade is meaningful only when the layout has real depth → lock it on flat coplanar presets
   $('fadeGroup').classList.toggle('flocked', !sceneHasDepth());
   // card-backs only matters when some card turns away from the camera (3D rings/globe). On flat layouts
-  // nothing ever shows a back → HIDE the whole control entirely (not just grey it).
-  $('backGroup').style.display = sceneHasBacks() ? '' : 'none';
+  // it does nothing → GREY it out in place (like rotation/spacing locks) instead of removing it, so the
+  // panel height stays constant across templates and nothing below jumps when you switch presets.
+  $('backGroup').classList.toggle('blocked', !sceneHasBacks());
   refreshCardSides();
   updateLoopInfo();
   document.querySelectorAll('#tpls .pv').forEach(c=>c.classList.toggle('active',c.dataset.id===t.id));
