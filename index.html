@@ -1758,7 +1758,7 @@ const SCENES = {
 const TEMPLATES = [
   {cat:'3D Carousels'},
   {id:'carousel',     name:'Carousel Slide',        scene:'ring',         ease:'Smooth',   size:1.16, spacing:.98, rotX:-3, fade:88, P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'y', tiltX:7,  step:'card', minN:8, chord:1.9}},
-  {id:'wheel',        name:'Vertical Wheel',        scene:'ring',         ease:'Smooth',   size:.85, spacing:.9, fade:85, P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'x', step:'card', minN:6, chord:1.1}},
+  {id:'wheel',        name:'Vertical Wheel',        scene:'ring',         ease:'Smooth',   size:.85, spacing:1.1, fade:85, P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'x', step:'card', minN:6, chord:1.1}},
   {id:'tilted-ring',  name:'Tilted Ring',           scene:'ring',         ease:'Linear',   noEase:true, lockEase:true, P:{dur:16, hold:0, drift:1, corner:0, axis:'y', tiltX:14, tiltZ:16, step:'full', minN:9, chord:1.9, sizeMul:.85}},
   {id:'card-arc',     name:'Card Arc',              scene:'ring',         ease:'Smooth',   size:.90, spacing:.55, speed:.95, comp:.45, rotX:-10, fade:75, P:{dur:1.5, hold:0, drift:.25, corner:0, axis:'y', tiltX:7, step:'card', minN:10, chord:1.9}},
   {cat:'Cards'},
@@ -2404,7 +2404,11 @@ function renderFrame(){
   // Live spacing for fixed-count presets: scale card POSITIONS from centre in realtime (smooth drag,
   // no rebuild). Card size is untouched → low spacing clusters/overlaps (mush), high spacing spreads.
   if(SCALE_SPACE.has(state.template.scene) && builtSpacing>0.001){
-    const k=state.spacing/builtSpacing;
+    let sp=state.spacing;
+    // Vertical Wheel: floor the spacing so cards just TOUCH and never intersect (like Carousel Slide).
+    // Tangent cards on the ring meet edge-to-edge when chord(=H·chord·sp) ≈ cardHeight(=H·size) → sp≈size/chord.
+    if(_wheelSpace){ const floor=(state.size||1)/(state.template.P.chord||1.9); if(sp<floor) sp=floor; }
+    const k=sp/builtSpacing;
     forEachCard(o=>{ const bp=o.userData.spBase;
       if(bp) o.position.set(bp.x*k,bp.y*k,bp.z*k);   // static-position presets (rings/globe/pop): scale from base — never cumulative
       else if(Math.abs(k-1)>1e-4) o.position.multiplyScalar(k); // per-frame-position presets reset each update, so a one-shot scale is fine
