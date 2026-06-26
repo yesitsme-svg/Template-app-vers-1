@@ -171,8 +171,7 @@
   .pvLogo{height:11px; width:auto; flex:0 0 auto; color:var(--text); display:block;}   /* exact M mark from the Figma SVG; fill follows currentColor (themes) */
   .pvDivide{height:1px; flex:0 0 1px; background:#ededf1; margin:4px -22px 0 -16px;}   /* full-bleed line under the brand header — softer than the section borders so it doesn't read heavy */
   body.dark .pvDivide{background:#2a2a2a;}
-  .pvName{font-size:12px; color:var(--muted); font-weight:500;}   /* rule: all panel text 12px */
-  .pvVer{font-weight:400; color:#b3b3b8; margin-left:3px;}   /* version tag next to the name */
+  .pvName{font-size:12px; color:var(--muted); font-weight:500;}   /* rule: all panel text 12px — "Motion Grid v1.0", uniform weight */
   .themeBtn{margin-left:auto; background:none; border:none; padding:4px; cursor:pointer; color:var(--text); display:flex; align-items:center; border-radius:7px; transition:color .15s,background .15s;}   /* sun icon dark, like the ref */
   .themeBtn:hover{background:var(--panel2);}
   .themeBtn svg{width:17px; height:17px; display:block;}
@@ -437,7 +436,7 @@
 <div id="content">
 <aside id="previews">
   <div class="pvBrand">
-    <span class="pvName">Motion Grid <span class="pvVer">v1.0</span></span>
+    <span class="pvName">Motion Grid v1.0</span>
     <button class="themeBtn" id="themeToggle" title="Toggle light / dark" aria-label="Toggle theme">
       <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
       <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
