@@ -153,9 +153,9 @@
   .secHead{display:flex; align-items:center; justify-content:space-between; width:100%; background:none; border:none; padding:0; cursor:pointer; font-family:inherit; color:var(--text); font-size:14px; font-weight:500; user-select:none;}   /* Figma section titles: 14px Medium #1c1c1c */
   .secHead .secChev{width:16px; height:16px; flex:0 0 auto; color:var(--muted); transition:transform .2s;}
   .sec.collapsed .secHead .secChev{transform:rotate(-90deg);}
-  .secBody{display:flex; flex-direction:column; gap:16px; padding-top:14px;}
+  .secBody{display:flex; flex-direction:column; gap:16px; padding-top:14px; overflow:hidden; box-sizing:border-box; min-height:0; transition:height .28s cubic-bezier(.4,0,.2,1), padding-top .28s cubic-bezier(.4,0,.2,1);}   /* min-height:0 lets it shrink; height animated in JS, padding via .collapsed → smooth open/close, no jump */
   .secBody .group{gap:11px;}                 /* a touch more air between the slider name and its track */
-  .sec.collapsed .secBody{display:none;}
+  .sec.collapsed .secBody{pointer-events:none; padding-top:0;}
   .slider-row .label{color:var(--muted); font-weight:500;}   /* slider names read grey */
   .label{font-size:12px; letter-spacing:0; text-transform:none; color:var(--text); font-weight:500;}
   .label small{color:var(--muted); letter-spacing:0; text-transform:none; font-weight:400;}
@@ -392,7 +392,7 @@
   #tlFill{position:absolute; left:0; top:0; bottom:0; background:#e8e8e8; border-radius:93px;}   /* uniform track — the white grip marks the position */
   #tlHead{position:absolute; top:50%; left:0; width:11px; height:23px; border-radius:4px; background:#fff; border:1px solid #b8b8b8; transform:translate(-50%,-50%); box-shadow:none;}   /* white vertical grip, 11×23, like Figma */
   #tlHead::after{content:''; position:absolute; left:50%; top:100%; transform:translateX(-50%); width:1.5px; height:13px; background:#b8b8b8; border-radius:1px; pointer-events:none;}   /* thin needle dropping from the grip (Figma) */
-  #tlTime{flex:0 0 auto; min-width:72px; text-align:right; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums;}   /* tighter → the track reaches further to the end, gaps read even */
+  #tlTime{flex:0 0 auto; min-width:0; white-space:nowrap; text-align:right; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums;}   /* hug the text → track reaches the right, even 13px gaps both sides */
   #toasts{position:absolute; bottom:18px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:8px; align-items:center; z-index:50; pointer-events:none;}
   .toast{
     background:var(--dark); border:none; color:#fff;
@@ -2830,7 +2830,22 @@ function applyTheme(){ document.body.classList.toggle('dark',state.dark); const 
 }
 $('themeToggle').addEventListener('click',()=>{ state.dark=!state.dark; applyTheme(); });
 // collapsible right-panel sections (Layout / Camera / Motion / Cards / Background)
-document.querySelectorAll('.secHead').forEach(h=>h.addEventListener('click',()=>h.closest('.sec').classList.toggle('collapsed')));
+function toggleSec(sec){
+  const body=sec.querySelector('.secBody'); if(!body) return;
+  clearTimeout(body._secTO);
+  if(sec.classList.contains('collapsed')){            // → OPEN: 0 → content height, then settle to auto
+    sec.classList.remove('collapsed');
+    body.style.height='0px'; body.getBoundingClientRect();      // commit the collapsed start, then…
+    body.style.height=body.scrollHeight+'px';                   // …animate to content height
+    body._secTO=setTimeout(()=>{ if(!sec.classList.contains('collapsed')) body.style.height='auto'; },320); // settle to auto so it adapts to later content changes
+  }else{                                              // → CLOSE: auto → explicit → 0
+    body.style.height=body.scrollHeight+'px'; body.getBoundingClientRect();   // commit the open height, then…
+    sec.classList.add('collapsed');
+    body.style.height='0px';                                    // …animate to 0
+  }
+}
+document.querySelectorAll('.secHead').forEach(h=>h.addEventListener('click',()=>toggleSec(h.closest('.sec'))));
+document.querySelectorAll('#setScroll .sec').forEach(sec=>{ const b=sec.querySelector('.secBody'); if(b) b.style.height=sec.classList.contains('collapsed')?'0px':'auto'; });
 // #11/#12 aspect ratio in the panel: px tooltip per option + a custom W×H mode
 function exportPxFor(ratioKey){
   if(ratioKey==='custom') return `${state.customW}×${state.customH}px`;
