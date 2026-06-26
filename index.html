@@ -63,6 +63,7 @@
   body.dark .chip.active, body.dark .seg button.active, body.dark .ratioGrid button.active{ background:#2e2e2e; color:var(--text); border-color:#404040; }
   body.dark #tlPlay{ background:#2e2e2e; color:var(--text); }
   body.dark .switch.on{ background:#404040; border-color:#404040; }
+  body.dark .switch .knob{ background:#737373; box-shadow:none; }   /* match the slider handles in dark — not glaring white */
   /* tiny tertiary labels sit just under the #a1a1a1 secondary text */
   body.dark .hint{ color:#737373; }
   body.dark .seeAll{ color:#737373; }
@@ -773,7 +774,7 @@ function makeTexture(source, key, aspect){
 function greyCard(){
   const c=document.createElement('canvas'); c.width=768; c.height=1024;
   const x=c.getContext('2d');
-  x.fillStyle='#d6d6da'; x.fillRect(0,0,768,1024); // one flat grey, identical on every card
+  x.fillStyle='#a8a8ad'; x.fillRect(0,0,768,1024); // one flat grey, identical on every card — calmer tone so previews don't read too bright/contrasty on the dark backdrop
   return c;
 }
 // all cards share the SAME single tone so overlapping/stacked cards merge into a clean silhouette (no internal lines)
