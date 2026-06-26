@@ -1124,7 +1124,8 @@ const SCENES = {
     // radius sized for the widest card so mixed aspects never intersect; even angular spacing.
     // R scales LINEARLY with spacing (no clamp) — the live spacing scale (renderFrame) divides by the
     // built spacing, so any clamp here would mismatch and make spacing jump to wrong values.
-    const R=Math.max(maxW*(P.chord||1.9)*(state.spacing||1)/(2*Math.sin(Math.PI/n)),1.35);
+    const ringDim=(P.axis==='x')?H:maxW;   // vertical wheel stacks cards vertically → space by HEIGHT (width packed them too tight → overlap); horizontal rings space by width
+    const R=Math.max(ringDim*(P.chord||1.9)*(state.spacing||1)/(2*Math.sin(Math.PI/n)),1.35);
     const inner=new THREE.Group();
     const meshes=[];
     for(let i=0;i<n;i++){
@@ -1142,6 +1143,7 @@ const SCENES = {
     const needHalfH=Math.sin(tilt)*R+H/2+.22;
     const camZ=Math.max(R+3.1*(H/1.5), R*Math.cos(tilt)+needHalfH/halfV);
     const camCY=-Math.sin(tilt)*R*.95*Math.sign(P.tiltX||0);
+    _wheelSpace = (P.axis==='x') ? {R, camZ} : null;   // vertical wheel: live spacing tracks the camera (see renderFrame)
     const phase=makePhase(P), cyc=P.dur+P.hold;
     const angleScale=P.step==='card'?Math.PI*2/n:Math.PI*2;
     const loop=P.step==='card'?cyc*n:cyc;
@@ -1756,7 +1758,7 @@ const SCENES = {
 const TEMPLATES = [
   {cat:'3D Carousels'},
   {id:'carousel',     name:'Carousel Slide',        scene:'ring',         ease:'Smooth',   spacing:.95, rotX:-6, fade:88, P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'y', tiltX:7,  step:'card', minN:8, chord:1.9}},
-  {id:'wheel',        name:'Vertical Wheel',        scene:'ring',         ease:'Smooth',   size:.85, spacing:.5, fade:85, P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'x', step:'card', minN:6, chord:2.2}},
+  {id:'wheel',        name:'Vertical Wheel',        scene:'ring',         ease:'Smooth',   size:.85, spacing:.7, fade:85, P:{dur:1.5,  hold:0,   drift:.25, corner:0, axis:'x', step:'card', minN:6, chord:2.2}},
   {id:'tilted-ring',  name:'Tilted Ring',           scene:'ring',         ease:'Linear',   noEase:true, lockEase:true, P:{dur:16, hold:0, drift:1, corner:0, axis:'y', tiltX:14, tiltZ:16, step:'full', minN:9, chord:1.9, sizeMul:.85}},
   {id:'card-arc',     name:'Card Arc',              scene:'ring',         ease:'Smooth',   size:.90, spacing:.55, speed:.95, comp:.45, rotX:-10, fade:75, P:{dur:1.5, hold:0, drift:.25, corner:0, axis:'y', tiltX:7, step:'card', minN:10, chord:1.9}},
   {cat:'Cards'},
@@ -1821,6 +1823,7 @@ const _quat=new THREE.Quaternion(), _euler=new THREE.Euler(), _off=new THREE.Vec
 const _cq=new THREE.Quaternion(), _pq=new THREE.Quaternion();
 const _mr=new THREE.Matrix4(), _mt=new THREE.Matrix4(), _mti=new THREE.Matrix4();
 let _camBaseSet=false;
+let _wheelSpace=null;   // Vertical Wheel only: {R, camZ} captured at build → live spacing pulls the camera back so cards spread without zooming the front one
 // When a ring preset is tilted, face its cards to the camera so the tilt reads as a clean fanned
 // arc of forward-facing cards instead of edge-on slivers (ring cards otherwise face fixed directions).
 function billboardRing(){
@@ -2120,6 +2123,7 @@ function rebuild(resetTime=false){
   applyBackground();            // honour solid / gradient / transparent + bgAlpha
   curBg=bgFadeColor(); cornerNorm=Math.min(0.5,(state.P.corner||0)/12*0.45); // ready before cards are built
   if(!previewMode && !userSources.length && !sourceList().length){ active=null; updateLoopInfo(); return; } // demo not ready → leave the stage blank (no placeholder flash); the demo onload rebuilds
+  _wheelSpace=null;                                       // reset before the factory; only the Vertical Wheel sets it
   active=SCENES[state.template.scene](state.P);
   builtSpacing=state.spacing;                              // spacing this layout was baked at (for live-drag scaling)
   try{ active.update(animTime); }catch(e){}                // let the engine aim its camera, then snapshot the base
@@ -2405,6 +2409,10 @@ function renderFrame(){
       if(bp) o.position.set(bp.x*k,bp.y*k,bp.z*k);   // static-position presets (rings/globe/pop): scale from base — never cumulative
       else if(Math.abs(k-1)>1e-4) o.position.multiplyScalar(k); // per-frame-position presets reset each update, so a one-shot scale is fine
     });
+    // Vertical Wheel: the front card sits on the +Z extreme, so scaling the ring would move it toward
+    // the camera (zoom). Pull the camera base back by the same growth → cards just spread apart, the
+    // front card keeps its size. applyUserRot() reads _camBase next, so this is the authoritative cam.
+    if(_wheelSpace && _camBaseSet) _camBase.z = _wheelSpace.camZ + _wheelSpace.R*(k-1);
   }
   applyUserRot();
   // No billboard on any ring: cards must tilt WITH the composition (real perspective lean) so the tilt
