@@ -210,22 +210,19 @@
   }   /* Figma easing: h32 pill, #f2f2f2, no border */
   .chip:hover{background:#efeff2;}
   .chip.active{background:var(--dark); color:#fff; border-color:var(--dark); font-weight:500;}
+  .chip.chipOff{opacity:.35; pointer-events:none;}   /* curve that doesn't suit this preset: greyed in place (kept → constant height, no jump) */
   .seg{display:flex; background:var(--panel2); border:none; border-radius:100px; overflow:hidden; padding:3px; gap:3px;}
   .seg button{flex:1; padding:6px 0; background:transparent; border:none; border-radius:100px; color:var(--muted); cursor:pointer; font-size:12px; font-family:inherit;}
   .seg button.active{background:var(--panel); color:var(--text); font-weight:500;}   /* Figma: active segment = white pill, dark text (not black) */
-  /* easing locked (continuous presets): chips visible but greyed, Linear shown active */
+  /* Lock states grey the control IN PLACE and explain via a hover tooltip (title) — never an inline
+     hint line, so the panel height never changes when you switch templates (nothing jumps). */
   #easeGroup.elocked .chips{opacity:.4; pointer-events:none;}
-  #easeGroup.elocked #easeToggle{display:none;}
+  #easeGroup.elocked #easeToggle{opacity:.4; pointer-events:none;}   /* greyed in place, not removed → constant height */
   #easeGroup.elocked #easeAdvanced{display:none !important;}
-  #easeGroup.elocked #easeLockHint{display:block !important;}
-  /* rotation locked (3D / single-card presets): sliders visible but greyed + hint */
   #rotGroup.rlocked input[type=range]{opacity:.4; pointer-events:none;}
   #rotGroup.rlocked .slider-row{opacity:.5;}
-  #rotGroup.rlocked #rotLockHint{display:block !important;}
-  /* depth fade locked (flat coplanar presets): slider visible but greyed + hint */
   #fadeGroup.flocked input[type=range]{opacity:.4; pointer-events:none;}
   #fadeGroup.flocked .slider-row{opacity:.5;}
-  #fadeGroup.flocked #fadeLockHint{display:block !important;}
   /* spacing locked (presets with no meaningful spacing, e.g. single-card Product Showcase): greyed */
   #spaceGroup.slocked input[type=range]{opacity:.4; pointer-events:none;}
   #spaceGroup.slocked .slider-row{opacity:.5;}
@@ -2237,14 +2234,16 @@ function applyTemplate(t){
   // VISIBLE but greyed so nothing ever looks like it vanished.
   // easing is never locked — Linear is just the smart default for continuous loops; the client can change it
   $('easeGroup').classList.toggle('elocked', !!t.lockEase);   // per-template lock (e.g. Diagonal Cascade = Linear only)
-  $('easeLockHint').style.display = (t.noEase || t.lockEase) ? 'block' : 'none';
-  // per-template easing whitelist: show only the curves that suit this preset (e.g. Cuts = Ease Out + Smooth)
-  document.querySelectorAll('#easeChips .chip').forEach(c=>{ c.style.display = (!t.eases || t.eases.includes(c.textContent)) ? '' : 'none'; });
+  $('easeGroup').title = (t.noEase || t.lockEase) ? $('easeLockHint').textContent : '';   // explain via tooltip, no inline line
+  // per-template easing whitelist: grey the curves that don't suit this preset (kept in place → constant height)
+  document.querySelectorAll('#easeChips .chip').forEach(c=>{ c.classList.toggle('chipOff', !(!t.eases || t.eases.includes(c.textContent))); });
   $('rotGroup').classList.toggle('rlocked', !!t.noRot);
+  $('rotGroup').title = t.noRot ? $('rotLockHint').textContent : '';
   $('spaceGroup').classList.toggle('slocked', !!t.noSpace);   // grey out spacing on presets where it does nothing (Product Showcase)
   rebuild(true);
   // depth fade is meaningful only when the layout has real depth → lock it on flat coplanar presets
   $('fadeGroup').classList.toggle('flocked', !sceneHasDepth());
+  $('fadeGroup').title = !sceneHasDepth() ? $('fadeLockHint').textContent : '';
   // card-backs only matters when some card turns away from the camera (3D rings/globe). On flat layouts
   // it does nothing → GREY it out in place (like rotation/spacing locks) instead of removing it, so the
   // panel height stays constant across templates and nothing below jumps when you switch presets.
@@ -2923,8 +2922,11 @@ $('fade').addEventListener('input',e=>{ state.fade=parseFloat(e.target.value)/10
 // real view-axis depth, so we unlock Depth fade only while they're rotated. Scoped to these presets.
 function updateDynamicFadeLock(){
   const t=state.template; if(!t) return;
-  if(FLAT_ROT_FADE.has(t.scene))
-    $('fadeGroup').classList.toggle('flocked', !(state.rotY||state.rotX));
+  if(FLAT_ROT_FADE.has(t.scene)){
+    const lock=!(state.rotY||state.rotX);
+    $('fadeGroup').classList.toggle('flocked', lock);
+    $('fadeGroup').title = lock ? $('fadeLockHint').textContent : '';   // tooltip only — no inline line, no jump while dragging
+  }
 }
 $('rotY').addEventListener('input',e=>{ state.rotY=parseFloat(e.target.value); $('rotYVal').textContent=state.rotY+'°'; updateDynamicFadeLock(); });
 $('rotX').addEventListener('input',e=>{ state.rotX=parseFloat(e.target.value); $('rotXVal').textContent=state.rotX+'°'; updateDynamicFadeLock(); });
