@@ -787,21 +787,27 @@ let previewMode=false;
    show only until the images are ready (or if they fail to load). */
 const DEMO_URLS=Array.from({length:20},(_,i)=>`demo/${String(i+1).padStart(2,'0')}.webp`);
 const DEMO=DEMO_URLS.map(u=>{ const img=new Image(); img.decoding='async'; img.src=u; return img; });
-/* Default demo deck: the real wannathis designs, drawn at native resolution (makeTexture caps to the
-   source — no upscale, full quality) so they are SHARP immediately. Loaded progressively: cards appear
-   as the webp arrive (small, same-origin → fast). No canvas placeholders are ever flashed — the stage
-   is simply blank for the brief moment before the first design decodes. */
-let _demoRebuildTO=null;
-function _demoLoaded(){ if(typeof state==='undefined' || userSources.length || !state.template) return;
-  clearTimeout(_demoRebuildTO); _demoRebuildTO=setTimeout(()=>rebuild(),60); }   // pull designs in as they decode, coalesced
+/* Default demo deck: the real wannathis designs at native resolution (makeTexture caps to source — no
+   upscale, full quality). We wait for the WHOLE set to settle before building the deck, then show all
+   20 at once. Why wait: templates with a minimum card count repeat the sources to fill the ring/grid
+   (N0*ceil(minN/N0)) — so a partial set (e.g. 2 designs decoded) would render the SAME few designs
+   duplicated over and over until the rest arrive. Waiting avoids that flicker. The webp are small +
+   same-origin, so it's a brief blank, not a placeholder flash. */
+let _demoRebuildTO=null, _demoSettled=0;
+function _demoLoaded(){
+  _demoSettled++;                                  // count loaded-or-errored
+  if(typeof state==='undefined' || userSources.length || !state.template) return;
+  if(_demoSettled>=DEMO.length){ clearTimeout(_demoRebuildTO); _demoRebuildTO=setTimeout(()=>rebuild(),0); } // whole deck ready → one clean build
+}
 DEMO.forEach(img=>{ img.onload=_demoLoaded; img.onerror=_demoLoaded; });
+function demoReady(){ return _demoSettled>=DEMO.length; }
 
 function sourceList(){
   if(previewMode) return PREVIEW_CARDS.map((p,i)=>({src:p, key:'pg'+i, aspect:PA}));
   if(userSources.length) return userSources.map(u=>({src:u.src, key:u.uid, aspect:u.aspect}));
-  const ok=DEMO.filter(img=>img.complete && img.naturalWidth);   // the real designs, sharp, used as they load
-  if(ok.length) return ok.map((img,i)=>({src:img, key:'demo'+i, aspect:PA}));
-  return [];                                                     // brief blank before the first decode — no placeholder flash
+  if(!demoReady()) return [];                                    // brief blank until the full deck settles — no duplicated partial states
+  const ok=DEMO.filter(img=>img.complete && img.naturalWidth);   // the designs that actually decoded (all of them, normally)
+  return ok.map((img,i)=>({src:img, key:'demo'+i, aspect:PA}));
 }
 /* per-card slot → image. Click-to-replace overrides a single slot, so a card
    can differ from others sharing the same source. */
