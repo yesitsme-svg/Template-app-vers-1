@@ -193,7 +193,7 @@
   .pv.active .pvimg, .pv:focus .pvimg, .pv:focus-visible .pvimg{box-shadow:none;}
   .pv .pvimg{width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:9px; border:0; background:transparent; display:block; transition:box-shadow .15s,transform .15s;}   /* rounded corners are baked into the canvas (anti-aliased) — CSS bg transparent so corners show the panel, not dark; border-radius kept only for the hover shadow shape */
   .pv span{font-size:10px; color:var(--muted); text-align:center; line-height:1.2; height:24px; display:flex; align-items:center; justify-content:center; overflow:hidden; transition:color .15s;}   /* reserve 2 lines for every label → all cards & rows are the same height (even rhythm) */
-  .pv:hover .pvimg{border-color:transparent; transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.10);}
+  .pv:hover .pvimg{border-color:transparent;}   /* no lift on hover — the translate was clipping the top corners */
   .pv:hover span{color:var(--text);}
   .pv.active .pvimg, .pv.active:hover .pvimg{border-color:transparent !important; box-shadow:none !important;}   /* selected = ZERO border/ring in BOTH themes; inactive keep the light border, active reads via its dark name */
   .pv.active span{color:var(--text); font-weight:500;}
@@ -247,7 +247,7 @@
   input[type=color]{width:100%; height:32px; border:1px solid var(--border); border-radius:10px; background:var(--panel2); cursor:pointer; padding:3px 5px;}
   /* block separators so the panel sections read as distinct cards (Figma/Framer style) */
   /* full-bleed divider lines (edge-to-edge of the panel) with generous breathing room each side */
-  #setScroll > * + *{border-top:1px solid var(--border); margin-top:18px; padding-top:18px; margin-left:-16px; margin-right:-16px; padding-left:16px; padding-right:16px;}
+  #setScroll > * + *{border-top:1px solid var(--border); margin-top:24px; padding-top:24px; margin-left:-16px; margin-right:-16px; padding-left:16px; padding-right:16px;}   /* more air between blocks; collapsed & expanded share this → no toggle jump */
   /* collapsed & expanded sections share the SAME top spacing → toggling never shifts the header/divider (no jump) */
   /* action buttons inside the scroll are not sections: no full-bleed divider, just top spacing */
   #setScroll > button.btn{border-top:none; margin-left:0; margin-right:0; padding-left:10px; padding-right:10px; padding-top:7px; margin-top:18px;}
@@ -298,8 +298,8 @@
   .ratioGrid .ratioCustom svg{width:15px; height:15px; display:block;}
   body.dark .ratioGrid button.active{color:var(--text);}   /* grey active surface → white text, like every other active item in the dark menu */
   .customRes{display:flex; align-items:center; gap:6px; margin-top:8px;}
-  .customRes input{width:64px; height:30px; border:1px solid var(--border); border-radius:7px; background:var(--panel2); color:var(--text); font-family:inherit; font-size:12px; text-align:center; outline:none;}
-  .customRes input:focus{border-color:#b6b6c0;}
+  .customRes input{width:64px; height:30px; border:none; border-radius:7px; background:var(--panel2); color:var(--text); font-family:inherit; font-size:12px; text-align:center; outline:none;}   /* no border — flat field like the hex input */
+  .customRes input:focus, .customRes input:focus-visible{border:none; outline:none; box-shadow:none;}
   .customRes span{color:var(--muted); font-size:12px;}
   /* #11 custom hover tooltip (px resolution on the canvas-ratio selector) */
   #tip{position:fixed; z-index:9999; background:#1b1b1d; color:#fff; font-size:11px; font-weight:500; letter-spacing:.01em; padding:6px 9px; border-radius:7px; pointer-events:none; opacity:0; transform:translate(-50%,4px); transition:opacity .12s ease,transform .12s ease; white-space:nowrap; box-shadow:0 6px 18px rgba(0,0,0,.28);}
@@ -341,6 +341,7 @@
   .btn:disabled{opacity:.45; cursor:default;}
   .btn.sm{height:40px; padding:0 12px; font-size:12px;}   /* Figma Reset: 40px tall, 12px Medium */
   .row2{display:flex; gap:8px;} .row2 .btn{flex:1;}
+  #imgActions{margin-top:8px;}   /* extra air so Shuffle / Clear all don't stick to the uploaded thumbnails */
   #easeCurve{width:100%; height:150px; background:#fafafa; border:1px solid var(--border); border-radius:12px; display:block; touch-action:none; cursor:crosshair;}
   .bezvals{display:flex; gap:5px;}
   .bezvals div{flex:1; text-align:center; background:var(--panel2); border:1px solid var(--border); border-radius:8px; padding:6px 0; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums;}
@@ -391,7 +392,7 @@
   #tlFill{position:absolute; left:0; top:0; bottom:0; background:#e8e8e8; border-radius:93px;}   /* uniform track — the white grip marks the position */
   #tlHead{position:absolute; top:50%; left:0; width:11px; height:23px; border-radius:4px; background:#fff; border:1px solid #b8b8b8; transform:translate(-50%,-50%); box-shadow:none;}   /* white vertical grip, 11×23, like Figma */
   #tlHead::after{content:''; position:absolute; left:50%; top:100%; transform:translateX(-50%); width:1.5px; height:13px; background:#b8b8b8; border-radius:1px; pointer-events:none;}   /* thin needle dropping from the grip (Figma) */
-  #tlTime{flex:0 0 auto; min-width:96px; text-align:right; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums;}
+  #tlTime{flex:0 0 auto; min-width:72px; text-align:right; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums;}   /* tighter → the track reaches further to the end, gaps read even */
   #toasts{position:absolute; bottom:18px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:8px; align-items:center; z-index:50; pointer-events:none;}
   .toast{
     background:var(--dark); border:none; color:#fff;
@@ -590,7 +591,7 @@
           <button data-v="transparent">Transparent</button>
         </div>
         <div id="bgFill">
-          <div class="colorField" style="margin-top:8px">
+          <div class="colorField" style="margin-top:2px">
             <button class="swatch" id="bgSwatch"></button>
             <input type="text" class="hexInput" id="bgHex" maxlength="7" value="#0D0D0D" spellcheck="false">
           </div>
