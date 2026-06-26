@@ -775,11 +775,21 @@ function greyCard(){
 // all cards share the SAME single tone so overlapping/stacked cards merge into a clean silhouette (no internal lines)
 const PREVIEW_CARDS=[0,1,2,3,4,5].map(greyCard);
 let previewMode=false;
+/* Default demo cards = the real wannathis designs (webp, full 1620×2160), loaded async.
+   They are what spins in the preview by default + after "Clear all". Canvas placeholders
+   show only until the images are ready (or if they fail to load). */
+const DEMO_URLS=Array.from({length:20},(_,i)=>`demo/${String(i+1).padStart(2,'0')}.webp`);
+const DEMO=DEMO_URLS.map(u=>{ const img=new Image(); img.decoding='async'; img.src=u; return img; });
+let demoReady=false, _demoLoaded=0;
+DEMO.forEach(img=>{ const done=()=>{ if(++_demoLoaded>=DEMO.length){ demoReady=true; if(typeof state!=='undefined' && !userSources.length && state.template) rebuild(); } }; img.onload=done; img.onerror=done; });
 function sourceList(){
   if(previewMode) return PREVIEW_CARDS.map((p,i)=>({src:p, key:'pg'+i, aspect:PA}));
-  return userSources.length
-    ? userSources.map(u=>({src:u.src, key:u.uid, aspect:u.aspect}))
-    : PLACEHOLDERS.map((p,i)=>({src:p, key:'p'+i, aspect:PA}));
+  if(userSources.length) return userSources.map(u=>({src:u.src, key:u.uid, aspect:u.aspect}));
+  if(demoReady){
+    const ok=DEMO.filter(img=>img.complete && img.naturalWidth);   // skip any that failed
+    if(ok.length) return ok.map((img,i)=>({src:img, key:'demo'+i, aspect:PA}));
+  }
+  return PLACEHOLDERS.map((p,i)=>({src:p, key:'p'+i, aspect:PA}));
 }
 /* per-card slot → image. Click-to-replace overrides a single slot, so a card
    can differ from others sharing the same source. */
