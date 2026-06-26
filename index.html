@@ -781,8 +781,9 @@ let previewMode=false;
    show only until the images are ready (or if they fail to load). */
 const DEMO_URLS=Array.from({length:20},(_,i)=>`demo/${String(i+1).padStart(2,'0')}.webp`);
 const DEMO=DEMO_URLS.map(u=>{ const img=new Image(); img.decoding='async'; img.src=u; return img; });
-let _demoRebuildTO=null;
+let _demoRebuildTO=null, _demoSettled=0;
 DEMO.forEach(img=>{ const done=()=>{
+  _demoSettled++;                                    // count loaded-or-failed so we know when ALL are in
   if(typeof state==='undefined' || userSources.length || !state.template) return;
   clearTimeout(_demoRebuildTO); _demoRebuildTO=setTimeout(()=>rebuild(),60);   // swap to designs as they load, coalesced into one rebuild (no long placeholder flash)
 }; img.onload=done; img.onerror=done; });
@@ -791,7 +792,10 @@ function sourceList(){
   if(userSources.length) return userSources.map(u=>({src:u.src, key:u.uid, aspect:u.aspect}));
   const ok=DEMO.filter(img=>img.complete && img.naturalWidth);   // the real designs, used as soon as they load
   if(ok.length) return ok.map((img,i)=>({src:img, key:'demo'+i, aspect:PA}));
-  return PLACEHOLDERS.map((p,i)=>({src:p, key:'p'+i, aspect:PA}));  // only the very first frame, before any design has loaded
+  // No design ready yet: show NOTHING (blank stage) rather than flashing the canvas placeholders.
+  // Fall back to placeholders only if EVERY demo image has settled and none decoded (offline / 404).
+  if(_demoSettled>=DEMO.length) return PLACEHOLDERS.map((p,i)=>({src:p, key:'p'+i, aspect:PA}));
+  return [];
 }
 /* per-card slot → image. Click-to-replace overrides a single slot, so a card
    can differ from others sharing the same source. */
@@ -2105,6 +2109,7 @@ function rebuild(resetTime=false){
   invalidateRotPivot();                                  // re-capture the rotation pivot for the new layout
   applyBackground();            // honour solid / gradient / transparent + bgAlpha
   curBg=bgFadeColor(); cornerNorm=Math.min(0.5,(state.P.corner||0)/12*0.45); // ready before cards are built
+  if(!previewMode && !userSources.length && !sourceList().length){ active=null; updateLoopInfo(); return; } // demo not ready → leave the stage blank (no placeholder flash); the demo onload rebuilds
   active=SCENES[state.template.scene](state.P);
   builtSpacing=state.spacing;                              // spacing this layout was baked at (for live-drag scaling)
   try{ active.update(animTime); }catch(e){}                // let the engine aim its camera, then snapshot the base
