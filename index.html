@@ -332,6 +332,11 @@
   .thumb:hover .x{display:block;}
   .thumb .x:hover{background:#e5484d; color:#fff; border-color:#e5484d;}
   .thumb.dragover img{border-color:#9b9ba3;}
+  .thumb.add{display:flex; align-items:center; justify-content:center; border:1.5px dashed #c8c8c8; border-radius:6px; color:var(--muted); cursor:pointer; transition:border-color .15s,color .15s,background .15s;}   /* the dropzone shrinks to a tile once there are images */
+  .thumb.add:hover,.thumb.add.over{border-color:#9b9ba3; color:var(--text); background:var(--panel2);}
+  .thumb.add svg{width:15px; height:15px;}
+  body.dark .thumb.add{border-color:#404040;}
+  .maxNote{font-size:10px; color:var(--muted); margin-top:8px;}   /* honest "max reached" hint, replaces the + tile at 20/20 */
   .btn{display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:10px; border-radius:100px; border:none; background:var(--panel2); color:var(--text); cursor:pointer; font-size:12px; font-family:inherit; font-weight:500; transition:background .15s,color .15s;}   /* Figma grey buttons: pill, #f2f2f2, no border */
   .btn:hover{background:#efeff2;}
   body.dark .btn:hover{background:#2a2a2a;}   /* dark theme: subtle lift, not a flip to white (primary keeps its own white hover) */
@@ -495,10 +500,11 @@
   </div>
   <div class="group">
     <div class="label" style="font-size:14px">Images <small id="imgCount"></small></div>
-    <div class="drop" id="drop">Drop images or videos here, or click to browse<br><span class="sub">JPG · PNG · WEBP · MP4 / WEBM — images ≤15 MB, video ≤30 MB</span></div>
+    <div class="drop" id="drop">Drop images or videos, or click to browse<br><span class="sub">JPG · PNG · WEBP · MP4 · WEBM</span></div>
     <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" multiple hidden>
     <input type="file" id="replaceInput" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" hidden>
     <div class="thumbs" id="thumbs"></div>
+    <div class="maxNote" id="imgMaxNote" style="display:none">Remove one to add another</div>
     <div class="row2" id="imgActions" style="display:none">
       <button class="btn sm" id="shuffleBtn">Shuffle</button>
       <button class="btn sm" id="clearBtn">Clear all</button>
@@ -3150,8 +3156,22 @@ function renderThumbs(){
     });
     d.appendChild(img); d.appendChild(x); thumbs.appendChild(d);
   });
-  $('imgCount').textContent=`${userSources.length} / ${MAX_FILES}`;
-  $('imgActions').style.display=userSources.length?'flex':'none';
+  const n=userSources.length;
+  // 1-19 images: the dropzone shrinks into a "+" tile at the end of the grid. 0: the big dropzone is the
+  // hero. 20: no add affordance at all — just an honest "remove one to add another" note.
+  if(n>0 && n<MAX_FILES){
+    const add=document.createElement('div'); add.className='thumb add'; add.title='Add more';
+    add.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg>';
+    add.addEventListener('click',()=>fileInput.click());
+    add.addEventListener('dragover',e=>{ e.preventDefault(); add.classList.add('over'); });
+    add.addEventListener('dragleave',()=>add.classList.remove('over'));
+    add.addEventListener('drop',e=>{ e.preventDefault(); add.classList.remove('over'); addFiles(e.dataTransfer.files); });
+    thumbs.appendChild(add);
+  }
+  $('imgCount').textContent = n>=MAX_FILES ? `${MAX_FILES} / ${MAX_FILES} · max` : `${n} / ${MAX_FILES}`;
+  drop.style.display       = n===0 ? '' : 'none';            // dropzone = empty state only
+  $('imgMaxNote').style.display = n>=MAX_FILES ? '' : 'none';
+  $('imgActions').style.display = n>0 ? 'flex' : 'none';     // Shuffle / Clear all whenever there are images
 }
 $('shuffleBtn').addEventListener('click',()=>{
   for(let i=userSources.length-1;i>0;i--){
