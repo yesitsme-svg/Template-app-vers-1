@@ -389,7 +389,8 @@
     display:flex; align-items:center; justify-content:center;
   }
   #tlPlay:hover{background:#000;}
-  #tlTrack{flex:1; height:10px; background:#e8e8e8; border-radius:93px; position:relative; cursor:pointer; touch-action:none;}   /* Figma timeline: 10px pill, #e8e8e8 */
+  #tlTrack{flex:1; height:10px; background:#e8e8e8; border-radius:93px; position:relative; cursor:pointer; touch-action:none; user-select:none; -webkit-user-select:none;}   /* Figma timeline: 10px pill, #e8e8e8 */
+  #tlTrack *{pointer-events:none;}   /* grip/fill don't intercept — scrubbing always lands on the track */
   #tlFill{position:absolute; left:0; top:0; bottom:0; background:#e8e8e8; border-radius:93px;}   /* uniform track — the white grip marks the position */
   #tlHead{position:absolute; top:50%; left:0; width:11px; height:23px; border-radius:4px; background:#fff; border:1px solid #b8b8b8; transform:translate(-50%,-50%); box-shadow:none;}   /* white vertical grip, 11×23, like Figma */
   #tlHead::after{content:''; position:absolute; left:50%; top:100%; transform:translateX(-50%); width:1.5px; height:13px; background:#b8b8b8; border-radius:1px; pointer-events:none;}   /* thin needle dropping from the grip (Figma) */
@@ -752,11 +753,11 @@ function makeTexture(source, key, aspect){
     tex.__videoUpdate();
     texCache.set(ck,tex); return tex;
   }
-  const LONG=3072; // long side 3K — matches the upload cap, crisp for full-frame cards / higher-res export
+  const sw=source.width||source.naturalWidth, sh=source.height||source.naturalHeight;
+  const LONG=Math.min(3072, Math.max(sw,sh)||3072); // cap to the SOURCE's own resolution — never upscale (that just wastes VRAM and throttles, no quality gain); 3K ceiling for big uploads
   const W=aspect>=1?LONG:Math.round(LONG*aspect), H=aspect>=1?Math.round(LONG/aspect):LONG;
   const c=document.createElement('canvas'); c.width=W; c.height=H;
   const x=c.getContext('2d');
-  const sw=source.width||source.naturalWidth, sh=source.height||source.naturalHeight;
   const s=Math.max(W/sw,H/sh), dw=sw*s, dh=sh*s; // cover-fit; when aspect matches the image there's no crop
   x.drawImage(source,(W-dw)/2,(H-dh)/2,dw,dh);
   const tex=new THREE.CanvasTexture(c);
@@ -780,16 +781,17 @@ let previewMode=false;
    show only until the images are ready (or if they fail to load). */
 const DEMO_URLS=Array.from({length:20},(_,i)=>`demo/${String(i+1).padStart(2,'0')}.webp`);
 const DEMO=DEMO_URLS.map(u=>{ const img=new Image(); img.decoding='async'; img.src=u; return img; });
-let demoReady=false, _demoLoaded=0;
-DEMO.forEach(img=>{ const done=()=>{ if(++_demoLoaded>=DEMO.length){ demoReady=true; if(typeof state!=='undefined' && !userSources.length && state.template) rebuild(); } }; img.onload=done; img.onerror=done; });
+let _demoRebuildTO=null;
+DEMO.forEach(img=>{ const done=()=>{
+  if(typeof state==='undefined' || userSources.length || !state.template) return;
+  clearTimeout(_demoRebuildTO); _demoRebuildTO=setTimeout(()=>rebuild(),60);   // swap to designs as they load, coalesced into one rebuild (no long placeholder flash)
+}; img.onload=done; img.onerror=done; });
 function sourceList(){
   if(previewMode) return PREVIEW_CARDS.map((p,i)=>({src:p, key:'pg'+i, aspect:PA}));
   if(userSources.length) return userSources.map(u=>({src:u.src, key:u.uid, aspect:u.aspect}));
-  if(demoReady){
-    const ok=DEMO.filter(img=>img.complete && img.naturalWidth);   // skip any that failed
-    if(ok.length) return ok.map((img,i)=>({src:img, key:'demo'+i, aspect:PA}));
-  }
-  return PLACEHOLDERS.map((p,i)=>({src:p, key:'p'+i, aspect:PA}));
+  const ok=DEMO.filter(img=>img.complete && img.naturalWidth);   // the real designs, used as soon as they load
+  if(ok.length) return ok.map((img,i)=>({src:img, key:'demo'+i, aspect:PA}));
+  return PLACEHOLDERS.map((p,i)=>({src:p, key:'p'+i, aspect:PA}));  // only the very first frame, before any design has loaded
 }
 /* per-card slot → image. Click-to-replace overrides a single slot, so a card
    can differ from others sharing the same source. */
@@ -2137,6 +2139,7 @@ function makeCardFrame(mesh, color, opacity){
   const m=new THREE.Mesh(new THREE.ShapeGeometry(outer,28),
     new THREE.MeshBasicMaterial({color, transparent:true, opacity, depthTest:false, depthWrite:false}));
   m.position.z=0; m.renderOrder=999;   // coplanar with the card (drawn on top via renderOrder) → no parallax shift when the card is tilted
+  m.scale.setScalar(state.size||1);    // match the card's live size (cards are scaled in the vertex shader via uSize, not the geometry)
   return m;
 }
 function clearHighlight(){
@@ -2374,6 +2377,8 @@ function renderFrame(){
   // CAMERA ZOOM of the whole scene (doesn't touch spacing or card sizes — just scales the view).
   if(camera.zoom!==state.comp){ camera.zoom=state.comp; camera.updateProjectionMatrix(); }
   forEachCard(o=>{ const u=o.material.uniforms.uSize; if(u) u.value=state.size; }); // per-card scale in the vertex shader (no accumulation)
+  if(hoverOutline) hoverOutline.scale.setScalar(state.size||1);   // keep the highlight frame on the live card size
+  if(outline) outline.scale.setScalar(state.size||1);
   // Live spacing for fixed-count presets: scale card POSITIONS from centre in realtime (smooth drag,
   // no rebuild). Card size is untouched → low spacing clusters/overlaps (mush), high spacing spreads.
   if(SCALE_SPACE.has(state.template.scene) && builtSpacing>0.001){
@@ -3021,11 +3026,13 @@ function scrubTo(e){
 }
 tlTrack.addEventListener('pointerdown',e=>{
   if(exporting) return;
+  e.preventDefault();                          // stop native drag / text-selection (the "blocked" cursor)
   scrubbing=true; state.playing=false; updatePlayBtn();
   try{ tlTrack.setPointerCapture(e.pointerId); }catch(_){} scrubTo(e);
 });
 tlTrack.addEventListener('pointermove',e=>{ if(scrubbing) scrubTo(e); });
 ['pointerup','pointercancel'].forEach(ev=>tlTrack.addEventListener(ev,()=>{ scrubbing=false; }));
+window.addEventListener('pointerup',()=>{ scrubbing=false; });   // safety: if the release lands off the track, never stay stuck
 
 /* ================= toasts ================= */
 function toast(msg){
