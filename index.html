@@ -408,7 +408,7 @@
   .toast.show{opacity:1; transform:translateY(0);}
 
   /* mobile-only elements: hidden by default, turned on inside the media query below */
-  #mTabs, #mNavBtn, #mNav, #mNavScrim{ display:none; }
+  #mTabs, #mNavBtn, #mNav, #mNavScrim, #mExpInfo{ display:none; }
 
   /* ===================== MOBILE / touch layout (≤820px) ===================== */
   @media (max-width:820px){
@@ -437,9 +437,20 @@
       overflow-y:auto; -webkit-overflow-scrolling:touch;
       border-left:none; border-right:none; display:none;
     }
-    body.mtab-templates #previews{ display:flex; flex-direction:column; }
+    body.mtab-templates #previews{ display:flex; flex-direction:column; padding-bottom:28px; }
     body.mtab-edit      #setScroll{ display:flex; flex-direction:column; }
     body.mtab-export    #exportBar{ display:flex; flex-direction:column; justify-content:flex-start; gap:14px; padding:18px 16px; }
+
+    /* TEMPLATE menu → a plain 2-column grid that scrolls vertically with the panel.
+       The desktop horizontal drag-strips (overflow-x) swallow finger-scroll, so unwrap them. */
+    #previews .catStrip{ flex-wrap:wrap; overflow:visible; margin-right:0; cursor:default; gap:10px; }
+    #previews .catStrip .pv{ flex:0 0 calc(50% - 5px) !important; }
+    #previews .seeAll{ display:none; }                 /* whole grid is already shown — no "See all" */
+    #previews .catHead{ pointer-events:none; }          /* category title is just a label on mobile */
+    #previews .pv .pvimg, #previews .pv span{ pointer-events:none; }  /* taps land on the .pv button itself */
+
+    /* export weight estimate as a visible line (touch has no hover tooltip) */
+    #mExpInfo{ display:block; text-align:center; font-size:12px; font-weight:500; color:var(--muted); margin-top:2px; }
 
     /* bigger tap targets */
     .thumb, .thumb img, .thumb.add{ width:58px; height:77px; }
@@ -705,6 +716,7 @@
     </div>
   </div>
   <button class="btn primary" id="exportBtn"><svg class="expIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Export</span></button>
+  <div id="mExpInfo"></div>
 </div>
 </aside>
 </div>
@@ -2377,7 +2389,7 @@ TEMPLATES.forEach(t=>{
 document.querySelectorAll('#tpls .catStrip').forEach(s=>{
   let down=false, startX=0, startScroll=0, moved=0;
   s.addEventListener('pointerdown', e=>{
-    if(e.button!==0 || s.closest('.catSec').classList.contains('expanded')) return;
+    if(e.button!==0 || window.innerWidth<=820 || s.closest('.catSec').classList.contains('expanded')) return;  // mobile = static grid, no drag-scroll (it would block taps)
     down=true; startX=e.clientX; startScroll=s.scrollLeft; moved=0;
   });
   s.addEventListener('pointermove', e=>{
@@ -2460,10 +2472,18 @@ function tickPreviews(dt){
   pvAccum+=dt; if(pvAccum<1/30) return; const fdt=pvAccum; pvAccum=0; // previews run at ~30fps
   const sR=root,sC=camera,sS=scene,sE=state.easeFn,sSize=state.size,sDir=state.dir;
   previewMode=true; state.size=1; state.dir=1;
+  const MOB=window.innerWidth<=820; let budget=MOB?3:Infinity; // mobile: render a few new thumbs per tick (no spike)
   try{
     for(const pv of previews){
-      if(!pv.api||!pv.ctx||!pv.onScreen||!pv.hover) continue; // only the hovered preview animates → no мельтешение
-      pv.clock+=fdt;
+      if(!pv.api||!pv.ctx) continue;
+      if(MOB){
+        // no hover on touch → render each preview ONCE (static thumbnail) when it scrolls into view at a settled frame
+        if(!pv.onScreen||pv._shot||budget<=0) continue;
+        budget--; pv._shot=true; pv.clock=0.35*pv.loop;
+      } else {
+        if(!pv.onScreen||!pv.hover) continue; // desktop: only the hovered preview animates → no мельтешение
+        pv.clock+=fdt;
+      }
       root=pv.root; camera=pv.camera; scene=pv.scene; state.easeFn=pv.ease;
       try{ pv.api.update(pv.clock % pv.loop); }catch(err){}
       pvRenderer.render(pv.scene,pv.camera);
@@ -3026,9 +3046,11 @@ const FMT_LABEL={mp4:'MP4',gif:'GIF',png:'PNG',seq:'PNG seq'};
 function updateExportSize(){
   const btn=$('exportBtn'); if(!btn) return;
   const e=estimateExport();
-  if(!e){ btn.dataset.tip=''; return; }
+  const info=$('mExpInfo');
+  if(!e){ btn.dataset.tip=''; if(info) info.textContent=''; return; }
   const fmt=$('ddFormat').dataset.value;
   btn.dataset.tip=['≈ '+fmtBytes(e.bytes), FMT_LABEL[fmt]||'', e.long+'p', e.sec!=null?Math.round(e.sec)+'s':null].filter(Boolean).join('  ·  ');
+  if(info) info.textContent=btn.dataset.tip;   // mobile: weight estimate as visible text (no hover on touch)
   if(tipFor===btn){ tipEl.textContent=btn.dataset.tip; placeTip(btn,'above'); }
 }
 function refreshRatioTooltips(){
