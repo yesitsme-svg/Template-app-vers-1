@@ -841,7 +841,7 @@ function makeTexture(source, key, aspect){
     texCache.set(ck,tex); return tex;
   }
   const sw=source.width||source.naturalWidth, sh=source.height||source.naturalHeight;
-  const LONG=Math.min(window.innerWidth<=820?1280:3072, Math.max(sw,sh)||3072); // cap to source res (no upscale); on a phone cap harder (1280) → far less VRAM/GPU work, no crashes/lag
+  const LONG=Math.min(window.innerWidth<=820?1024:3072, Math.max(sw,sh)||3072); // cap to source res (no upscale); on a phone cap hard (1024) → ~6× less texture VRAM than desktop, no crashes/lag
   const W=aspect>=1?LONG:Math.round(LONG*aspect), H=aspect>=1?Math.round(LONG/aspect):LONG;
   const c=document.createElement('canvas'); c.width=W; c.height=H;
   const x=c.getContext('2d');
@@ -2551,6 +2551,7 @@ let rec=null, recChunks=[], recUntil=0;
 let pendingRebuild=false;
 function scheduleRebuild(){ pendingRebuild=true; } // coalesce live slider drags to one rebuild per frame
 let _vidPlay=null;
+let _renderAccum=0, _scrollPauseUntil=0;   // mobile: 30fps render cap + don't render mid-scroll (keeps the main thread free → smooth scroll/touch)
 function tickFrame(now){
   requestAnimationFrame(tickFrame);
   if(exporting) return; // export loop drives rendering (and must NOT pause the videos)
@@ -2566,9 +2567,19 @@ function tickFrame(now){
     fpsAccum+=dt;
     if(fpsAccum>=step){ const n=Math.floor(fpsAccum/step); fpsAccum-=n*step; animTime+=n*step*state.speed; }
   }
-  renderFrame();          // every frame → slider feedback stays smooth even while the motion is FPS-stepped
-  updateTimeline();
-  tickPreviews(dt);
+  // MOBILE perf: cap the render to ~30fps, and skip rendering entirely while a panel is being scrolled.
+  // animTime already advanced above (accumulator-based), so motion stays correct — we just draw less often,
+  // which frees the main thread. Continuous 60fps WebGL is the #1 cause of janky scroll/taps on phones.
+  let doRender=true;
+  if(window.innerWidth<=820){
+    if(now<_scrollPauseUntil) doRender=false;
+    else { _renderAccum+=dt; if(_renderAccum<1/30) doRender=false; else _renderAccum=0; }
+  }
+  if(doRender){
+    renderFrame();        // slider feedback stays smooth even while the motion is FPS-stepped
+    updateTimeline();
+    tickPreviews(dt);
+  }
   if(rec && rec.state==='recording' && animTime>=recUntil) rec.stop();
 }
 requestAnimationFrame(tickFrame);
@@ -2924,6 +2935,9 @@ window.addEventListener('resize',resize);
   const nb=document.getElementById('mNavBtn'); if(nb) nb.addEventListener('click',()=>document.body.classList.toggle('mnav-open'));
   const sc=document.getElementById('mNavScrim'); if(sc) sc.addEventListener('click',closeNav);
   document.querySelectorAll('#mNav a').forEach(a=>a.addEventListener('click',closeNav));
+  // pause WebGL rendering during panel scroll → buttery scroll (resumes ~150ms after the finger stops)
+  ['previews','setScroll','exportBar'].forEach(id=>{ const el=document.getElementById(id);
+    if(el) el.addEventListener('scroll',()=>{ _scrollPauseUntil=performance.now()+150; },{passive:true}); });
   // re-fit the stage when the device rotates or the URL bar shows/hides
   window.addEventListener('orientationchange',()=>setTimeout(resize,300));
 })();
