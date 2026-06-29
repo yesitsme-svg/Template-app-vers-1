@@ -1570,7 +1570,7 @@ const SCENES = {
           m.scale.setScalar(0.66+0.42*(1-p));               // generous, even sizing (no microscopic core cards)
           m.rotation.z=-a;                                  // cards lie tangent to the arm → the spiral reads
           m.renderOrder=Math.round((1-p)*1000);             // rim in front, inner behind
-          setCardOpacity(m, Math.min(clamp01((1-p)/0.10), clamp01(p/0.05))); // soft wrap at the recycle seam
+          setCardOpacity(m, Math.min(THREE.MathUtils.smoothstep(p,0,0.10), 1-THREE.MathUtils.smoothstep(p,0.90,1))); // WIDE smooth wrap at the recycle seam → the big rim card fades in/out gently, no abrupt pop at the top
           m.material.uniforms.uFade.value = 1 - state.fade*THREE.MathUtils.smoothstep(p,0.3,0.95);  // inner coil melts gently into depth
         }
       } };
@@ -1641,9 +1641,12 @@ const SCENES = {
     return { loopSeconds:L,
       update(T){
         const adv=((T/L)%1)*n*state.dir;               // constant-speed conveyor → buttery on Linear, no stutter
+        // Flat at rest. As you TILT, fan the coplanar stack into real depth (z by stack order) so the
+        // overlapping cards become parallel offset planes → they can't intersect/poke through each other.
+        const tiltR=Math.min(1,(Math.abs(state.rotX)+Math.abs(state.rotY))/10), stepZ=H*0.06;
         for(let i=0;i<n;i++){
           let pw=(((i-adv)%n)+n)%n;                     // wraps off-screen at the corners
-          meshes[i].position.set((pw-n/2)*stepX,-(pw-n/2)*stepY,0);
+          meshes[i].position.set((pw-n/2)*stepX,-(pw-n/2)*stepY,(n/2-pw)*stepZ*tiltR);  // on-top (low pw) = nearer
           meshes[i].renderOrder=Math.round((n-pw)*4);   // newer (top-left) cards drawn on top (painter's order)
         }
       } };
@@ -1768,7 +1771,7 @@ const TEMPLATES = [
   {id:'diag-cascade', name:'Diagonal Cascade',      scene:'diagCascade',  ease:'Linear',   noEase:true, lockEase:true, P:{corner:2}},
   {id:'wreath',       name:'Card Wreath',           scene:'wreath',       ease:'Linear',   noEase:true, lockEase:true, P:{loop:18, drift:1, corner:1.5, minN:12}},
   {id:'floating',     name:'Floating Cards',        scene:'floating',     ease:'Linear',   noEase:true, lockEase:true, P:{loop:9,   corner:1.5}},
-  {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Smooth',   noSpace:true, P:{dur:.7,   hold:.3, corner:1.5}},
+  {id:'showcase',     name:'Product Showcase',      scene:'showcase',     ease:'Smooth',   noSpace:true, P:{dur:.65,   hold:.8, corner:1.5}},
   {cat:'Grids & Scrolls'},
   {id:'scroll-cols',  name:'Scroll Columns',        scene:'scrollCols',   ease:'Linear',   noEase:true, lockEase:true, P:{corner:2, cols:3, cellAsp:0.74}},
   {id:'marquee-rows', name:'Marquee Rows',          scene:'scrollRows',   ease:'Linear',   noEase:true, lockEase:true, P:{corner:2, rows:3, cellAsp:0.7}},
