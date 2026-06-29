@@ -407,36 +407,60 @@
   }
   .toast.show{opacity:1; transform:translateY(0);}
 
+  /* mobile-only elements: hidden by default, turned on inside the media query below */
+  #mTabs, #mNavBtn, #mNav, #mNavScrim{ display:none; }
+
   /* ===================== MOBILE / touch layout (≤820px) ===================== */
   @media (max-width:820px){
-    /* top nav → thin logo bar (the desktop mega-menu doesn't belong on a phone) */
-    #topnav{ height:52px; padding:0 14px; }
+    html,body{ height:100%; overflow:hidden; }
+
+    /* APP BAR: logo + hamburger (the desktop mega-menu opens as a drawer) */
+    #topnav{ height:54px; padding:0 10px 0 14px; }
     #topnav .navleft > a:not(.navlogo), #topnav .navdrop, #topnav .navpro{ display:none; }
+    #topnav .navleft{ gap:0; }
+    #mNavBtn{ display:flex; }
 
-    /* stack the three columns; the whole content area scrolls vertically. Bottom padding clears the
-       fixed export bar so the last controls aren't hidden behind it. */
-    #content{ flex-direction:column; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; padding-bottom:120px; }
-
-    /* STAGE pinned at the top (DOM order is previews→main→settings, so pull it up + make it sticky)
-       → you watch the animation while scrolling the controls underneath */
-    main{ order:-1; position:sticky; top:0; z-index:30; flex:0 0 auto; height:40vh; min-height:240px;
-          background:var(--bg); border-bottom:1px solid var(--border); }
+    /* ONE clean flex column — stage, tab bar, then the active panel. Pure rows → nothing can overlap. */
+    #content{ flex-direction:column; overflow:hidden; }
+    main{ order:-1; flex:0 0 auto; height:38vh; min-height:228px; border-bottom:1px solid var(--border); }
     body.dark main{ background:#171717; }
     #timeline{ flex:0 0 auto; }
 
-    /* panels → full-width stacked blocks that scroll with the page */
-    #previews, #settings{ width:auto; min-width:0; border-left:none; border-right:none; flex:0 0 auto; overflow:visible; }
-    #previews{ border-bottom:1px solid var(--border); }
-    #setScroll, #settings{ overflow:visible; }
+    /* unwrap the settings aside so its children (#setScroll, #exportBar) become tab panels of #content */
+    #settings{ display:contents; }
 
-    /* export bar fixed to the screen bottom → Export is always one tap away (sticky misbehaves in a
-       stacked scroll: it clamps to its container top when settings is below the fold) */
-    #exportBar{ position:fixed; bottom:0; left:0; right:0; width:100%; z-index:40; box-shadow:0 -6px 20px rgba(0,0,0,.10); }
-    body.dark #exportBar{ box-shadow:0 -6px 20px rgba(0,0,0,.45); }
+    #mTabs{ display:flex; order:0; flex:0 0 auto; }
 
-    /* bigger tap targets for uploaded-image thumbnails */
-    .thumb, .thumb img, .thumb.add{ width:56px; height:75px; }
-    .thumb .x{ width:20px; height:20px; top:-7px; right:-7px; line-height:18px; }
+    /* the three panels share the remaining space — only the ACTIVE tab's panel is shown, and it scrolls on its own */
+    #previews, #setScroll, #exportBar{
+      order:1; flex:1 1 auto; width:auto; min-width:0; min-height:0;
+      overflow-y:auto; -webkit-overflow-scrolling:touch;
+      border-left:none; border-right:none; display:none;
+    }
+    body.mtab-templates #previews{ display:flex; flex-direction:column; }
+    body.mtab-edit      #setScroll{ display:flex; flex-direction:column; }
+    body.mtab-export    #exportBar{ display:flex; flex-direction:column; justify-content:flex-start; gap:14px; padding:18px 16px; }
+
+    /* bigger tap targets */
+    .thumb, .thumb img, .thumb.add{ width:58px; height:77px; }
+    .thumb .x{ width:22px; height:22px; top:-8px; right:-8px; line-height:20px; }
+
+    /* tab bar */
+    #mTabs button{ flex:1; height:50px; border:none; background:var(--panel); font-family:inherit; font-size:13px; font-weight:500; color:var(--muted); cursor:pointer; border-top:1px solid var(--border); border-bottom:2px solid transparent; }
+    #mTabs button.on{ color:var(--text); border-bottom-color:var(--text); }
+
+    /* hamburger button */
+    #mNavBtn{ width:42px; height:42px; align-items:center; justify-content:center; background:none; border:none; cursor:pointer; color:var(--text); flex:0 0 auto; }
+    #mNavBtn svg{ width:24px; height:24px; }
+
+    /* site-nav drawer (slides down under the app bar) + scrim */
+    #mNavScrim{ display:block; position:fixed; inset:54px 0 0 0; z-index:190; background:rgba(0,0,0,.35); opacity:0; pointer-events:none; transition:opacity .22s; }
+    body.mnav-open #mNavScrim{ opacity:1; pointer-events:auto; }
+    #mNav{ display:block; position:fixed; left:0; right:0; top:54px; z-index:200; background:var(--panel); transform:translateY(-110%); transition:transform .25s ease; max-height:calc(100% - 54px); overflow-y:auto; box-shadow:0 12px 30px rgba(0,0,0,.18); }
+    body.dark #mNav{ background:#1a1a1a; }
+    body.mnav-open #mNav{ transform:translateY(0); }
+    #mNav a{ display:block; padding:16px 22px; font-size:16px; font-weight:500; color:var(--text); text-decoration:none; border-bottom:1px solid var(--border); }
+    #mNav a.pro{ color:#000; } body.dark #mNav a.pro{ color:var(--text); }
   }
 </style>
 </head>
@@ -468,9 +492,15 @@
     <a href="https://wannathis.one/online-tools">Online tools</a>
   </div>
   <a class="navpro" href="https://wannathis.one/pro-access"><svg class="bolt" viewBox="0 0 13 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M1.18458 11.5901L3.89135 2.35931C3.9538 2.14632 4.14919 2 4.37115 2H10.653C11.0329 2 11.274 2.40687 11.0916 2.74007L7.9018 8.56762C7.71942 8.90082 7.96054 9.30769 8.3404 9.30769H11.0356C11.6234 9.30769 11.9494 9.9883 11.5811 10.4463L4.59272 19.137C4.27765 19.5288 3.64632 19.2628 3.70669 18.7637L4.42899 12.7908C4.465 12.493 4.23255 12.2308 3.9326 12.2308H1.66438C1.33075 12.2308 1.0907 11.9102 1.18458 11.5901Z" fill="#FFCA35"/></svg>Pro Access</a>
+  <button id="mNavBtn" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
 </nav>
 
 <div id="content">
+<div id="mTabs">
+  <button data-mt="templates">Templates</button>
+  <button data-mt="edit">Edit</button>
+  <button data-mt="export">Export</button>
+</div>
 <aside id="previews">
   <div class="pvBrand">
     <span class="pvName">Motion Grid v1.0</span>
@@ -679,6 +709,15 @@
 </aside>
 </div>
 
+<div id="mNavScrim"></div>
+<nav id="mNav">
+  <a href="https://wannathis.one/mockups">Mockup catalog</a>
+  <a href="https://wannathis.one/mockups/free">Free mockups</a>
+  <a href="https://wannathis.one/illustrations">Illustrations</a>
+  <a href="https://wannathis.one/online-tools">Online tools</a>
+  <a class="pro" href="https://wannathis.one/pro-access">⚡ Pro Access</a>
+</nav>
+
 <script type="importmap">
 {"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}
 </script>
@@ -790,7 +829,7 @@ function makeTexture(source, key, aspect){
     texCache.set(ck,tex); return tex;
   }
   const sw=source.width||source.naturalWidth, sh=source.height||source.naturalHeight;
-  const LONG=Math.min(3072, Math.max(sw,sh)||3072); // cap to the SOURCE's own resolution — never upscale (that just wastes VRAM and throttles, no quality gain); 3K ceiling for big uploads
+  const LONG=Math.min(window.innerWidth<=820?1280:3072, Math.max(sw,sh)||3072); // cap to source res (no upscale); on a phone cap harder (1280) → far less VRAM/GPU work, no crashes/lag
   const W=aspect>=1?LONG:Math.round(LONG*aspect), H=aspect>=1?Math.round(LONG/aspect):LONG;
   const c=document.createElement('canvas'); c.width=W; c.height=H;
   const x=c.getContext('2d');
@@ -798,7 +837,7 @@ function makeTexture(source, key, aspect){
   x.drawImage(source,(W-dw)/2,(H-dh)/2,dw,dh);
   const tex=new THREE.CanvasTexture(c);
   tex.colorSpace=THREE.SRGBColorSpace;
-  tex.anisotropy=MAX_ANISO;
+  tex.anisotropy=window.innerWidth<=820?4:MAX_ANISO;   // anisotropic filtering is expensive on mobile GPUs → cap it
   texCache.set(ck,tex);
   return tex;
 }
@@ -2834,17 +2873,40 @@ function resize(){
   let dispW=availW, dispH=Math.round(availW/ar);
   if(dispH>availH){ dispH=availH; dispW=Math.round(availH*ar); }
   stage.style.width=dispW+'px'; stage.style.height=dispH+'px';
-  // render buffer = on-screen device pixels × 2 super-sample → crisp uploads (no upscale-blur on hi-DPI). Floor 1080, cap 3000 for perf.
-  const dpr=Math.min(window.devicePixelRatio||1, 2);
-  let W=dispW*dpr*2, H=dispH*dpr*2, m=Math.max(W,H);
-  if(m<1080){ const k=1080/m; W*=k; H*=k; m=1080; }
-  if(m>3000){ const k=3000/m; W*=k; H*=k; }
+  // render buffer = device pixels × supersample. Desktop: ×2 + 1080 floor + 3000 cap → crisp. Mobile:
+  // ×1 (native, no supersample) + 1400 cap → much lighter on phone GPUs (the big perf win) while still sharp.
+  const dpr=Math.min(window.devicePixelRatio||1, 2), mob=window.innerWidth<=820;
+  let W=dispW*dpr*(mob?1:2), H=dispH*dpr*(mob?1:2), m=Math.max(W,H);
+  if(!mob && m<1080){ const k=1080/m; W*=k; H*=k; m=1080; }
+  const cap=mob?1400:3000;
+  if(m>cap){ const k=cap/m; W*=k; H*=k; }
   W=Math.round(W)&~1; H=Math.round(H)&~1; // even dimensions
   renderer.setSize(W,H,false);
   camera.aspect=W/H; camera.updateProjectionMatrix();
   if(state.template) rebuild();
 }
 window.addEventListener('resize',resize);
+
+/* ===================== mobile: tab bar + nav drawer ===================== */
+(function(){
+  const tabs=document.querySelectorAll('#mTabs button');
+  function setTab(t){
+    document.body.classList.remove('mtab-templates','mtab-edit','mtab-export');
+    document.body.classList.add('mtab-'+t);
+    tabs.forEach(b=>b.classList.toggle('on', b.dataset.mt===t));
+    const p=t==='templates'?document.getElementById('previews'):t==='edit'?document.getElementById('setScroll'):document.getElementById('exportBar');
+    if(p) p.scrollTop=0;
+  }
+  tabs.forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.mt)));
+  setTab('templates');                                   // default tab (works only on mobile; harmless on desktop)
+  // nav drawer
+  const closeNav=()=>document.body.classList.remove('mnav-open');
+  const nb=document.getElementById('mNavBtn'); if(nb) nb.addEventListener('click',()=>document.body.classList.toggle('mnav-open'));
+  const sc=document.getElementById('mNavScrim'); if(sc) sc.addEventListener('click',closeNav);
+  document.querySelectorAll('#mNav a').forEach(a=>a.addEventListener('click',closeNav));
+  // re-fit the stage when the device rotates or the URL bar shows/hides
+  window.addEventListener('orientationchange',()=>setTimeout(resize,300));
+})();
 
 /* ================= UI bindings ================= */
 function bindSeg(id,fn){
