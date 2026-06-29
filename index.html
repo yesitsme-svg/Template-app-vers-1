@@ -1642,15 +1642,20 @@ const SCENES = {
     return { loopSeconds:L,
       update(T){
         const adv=((T/L)%1)*n*state.dir;               // constant-speed conveyor → buttery on Linear, no stutter
-        // The cascade is a straight diagonal line, so view-depth is MONOTONIC in pw. Order strictly by pw,
-        // flipped by the sign of d(viewDepth)/d(pw) for the current camera tilt. This is smooth as cards
-        // slide → no flicker/poke. (The old euclidean distanceTo sort mis-ordered the side cards = the lag.)
-        camera.getWorldDirection(_cfwd);
-        const dir=(stepX*_cfwd.x - stepY*_cfwd.y)>=0 ? -1 : 1;   // nearer end on top; flat → -1 = low pw (top-left) on top
+        // Painter's order from CONTINUOUS view-depth (no discrete sign flip → no frame-to-frame flicker as
+        // the camera tilts). The -pw·ε term breaks the near-coplanar tie (small tilt) into the flat design
+        // order so nothing jitters there either. (The old euclidean distanceTo sort mis-ordered the side
+        // cards; the sign-flip version flickered near its threshold — both fixed.)
+        camera.getWorldDirection(_cfwd); const cp=camera.position;
+        // As you tilt, lift the flat stack into a gentle 3D staircase (low pw = nearest). Parallel offset
+        // planes physically can't intersect, and it keeps depth order consistent → no poke/flicker.
+        const tiltR=Math.min(1,(Math.abs(state.rotX)+Math.abs(state.rotY))/12), stepZ=H*0.07;
         for(let i=0;i<n;i++){
           let pw=(((i-adv)%n)+n)%n;                     // wraps off-screen at the corners
-          meshes[i].position.set((pw-n/2)*stepX,-(pw-n/2)*stepY,0);
-          meshes[i].renderOrder=dir*pw;                 // stable, monotonic painter's order — never swaps frame-to-frame
+          const x=(pw-n/2)*stepX, y=-(pw-n/2)*stepY, z=(n/2-pw)*stepZ*tiltR;
+          meshes[i].position.set(x,y,z);
+          const vd=(x-cp.x)*_cfwd.x + (y-cp.y)*_cfwd.y + (z-cp.z)*_cfwd.z;   // view-depth (bigger = farther)
+          meshes[i].renderOrder = -vd - pw*stepX*0.04;   // nearer on top; ε·pw stabilises the flat/small-tilt case
         }
       } };
   },
