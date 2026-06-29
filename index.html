@@ -2574,12 +2574,26 @@ async function exportMP4(){
   try{
     const {Muxer,ArrayBufferTarget}=await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5/+esm');
     const cv=renderer.domElement, fps=state.fps||30;
-    const {W,H,RW,RH}=exportDims();                     // 1K/2K output, supersampled render
-    const {ds,dx}=beginHiRes(W,H,RW,RH);
-    const bitrate=Math.min(60_000_000, Math.round(W*H*fps*0.28)); // scale bitrate to resolution
+    let {W,H,RW,RH}=exportDims();                       // 1K/2K/4K output, supersampled render
     const loopReal=active.loopSeconds/state.speed;
     const totalFrames=Math.max(fps,Math.min(Math.round(loopReal*fps),fps*180));   // FULL loop (seamless) — only a 3-min hard safety, never trims a real loop
     if(loopReal>180) toast('Loop over 3 min — export trimmed.');
+    // Pick a supported H.264 config. High profile, levels 6.2→5.2→… first so big frames are accepted. A 4K
+    // frame in a TALL ratio (e.g. 3:4 → 2880×3840 ≈ 11 Mpx) can exceed even level 5.2's area cap → if nothing
+    // accepts it, scale the output down ~15% and retry, so MP4 NEVER fails (still near-4K; bitrate scales too).
+    const codecs=['avc1.64003E','avc1.64003D','avc1.64003C','avc1.640034','avc1.640033','avc1.640032','avc1.640028','avc1.4d0034','avc1.42e01f'];
+    let cfg=null, bitrate=0;
+    for(let tries=0; tries<4 && !cfg; tries++){
+      bitrate=Math.min(60_000_000, Math.round(W*H*fps*0.28));   // scale bitrate to the (possibly clamped) resolution
+      for(const codec of codecs){
+        const s=await VideoEncoder.isConfigSupported({codec,width:W,height:H,bitrate,framerate:fps}).catch(()=>null);
+        if(s?.supported){ cfg={codec,width:W,height:H,bitrate,framerate:fps}; break; }
+      }
+      if(!cfg){ W=(Math.round(W*0.85))&~1; H=(Math.round(H*0.85))&~1; }   // too big for any level → shrink + retry
+    }
+    if(!cfg) throw new Error('no supported H.264 encoder');
+    const ss=Math.min(2, RENDER_CAP/Math.max(W,H)); RW=(Math.round(W*ss))&~1; RH=(Math.round(H*ss))&~1;   // supersample for the final size
+    const {ds,dx}=beginHiRes(W,H,RW,RH);
     const muxer=new Muxer({
       target:new ArrayBufferTarget(),
       video:{codec:'avc', width:W, height:H, frameRate:fps},
@@ -2590,14 +2604,6 @@ async function exportMP4(){
       output:(chunk,meta)=>muxer.addVideoChunk(chunk,meta),
       error:e=>{ encErr=e; },
     });
-    let cfg=null;
-    // include High-profile levels 5.2/5.1/5.0 first so 2K frames (which exceed level-4.0 limits) are accepted
-    for(const codec of ['avc1.640034','avc1.640033','avc1.640032','avc1.640028','avc1.4d0034','avc1.42e01f']){
-      const c={codec,width:W,height:H,bitrate,framerate:fps};
-      const s=await VideoEncoder.isConfigSupported(c).catch(()=>null);
-      if(s?.supported){ cfg=c; break; }
-    }
-    if(!cfg) throw new Error('no supported H.264 encoder');
     encoder.configure(cfg);
     const hasVid=exportHasVideo();
     for(let i=0;i<totalFrames;i++){
@@ -2912,10 +2918,10 @@ function estimateExport(){
   if(!active) return null;
   const fps=state.fps||30, fmt=$('ddFormat').dataset.value;
   const loopReal=active.loopSeconds/(state.speed||1);
-  if(fmt==='png'){ const {W,H}=exportDims(); return {bytes:W*H*1.8, sec:null, long:Math.max(W,H)}; }                 // one frame
-  if(fmt==='gif'){ const {W,H}=exportDims(); const s=Math.min(1,640/Math.max(W,H)); const gw=Math.round(W*s)&~1, gh=Math.round(H*s)&~1; const f=Math.min(Math.round(loopReal*fps), fps*30); return {bytes:f*gw*gh*0.42, sec:f/fps, long:Math.max(gw,gh)}; } // 256-colour LZW
-  if(fmt==='seq'){ const sv=state.exportRes; let r=sv==='4k'?'2k':sv; const full=Math.max(fps,Math.round(loopReal*fps)); if(full>700)r='1k'; const frames=Math.min(full,2400); state.exportRes=r; const {W,H}=exportDims(); state.exportRes=sv; return {bytes:frames*W*H*1.8, sec:frames/fps, long:Math.max(W,H)}; } // zipped PNGs
-  const {W,H}=exportDims(); const dur=Math.min(loopReal,180); const bitrate=Math.min(60e6, W*H*fps*0.28); return {bytes:bitrate*dur/8, sec:dur, long:Math.max(W,H)}; // mp4: bitrate × duration
+  if(fmt==='png'){ const {W,H}=exportDims(); return {bytes:W*H*0.45, sec:null, long:Math.max(W,H)}; }                 // one frame (~0.45 B/px measured)
+  if(fmt==='gif'){ const {W,H}=exportDims(); const s=Math.min(1,640/Math.max(W,H)); const gw=Math.round(W*s)&~1, gh=Math.round(H*s)&~1; const f=Math.min(Math.round(loopReal*fps), fps*30); return {bytes:f*gw*gh*0.16, sec:f/fps, long:Math.max(gw,gh)}; } // 256-colour LZW (~0.16 B/px)
+  if(fmt==='seq'){ const sv=state.exportRes; let r=sv==='4k'?'2k':sv; const full=Math.max(fps,Math.round(loopReal*fps)); if(full>700)r='1k'; const frames=Math.min(full,2400); state.exportRes=r; const {W,H}=exportDims(); state.exportRes=sv; return {bytes:frames*W*H*0.45, sec:frames/fps, long:Math.max(W,H)}; } // zipped PNGs (~0.45 B/px)
+  const {W,H}=exportDims(); const dur=Math.min(loopReal,180); const bitrate=Math.min(60e6, W*H*fps*0.28); return {bytes:bitrate*dur/8*0.6, sec:dur, long:Math.max(W,H)}; // mp4: ~0.6 of the bitrate ceiling in practice
 }
 function fmtBytes(b){ return b>=1073741824?(b/1073741824).toFixed(1)+' GB':b>=1048576?Math.round(b/1048576)+' MB':Math.max(1,Math.round(b/1024))+' KB'; }
 const FMT_LABEL={mp4:'MP4',gif:'GIF',png:'PNG',seq:'PNG seq'};
