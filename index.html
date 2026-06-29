@@ -1638,16 +1638,19 @@ const SCENES = {
     const meshes=[];
     for(let i=0;i<n;i++){ const e=entryForSlot(i%N0); const m=plane(e.tex,H*e.asp,H); m.userData.slot=i%N0; root.add(m); meshes.push(m); } // opaque → depth-correct under rotation
     const L=P.loop||(n*1.0);                           // ~1s per diagonal step → matches the scrollers' pace
+    const _cfwd=new THREE.Vector3();
     return { loopSeconds:L,
       update(T){
         const adv=((T/L)%1)*n*state.dir;               // constant-speed conveyor → buttery on Linear, no stutter
-        // Flat at rest. As you TILT, fan the coplanar stack into real depth (z by stack order) so the
-        // overlapping cards become parallel offset planes → they can't intersect/poke through each other.
-        const tiltR=Math.min(1,(Math.abs(state.rotX)+Math.abs(state.rotY))/10), stepZ=H*0.06;
+        // The cascade is a straight diagonal line, so view-depth is MONOTONIC in pw. Order strictly by pw,
+        // flipped by the sign of d(viewDepth)/d(pw) for the current camera tilt. This is smooth as cards
+        // slide → no flicker/poke. (The old euclidean distanceTo sort mis-ordered the side cards = the lag.)
+        camera.getWorldDirection(_cfwd);
+        const dir=(stepX*_cfwd.x - stepY*_cfwd.y)>=0 ? -1 : 1;   // nearer end on top; flat → -1 = low pw (top-left) on top
         for(let i=0;i<n;i++){
           let pw=(((i-adv)%n)+n)%n;                     // wraps off-screen at the corners
-          meshes[i].position.set((pw-n/2)*stepX,-(pw-n/2)*stepY,(n/2-pw)*stepZ*tiltR);  // on-top (low pw) = nearer
-          meshes[i].renderOrder=Math.round((n-pw)*4);   // newer (top-left) cards drawn on top (painter's order)
+          meshes[i].position.set((pw-n/2)*stepX,-(pw-n/2)*stepY,0);
+          meshes[i].renderOrder=dir*pw;                 // stable, monotonic painter's order — never swaps frame-to-frame
         }
       } };
   },
@@ -2426,10 +2429,9 @@ function renderFrame(){
   // No billboard on any ring: cards must tilt WITH the composition (real perspective lean) so the tilt
   // reads right (wheel: Rotate X = vertical, Rotate Y = horizontal) AND Card backs/Hide can cull the
   // away-facing cards that a tilt reveals. (The vertical wheel uses layout-rotation in applyUserRot.)
-  // ring/globe always; the flat Diagonal Cascade only WHEN tilted (its conveyor draw-order is right when
-  // flat but wrong once tilted → far cards drew over near ones, reading as flicker / wrong depth).
-  if(state.template.scene==='ring' || state.template.scene==='globe' ||
-     (state.template.scene==='diagCascade' && (state.rotY||state.rotX))) sortCardsByDepth(); // overlap → no flicker
+  // ring/globe sort by camera distance. Diagonal Cascade does its OWN stable pw-based order in update()
+  // (the shared euclidean sort mis-ordered its wide diagonal spread → that was the flicker/lag).
+  if(state.template.scene==='ring' || state.template.scene==='globe') sortCardsByDepth();
   applyDepthFade();
   postMat.uniforms.uTime.value=animTime;
   const lens=state.lens||0;
