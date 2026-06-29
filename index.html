@@ -300,9 +300,9 @@
   .customRes input:focus, .customRes input:focus-visible{border:none; outline:none; box-shadow:none;}
   .customRes span{color:var(--muted); font-size:12px;}
   /* #11 custom hover tooltip (px resolution on the canvas-ratio selector) */
-  #tip{position:fixed; z-index:9999; background:#1c1c1c; color:#fff; font-size:12px; font-weight:500; letter-spacing:.005em; line-height:1.3; padding:7px 11px; border-radius:9px; pointer-events:none; opacity:0; transform:translate(-50%,6px) scale(.97); transform-origin:center bottom; transition:opacity .16s cubic-bezier(.2,.7,.3,1), transform .16s cubic-bezier(.2,.7,.3,1); white-space:nowrap; box-shadow:0 8px 24px rgba(0,0,0,.16), 0 2px 6px rgba(0,0,0,.10);}
-  #tip.show{opacity:1; transform:translate(-50%,0) scale(1);}
-  body.dark #tip{ background:#2a2a2a; color:var(--text); border:1px solid #383838; box-shadow:0 10px 28px rgba(0,0,0,.5); }
+  #tip{position:fixed; z-index:9999; background:rgba(28,28,31,.62); -webkit-backdrop-filter:blur(18px) saturate(1.4); backdrop-filter:blur(18px) saturate(1.4); color:#fff; border:1px solid rgba(255,255,255,.10); font-size:13px; font-weight:500; letter-spacing:.005em; line-height:1.3; padding:9px 13px; border-radius:12px; pointer-events:none; white-space:nowrap; box-shadow:0 12px 32px rgba(0,0,0,.20), 0 2px 8px rgba(0,0,0,.12); opacity:0; transition:opacity .15s ease;}   /* frosted translucent glass — set its position transform inline (placeTip) */
+  #tip.show{opacity:1;}
+  body.dark #tip{ background:rgba(60,60,66,.5); border-color:rgba(255,255,255,.13); color:var(--text); box-shadow:0 14px 38px rgba(0,0,0,.55); }
   /* #17 custom HEX colour picker popover (replaces the native OS RGB dialog) */
   #cpop{position:fixed; z-index:10000; width:188px; background:var(--panel); border:1px solid var(--border); border-radius:12px; box-shadow:0 14px 38px rgba(0,0,0,.24); padding:10px; display:none; flex-direction:column; gap:10px;}
   #cpop.show{display:flex;}
@@ -2890,10 +2890,14 @@ function exportPxFor(ratioKey){
 }
 // custom hover tooltip — follows data-tip, lives at the bottom of any element it's bound to
 const tipEl=$('tip'); let tipTimer=null, tipFor=null;
-function placeTip(el, above){ const r=el.getBoundingClientRect(); tipEl.style.left=(r.left+r.width/2)+'px'; tipEl.style.top=((above ? r.top-tipEl.offsetHeight-9 : r.bottom+9))+'px'; }
-function bindTip(el, above){
+function placeTip(el, mode){ const r=el.getBoundingClientRect();
+  if(mode==='left'){ tipEl.style.left=(r.left-10)+'px';        tipEl.style.top=(r.top+r.height/2)+'px'; tipEl.style.transform='translate(-100%,-50%)'; }   // beside the button, over the open stage → never covers the panel
+  else if(mode==='above'){ tipEl.style.left=(r.left+r.width/2)+'px'; tipEl.style.top=(r.top-tipEl.offsetHeight-10)+'px'; tipEl.style.transform='translate(-50%,0)'; }
+  else { tipEl.style.left=(r.left+r.width/2)+'px';              tipEl.style.top=(r.bottom+9)+'px';        tipEl.style.transform='translate(-50%,0)'; }
+}
+function bindTip(el, mode){
   if(el._tipBound) return; el._tipBound=true;
-  el.addEventListener('mouseenter',()=>{ const t=el.dataset.tip; if(!t)return; tipFor=el; tipEl.textContent=t; placeTip(el, above); clearTimeout(tipTimer); tipTimer=setTimeout(()=>tipEl.classList.add('show'),140); });
+  el.addEventListener('mouseenter',()=>{ const t=el.dataset.tip; if(!t)return; tipFor=el; tipEl.textContent=t; placeTip(el, mode); clearTimeout(tipTimer); tipTimer=setTimeout(()=>tipEl.classList.add('show'),140); });
   el.addEventListener('mouseleave',()=>{ if(tipFor===el){ clearTimeout(tipTimer); tipEl.classList.remove('show'); tipFor=null; } });
 }
 /* Estimated export weight → hover popup on the Export button (so you never grab a surprise 200 MB file). */
@@ -2914,7 +2918,7 @@ function updateExportSize(){
   if(!e){ btn.dataset.tip=''; return; }
   const fmt=$('ddFormat').dataset.value;
   btn.dataset.tip=['≈ '+fmtBytes(e.bytes), FMT_LABEL[fmt]||'', e.long+'p', e.sec!=null?Math.round(e.sec)+'s':null].filter(Boolean).join('  ·  ');
-  if(tipFor===btn){ tipEl.textContent=btn.dataset.tip; placeTip(btn,true); }
+  if(tipFor===btn){ tipEl.textContent=btn.dataset.tip; placeTip(btn,'left'); }
 }
 function refreshRatioTooltips(){
   $('ratios').querySelectorAll('button').forEach(b=>{ b.dataset.tip=b.dataset.r==='custom'?'Custom resolution — set W×H below':exportPxFor(b.dataset.r); bindTip(b); if(tipFor===b){ tipEl.textContent=b.dataset.tip; placeTip(b); } });
@@ -2937,7 +2941,7 @@ function applyCustomRes(){
 $('customW').addEventListener('change',applyCustomRes);
 $('customH').addEventListener('change',applyCustomRes);
 refreshRatioTooltips();
-bindTip($('exportBtn'), true); updateExportSize();   // export-weight popup above the button
+bindTip($('exportBtn'), 'left'); updateExportSize();   // export-weight popup beside the button (over the stage)
 $('speed').addEventListener('input',e=>{
   state.speed=parseFloat(e.target.value);
   $('speedVal').textContent=''+state.speed.toFixed(2);
