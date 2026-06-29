@@ -628,7 +628,7 @@
     <div class="dd" id="ddQuality" data-value="2k">
       <button class="ddBtn" type="button"><span class="ddVal">2K</span><span class="ddCar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
       <div class="ddPop">
-        <button type="button" data-v="1k">1K</button>
+        <button type="button" data-v="1k">1080</button>
         <button type="button" data-v="2k">2K</button>
         <button type="button" data-v="4k">4K</button>
       </div>
@@ -2213,6 +2213,7 @@ renderer.domElement.addEventListener('pointerdown',e=>{
 });
 function updateLoopInfo(){
   const el=$('loopInfo'); if(active&&el) el.textContent=`Loop ≈ ${(active.loopSeconds/state.speed).toFixed(1)} s · ${state.fps} fps`;
+  if(typeof updateExportSize==='function') updateExportSize();   // loop/speed changed → refresh the export-weight estimate
 }
 function applyTemplate(t){
   clearHover(); clearHighlight();   // drop any hover/click outline tied to the old scene's cards
@@ -2496,6 +2497,7 @@ function seekVideosTo(playSec){
    then downscale) so card edges, rounded corners and the photos come out crisp, not pixelated.
    The supersampled render is capped (~3000px long) so 2K square exports stay within GPU limits. */
 const EXPORT_LONGS={'1k':1080,'2k':2160,'4k':3840}, RENDER_CAP=4096;
+const RES_LABEL={'1k':'1080','2k':'2K','4k':'4K'};   // user-facing labels (1K shown as 1080, like Edits)
 function ratioWH(){ // [w,h] aspect for the current canvas (custom → the typed pixel size)
   if(state.ratio==='custom') return [state.customW||1080, state.customH||1080];
   return RATIOS[state.ratio];
@@ -2764,9 +2766,9 @@ function wireDropdown(id, onChange){
   sync(); return dd;
 }
 document.addEventListener('click',()=>document.querySelectorAll('.dd.open').forEach(o=>o.classList.remove('open')));
-wireDropdown('ddFormat');
-wireDropdown('ddQuality', v=>{ state.exportRes=v; refreshRatioTooltips(); });
-wireDropdown('ddFps', v=>{ state.fps=parseInt(v)||30; });
+wireDropdown('ddFormat', ()=>updateExportSize());
+wireDropdown('ddQuality', v=>{ state.exportRes=v; refreshRatioTooltips(); updateExportSize(); });
+wireDropdown('ddFps', v=>{ state.fps=parseInt(v)||30; updateExportSize(); });
 $('exportBtn').addEventListener('click',()=>{
   const fmt=$('ddFormat').dataset.value;
   if(fmt==='mp4') exportMP4(); else if(fmt==='gif') exportGIF(); else if(fmt==='png') exportPNG(); else if(fmt==='seq') exportPNGSequence();
@@ -2881,15 +2883,35 @@ function exportPxFor(ratioKey){
   if(ratioKey==='custom') return `${state.customW}×${state.customH}px`;
   const [rw,rh]=RATIOS[ratioKey], long=EXPORT_LONGS[state.exportRes]||2160;
   let W=rw>=rh?long:Math.round(long*rw/rh), H=rw>=rh?Math.round(long*rh/rw):long; W&=~1; H&=~1;
-  return `${W}×${H}px @ ${state.exportRes.toUpperCase()}`;
+  return `${W}×${H}px @ ${RES_LABEL[state.exportRes]||state.exportRes.toUpperCase()}`;
 }
 // custom hover tooltip — follows data-tip, lives at the bottom of any element it's bound to
 const tipEl=$('tip'); let tipTimer=null, tipFor=null;
-function placeTip(el){ const r=el.getBoundingClientRect(); tipEl.style.left=(r.left+r.width/2)+'px'; tipEl.style.top=(r.bottom+9)+'px'; }
-function bindTip(el){
+function placeTip(el, above){ const r=el.getBoundingClientRect(); tipEl.style.left=(r.left+r.width/2)+'px'; tipEl.style.top=((above ? r.top-tipEl.offsetHeight-9 : r.bottom+9))+'px'; }
+function bindTip(el, above){
   if(el._tipBound) return; el._tipBound=true;
-  el.addEventListener('mouseenter',()=>{ const t=el.dataset.tip; if(!t)return; tipFor=el; tipEl.textContent=t; placeTip(el); clearTimeout(tipTimer); tipTimer=setTimeout(()=>tipEl.classList.add('show'),140); });
+  el.addEventListener('mouseenter',()=>{ const t=el.dataset.tip; if(!t)return; tipFor=el; tipEl.textContent=t; placeTip(el, above); clearTimeout(tipTimer); tipTimer=setTimeout(()=>tipEl.classList.add('show'),140); });
   el.addEventListener('mouseleave',()=>{ if(tipFor===el){ clearTimeout(tipTimer); tipEl.classList.remove('show'); tipFor=null; } });
+}
+/* Estimated export weight → hover popup on the Export button (so you never grab a surprise 200 MB file). */
+function estimateExport(){
+  if(!active) return null;
+  const fps=state.fps||30, fmt=$('ddFormat').dataset.value;
+  const loopReal=active.loopSeconds/(state.speed||1);
+  if(fmt==='png'){ const {W,H}=exportDims(); return {bytes:W*H*1.8, sec:null, long:Math.max(W,H)}; }                 // one frame
+  if(fmt==='gif'){ const {W,H}=exportDims(); const s=Math.min(1,640/Math.max(W,H)); const gw=Math.round(W*s)&~1, gh=Math.round(H*s)&~1; const f=Math.min(Math.round(loopReal*fps), fps*30); return {bytes:f*gw*gh*0.42, sec:f/fps, long:Math.max(gw,gh)}; } // 256-colour LZW
+  if(fmt==='seq'){ const sv=state.exportRes; let r=sv==='4k'?'2k':sv; const full=Math.max(fps,Math.round(loopReal*fps)); if(full>700)r='1k'; const frames=Math.min(full,2400); state.exportRes=r; const {W,H}=exportDims(); state.exportRes=sv; return {bytes:frames*W*H*1.8, sec:frames/fps, long:Math.max(W,H)}; } // zipped PNGs
+  const {W,H}=exportDims(); const dur=Math.min(loopReal,180); const bitrate=Math.min(60e6, W*H*fps*0.28); return {bytes:bitrate*dur/8, sec:dur, long:Math.max(W,H)}; // mp4: bitrate × duration
+}
+function fmtBytes(b){ return b>=1073741824?(b/1073741824).toFixed(1)+' GB':b>=1048576?Math.round(b/1048576)+' MB':Math.max(1,Math.round(b/1024))+' KB'; }
+const FMT_LABEL={mp4:'MP4',gif:'GIF',png:'PNG',seq:'PNG seq'};
+function updateExportSize(){
+  const btn=$('exportBtn'); if(!btn) return;
+  const e=estimateExport();
+  if(!e){ btn.dataset.tip=''; return; }
+  const fmt=$('ddFormat').dataset.value;
+  btn.dataset.tip=['≈ '+fmtBytes(e.bytes), FMT_LABEL[fmt]||'', e.long+'p', e.sec!=null?Math.round(e.sec)+'s':null].filter(Boolean).join('  ·  ');
+  if(tipFor===btn){ tipEl.textContent=btn.dataset.tip; placeTip(btn,true); }
 }
 function refreshRatioTooltips(){
   $('ratios').querySelectorAll('button').forEach(b=>{ b.dataset.tip=b.dataset.r==='custom'?'Custom resolution — set W×H below':exportPxFor(b.dataset.r); bindTip(b); if(tipFor===b){ tipEl.textContent=b.dataset.tip; placeTip(b); } });
@@ -2900,18 +2922,19 @@ $('ratios').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=
   $('ratios').querySelectorAll('button').forEach(x=>x.classList.remove('active'));
   b.classList.add('active'); state.ratio=b.dataset.r;
   $('customRes').style.display = state.ratio==='custom' ? 'flex' : 'none';
-  resize();
+  resize(); updateExportSize();
 }));
 function applyCustomRes(){
   let w=parseInt($('customW').value)||1080, h=parseInt($('customH').value)||1080;
   w=Math.max(120,Math.min(4096,w))&~1; h=Math.max(120,Math.min(4096,h))&~1;
   state.customW=w; state.customH=h;
   if(state.ratio==='custom') resize();
-  refreshRatioTooltips();
+  refreshRatioTooltips(); updateExportSize();
 }
 $('customW').addEventListener('change',applyCustomRes);
 $('customH').addEventListener('change',applyCustomRes);
 refreshRatioTooltips();
+bindTip($('exportBtn'), true); updateExportSize();   // export-weight popup above the button
 $('speed').addEventListener('input',e=>{
   state.speed=parseFloat(e.target.value);
   $('speedVal').textContent=''+state.speed.toFixed(2);
