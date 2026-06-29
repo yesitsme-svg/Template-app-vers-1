@@ -415,33 +415,35 @@
 
   /* ===================== MOBILE / touch layout (≤820px) ===================== */
   @media (max-width:820px){
-    /* 100dvh = the REAL visible height (accounts for the phone's address bar). Using vh/100% here makes
-       the column taller than the screen → things overflow & overlap and the scroll math goes wrong. */
-    html,body{ height:100vh; height:100dvh; overflow:hidden; }
+    /* NATURAL full-page scroll: the whole page scrolls top→bottom like a normal site
+       (Anton: "должен быть везде скролл"). No fixed heights or overflow:hidden anywhere,
+       so nothing can be clipped or overlap. Overrides the desktop body{overflow:hidden}. */
+    html{ height:auto; overflow-x:hidden; }
+    body{ height:auto; min-height:100%; overflow:visible; overflow-x:hidden; }
 
-    /* APP BAR: logo + hamburger (the desktop mega-menu opens as a drawer) */
-    #topnav{ height:54px; padding:0 10px 0 14px; }
+    /* APP BAR sticks at the very top; hamburger opens the site menu */
+    #topnav{ height:54px; padding:0 10px 0 14px; position:sticky; top:0; z-index:50; }
     #topnav .navleft > a:not(.navlogo), #topnav .navdrop, #topnav .navpro{ display:none; }
     #topnav .navleft{ gap:0; }
     #mNavBtn{ display:flex; }
 
-    /* ONE clean flex column — stage, tab bar, then the active panel. Sizes are PROPORTIONAL (%/flex) of
-       the real content height, never vh → it always fits the visible screen, nothing can overlap. */
-    #content{ flex-direction:column; overflow:hidden; min-height:0; height:100%; }
-    main{ order:-1; flex:0 0 42%; min-height:0; height:auto; border-bottom:1px solid var(--border); }
+    /* one column in normal document flow — the PAGE scrolls, no inner scroll boxes */
+    #content{ flex-direction:column; height:auto; min-height:0; overflow:visible; }
+    main{ order:-1; flex:0 0 auto; height:auto; border-bottom:1px solid var(--border); }
+    .stageWrap{ flex:0 0 auto; height:44vh; max-height:430px; min-height:280px; }
     body.dark main{ background:#171717; }
     #timeline{ flex:0 0 auto; }
 
     /* unwrap the settings aside so its children (#setScroll, #exportBar) become tab panels of #content */
     #settings{ display:contents; }
 
-    #mTabs{ display:flex; order:0; flex:0 0 48px; }
+    /* tab bar sticks just under the app bar → switch sections from anywhere while scrolling */
+    #mTabs{ display:flex; order:0; flex:0 0 48px; position:sticky; top:54px; z-index:40; }
 
-    /* the three panels share the remaining space — only the ACTIVE tab's panel is shown, and it scrolls on its own */
+    /* the active tab's panel flows in the page (no inner scrollbar — the whole page scrolls) */
     #previews, #setScroll, #exportBar{
-      order:1; flex:1 1 0; width:auto; min-width:0; min-height:0; height:auto;
-      overflow-y:auto; -webkit-overflow-scrolling:touch;
-      border-left:none; border-right:none; display:none;
+      order:1; flex:0 0 auto; width:auto; min-width:0; height:auto;
+      overflow:visible; border-left:none; border-right:none; display:none;
     }
     body.mtab-templates #previews{ display:flex; flex-direction:column; padding-bottom:28px; }
     body.mtab-edit      #setScroll{ display:flex; flex-direction:column; }
@@ -2562,7 +2564,7 @@ let rec=null, recChunks=[], recUntil=0;
 let pendingRebuild=false;
 function scheduleRebuild(){ pendingRebuild=true; } // coalesce live slider drags to one rebuild per frame
 let _vidPlay=null;
-let _renderAccum=0, _scrollPauseUntil=0;   // mobile: 30fps render cap + don't render mid-scroll (keeps the main thread free → smooth scroll/touch)
+let _renderAccum=0, _scrollPauseUntil=0, _stageVisible=true;   // mobile: 30fps render cap + don't render mid-scroll or when the stage is scrolled off-screen
 function tickFrame(now){
   requestAnimationFrame(tickFrame);
   if(exporting) return; // export loop drives rendering (and must NOT pause the videos)
@@ -2583,7 +2585,7 @@ function tickFrame(now){
   // which frees the main thread. Continuous 60fps WebGL is the #1 cause of janky scroll/taps on phones.
   let doRender=true;
   if(window.innerWidth<=820){
-    if(now<_scrollPauseUntil) doRender=false;
+    if(!_stageVisible || now<_scrollPauseUntil) doRender=false;   // stage scrolled away or page mid-scroll → don't draw
     else { _renderAccum+=dt; if(_renderAccum<1/30) doRender=false; else _renderAccum=0; }
   }
   if(doRender){
@@ -2947,9 +2949,13 @@ window.addEventListener('resize',resize);
   const nb=document.getElementById('mNavBtn'); if(nb) nb.addEventListener('click',()=>document.body.classList.toggle('mnav-open'));
   const sc=document.getElementById('mNavScrim'); if(sc) sc.addEventListener('click',closeNav);
   document.querySelectorAll('#mNav a').forEach(a=>a.addEventListener('click',closeNav));
-  // pause WebGL rendering during panel scroll → buttery scroll (resumes ~150ms after the finger stops)
-  ['previews','setScroll','exportBar'].forEach(id=>{ const el=document.getElementById(id);
-    if(el) el.addEventListener('scroll',()=>{ _scrollPauseUntil=performance.now()+150; },{passive:true}); });
+  // pause WebGL while the PAGE scrolls → buttery scroll (resumes ~150ms after the finger stops)
+  window.addEventListener('scroll',()=>{ _scrollPauseUntil=performance.now()+150; },{passive:true});
+  // stop drawing the stage entirely once it's scrolled out of view (you're deep in controls) → saves GPU
+  if('IntersectionObserver'in window){
+    const m=document.querySelector('main');
+    if(m) new IntersectionObserver(es=>{ _stageVisible=es[0].isIntersecting; }).observe(m);
+  }
   // re-fit the stage when the device rotates or the URL bar shows/hides
   window.addEventListener('orientationchange',()=>setTimeout(resize,300));
 })();
