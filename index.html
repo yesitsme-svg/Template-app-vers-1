@@ -406,6 +406,38 @@
     box-shadow:0 6px 24px rgba(0,0,0,.2);
   }
   .toast.show{opacity:1; transform:translateY(0);}
+
+  /* ===================== MOBILE / touch layout (≤820px) ===================== */
+  @media (max-width:820px){
+    /* top nav → thin logo bar (the desktop mega-menu doesn't belong on a phone) */
+    #topnav{ height:52px; padding:0 14px; }
+    #topnav .navleft > a:not(.navlogo), #topnav .navdrop, #topnav .navpro{ display:none; }
+
+    /* stack the three columns; the whole content area scrolls vertically. Bottom padding clears the
+       fixed export bar so the last controls aren't hidden behind it. */
+    #content{ flex-direction:column; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; padding-bottom:120px; }
+
+    /* STAGE pinned at the top (DOM order is previews→main→settings, so pull it up + make it sticky)
+       → you watch the animation while scrolling the controls underneath */
+    main{ order:-1; position:sticky; top:0; z-index:30; flex:0 0 auto; height:40vh; min-height:240px;
+          background:var(--bg); border-bottom:1px solid var(--border); }
+    body.dark main{ background:#171717; }
+    #timeline{ flex:0 0 auto; }
+
+    /* panels → full-width stacked blocks that scroll with the page */
+    #previews, #settings{ width:auto; min-width:0; border-left:none; border-right:none; flex:0 0 auto; overflow:visible; }
+    #previews{ border-bottom:1px solid var(--border); }
+    #setScroll, #settings{ overflow:visible; }
+
+    /* export bar fixed to the screen bottom → Export is always one tap away (sticky misbehaves in a
+       stacked scroll: it clamps to its container top when settings is below the fold) */
+    #exportBar{ position:fixed; bottom:0; left:0; right:0; width:100%; z-index:40; box-shadow:0 -6px 20px rgba(0,0,0,.10); }
+    body.dark #exportBar{ box-shadow:0 -6px 20px rgba(0,0,0,.45); }
+
+    /* bigger tap targets for uploaded-image thumbnails */
+    .thumb, .thumb img, .thumb.add{ width:56px; height:75px; }
+    .thumb .x{ width:20px; height:20px; top:-7px; right:-7px; line-height:18px; }
+  }
 </style>
 </head>
 <body>
@@ -2793,7 +2825,11 @@ $('exportBtn').addEventListener('click',()=>{
 /* ================= sizing ================= */
 function resize(){
   const [rw,rh]=ratioWH(), ar=rw/rh;
-  const availW=window.innerWidth-222-312-72, availH=window.innerHeight-150-56; // -56 for the top nav bar
+  let availW, availH;
+  if(window.innerWidth<=820){                            // mobile: the layout is stacked → measure the real stage area
+    const wr=document.querySelector('.stageWrap').getBoundingClientRect();
+    availW=Math.max(80, wr.width-20); availH=Math.max(80, wr.height-20);
+  } else { availW=window.innerWidth-222-312-72; availH=window.innerHeight-150-56; } // desktop: fixed side panels + nav (unchanged)
   // CSS display size: fit the aspect ratio into the available area
   let dispW=availW, dispH=Math.round(availW/ar);
   if(dispH>availH){ dispH=availH; dispW=Math.round(availH*ar); }
