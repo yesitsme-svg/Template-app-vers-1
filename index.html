@@ -494,7 +494,7 @@
 
 <nav id="topnav">
   <div class="navleft">
-    <span id="verBadge">v117</span>
+    <span id="verBadge">v118</span>
     <a class="navlogo" href="https://wannathis.one/" title="wannathis.one"><svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M22 44C34.1503 44 44 34.1503 44 22C44 9.84974 34.1503 0 22 0C9.84974 0 0 9.84974 0 22C0 34.1503 9.84974 44 22 44Z" fill="white"/><path fill-rule="evenodd" clip-rule="evenodd" d="M22 43.0833C33.644 43.0833 43.0833 33.644 43.0833 22C43.0833 10.356 33.644 0.916667 22 0.916667C10.356 0.916667 0.916667 10.356 0.916667 22C0.916667 33.644 10.356 43.0833 22 43.0833ZM22 44C34.1503 44 44 34.1503 44 22C44 9.84974 34.1503 0 22 0C9.84974 0 0 9.84974 0 22C0 34.1503 9.84974 44 22 44Z" fill="black"/><path fill-rule="evenodd" clip-rule="evenodd" d="M19.6198 16.8747V26.2086C19.6198 27.9343 18.1834 29.3333 16.4115 29.3333C14.6395 29.3333 13.2031 27.9343 13.2031 26.2086V16.8747C13.2031 15.149 14.6395 13.75 16.4115 13.75C18.1834 13.75 19.6198 15.149 19.6198 16.8747ZM30.6198 16.8747V26.2086C30.6198 27.9343 29.1834 29.3333 27.4115 29.3333C25.6395 29.3333 24.2031 27.9343 24.2031 26.2086V16.8747C24.2031 15.149 25.6395 13.75 27.4115 13.75C29.1834 13.75 30.6198 15.149 30.6198 16.8747Z" fill="white"/><path fill-rule="evenodd" clip-rule="evenodd" d="M30.6193 25.9321V17.2685C30.6193 15.6667 29.3208 14.3682 27.7189 14.3682C26.1171 14.3682 24.8186 15.6667 24.8186 17.2685V25.9321C24.8186 27.5339 26.1171 28.8325 27.7189 28.8325C29.3208 28.8325 30.6193 27.5339 30.6193 25.9321ZM27.7189 13.2917C25.5226 13.2917 23.7422 15.0722 23.7422 17.2685V25.9321C23.7422 28.1284 25.5226 29.9089 27.7189 29.9089C29.9152 29.9089 31.6957 28.1284 31.6957 25.9321V17.2685C31.6957 15.0722 29.9152 13.2917 27.7189 13.2917Z" fill="black"/><path d="M23.7422 26.4352C23.7422 24.2389 25.5226 22.4585 27.7189 22.4585C29.9152 22.4585 31.6957 24.2389 31.6957 26.4352C31.6957 28.6315 29.9152 30.412 27.7189 30.412C25.5226 30.412 23.7422 28.6315 23.7422 26.4352Z" fill="black"/><path fill-rule="evenodd" clip-rule="evenodd" d="M19.1622 25.9321V17.2685C19.1622 15.6667 17.8637 14.3682 16.2619 14.3682C14.6601 14.3682 13.3616 15.6667 13.3616 17.2685V25.9321C13.3616 27.5339 14.6601 28.8325 16.2619 28.8325C17.8637 28.8325 19.1622 27.5339 19.1622 25.9321ZM16.2619 13.2917C14.0656 13.2917 12.2852 15.0722 12.2852 17.2685V25.9321C12.2852 28.1284 14.0656 29.9089 16.2619 29.9089C18.4582 29.9089 20.2387 28.1284 20.2387 25.9321V17.2685C20.2387 15.0722 18.4582 13.2917 16.2619 13.2917Z" fill="black"/><path d="M12.2852 26.4352C12.2852 24.2389 14.0656 22.4585 16.2619 22.4585C18.4582 22.4585 20.2387 24.2389 20.2387 26.4352C20.2387 28.6315 18.4582 30.412 16.2619 30.412C14.0656 30.412 12.2852 28.6315 12.2852 26.4352Z" fill="black"/></svg></a>
     <div class="navdrop">
       <a class="navlink" href="https://wannathis.one/mockups">Mockup catalog <span class="navcaret"><svg viewBox="0 0 10 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.46967 2.53033C2.17678 2.23744 2.17678 1.76268 2.46967 1.46978C2.76256 1.17689 3.23732 1.17689 3.53022 1.46978L8.06049 6.00006L3.53022 10.5303C3.23732 10.8232 2.76256 10.8232 2.46967 10.5303C2.17678 10.2374 2.17678 9.76268 2.46967 9.46978L5.9394 6.00006L2.46967 2.53033Z" fill="black"/></svg></span></a>
@@ -2269,8 +2269,9 @@ function makeCardFrame(mesh, color, opacity){
   const outer=roundedRectShape(w+2*bw, h+2*bw, ri>0?ri+bw:0);
   outer.holes.push(new THREE.Path(roundedRectShape(w, h, ri).getPoints(ri>0?28:5)));
   const m=new THREE.Mesh(new THREE.ShapeGeometry(outer,28),
-    new THREE.MeshBasicMaterial({color, transparent:true, opacity, depthTest:false, depthWrite:false}));
-  m.position.z=0; m.renderOrder=999;   // coplanar with the card (drawn on top via renderOrder) → no parallax shift when the card is tilted
+    new THREE.MeshBasicMaterial({color, transparent:true, opacity, depthTest:false, depthWrite:false, side:THREE.DoubleSide}));
+  m.position.z=0; m.renderOrder=1e6;   // ABOVE every card in every scene (spiral uses up to 1000) → the highlight
+                                       // shows even on a back/overlapped card. DoubleSide → visible if the card is turned.
   m.scale.setScalar(state.size||1);    // match the card's live size (cards are scaled in the vertex shader via uSize, not the geometry)
   return m;
 }
@@ -2667,8 +2668,10 @@ function downloadBlob(blob,name){
   a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),5000);
 }
-function setExportUI(on,label='Exporting MP4'){
+let _expLabel='Exporting';
+function setExportUI(on,label='Exporting'){
   exportingUI(on);
+  _expLabel=label;                       // remembered so the progress text shows the RIGHT format, not always "MP4"
   $('ebText').textContent=label+'…';
   $('ebFill').style.width='0%';
 }
@@ -2681,7 +2684,7 @@ function exportingUI(on){
 }
 function setExportProgress(f,txt){
   $('ebFill').style.width=Math.round(f*100)+'%';
-  $('ebText').textContent=(txt||'Exporting MP4')+` — ${Math.round(f*100)}%`;
+  $('ebText').textContent=(txt||_expLabel)+` — ${Math.round(f*100)}%`;
 }
 const yieldTask=()=>new Promise(r=>{ // unlike setTimeout, not throttled in background tabs
   const ch=new MessageChannel(); ch.port1.onmessage=()=>r(); ch.port2.postMessage(0);
@@ -2694,7 +2697,7 @@ async function exportMP4(){
     toast('This browser has no WebCodecs — falling back to WebM.');
     exportWebM(); return;
   }
-  exporting=true; exportCancelled=false; setExportUI(true);
+  exporting=true; exportCancelled=false; setExportUI(true,'Exporting MP4');
   const prevT=animTime, prevPlay=state.playing; state.playing=false;
   // MP4 has no alpha channel → force a fully-opaque background pass for the duration of the export.
   // (transparent mode falls back to a solid fill of colour 1.) applyBackground() restores it afterwards.
@@ -2780,11 +2783,13 @@ async function exportMP4(){
 // the equivalent H.264 MP4. Falls back to realtime capture only on browsers without WebCodecs.
 async function exportWebM(){
   if(exporting||rec||!active) return;
-  if(!('VideoEncoder' in window)){ exportWebMRealtime(); return; }
+  // TRANSPARENCY: WebCodecs cannot encode an alpha channel here (verified: isConfigSupported{alpha:'keep'}
+  // → false for VP9 & VP8). The only client-side route that keeps alpha is capturing the live transparent
+  // canvas → use the realtime path. Opaque projects get the crisp frame-accurate VP9 path below.
+  if(state.transparent || !('VideoEncoder' in window)){ exportWebMRealtime(); return; }
   exporting=true; exportCancelled=false; setExportUI(true,'Exporting WebM');
   const prevT=animTime, prevPlay=state.playing; state.playing=false;
-  const transparent=!!state.transparent;
-  let encoder=null, bgForced=false;
+  let encoder=null;
   try{
     const {Muxer,ArrayBufferTarget}=await import('https://cdn.jsdelivr.net/npm/webm-muxer@5/+esm');
     const cv=renderer.domElement, fps=state.fps||30;
@@ -2793,8 +2798,7 @@ async function exportWebM(){
     const totalFrames=Math.max(fps,Math.min(Math.round(loopReal*fps),fps*180));
     if(loopReal>180) toast('Loop over 3 min — export trimmed.');
     const bitrate=exportBitrate(W,H,fps,'webm');
-    // pick a VP9 level that accepts this resolution (low→high), like the H.264 picker
-    const levels=['10','11','20','21','30','31','40','41','50','51','60','61'];
+    const levels=['10','11','20','21','30','31','40','41','50','51','60','61'];   // pick a VP9 level that fits W×H
     let cfg=null;
     for(const L of levels){
       const probe={codec:'vp09.00.'+L+'.08', width:W, height:H, bitrate, framerate:fps, bitrateMode:'constant'};
@@ -2802,21 +2806,10 @@ async function exportWebM(){
       if(s?.supported){ cfg=probe; break; }
     }
     if(!cfg) throw new Error('no supported VP9 encoder');
-    // transparency: only if the project IS transparent AND the encoder accepts an alpha config
-    let alpha='discard';
-    if(transparent){ const ac={...cfg, alpha:'keep'};
-      const s=await VideoEncoder.isConfigSupported(ac).catch(()=>null);
-      if(s?.supported){ alpha='keep'; cfg=ac; } }
-    // background: opaque pass UNLESS we're keeping alpha (then leave the scene's transparent bg untouched)
-    if(alpha!=='keep'){
-      bgMat.uniforms.uAlphaA.value=1; bgMat.uniforms.uAlphaB.value=1;
-      if(transparent){ bgMat.uniforms.uMode.value=0; const A=hex01(state.bg); bgMat.uniforms.uColA.value.set(A[0],A[1],A[2]); }
-      bgDraw=true; bgForced=true;
-    }
     const ss=Math.min(2, RENDER_CAP/Math.max(W,H)); RW=(Math.round(W*ss))&~1; RH=(Math.round(H*ss))&~1;
     const {ds,dx}=beginHiRes(W,H,RW,RH);
     const muxer=new Muxer({ target:new ArrayBufferTarget(),
-      video:{codec:'V_VP9', width:W, height:H, frameRate:fps, alpha:alpha==='keep'} });
+      video:{codec:'V_VP9', width:W, height:H, frameRate:fps} });
     let encErr=null;
     encoder=new VideoEncoder({ output:(chunk,meta)=>muxer.addVideoChunk(chunk,meta), error:e=>{encErr=e;} });
     encoder.configure(cfg);
@@ -2826,8 +2819,8 @@ async function exportWebM(){
       animTime=i*state.speed/fps;
       if(hasVid) await seekVideosTo(i/fps);
       renderFrame();
-      dx.clearRect(0,0,W,H); dx.drawImage(cv,0,0,W,H);    // supersample → downscale; clearRect keeps alpha
-      const vf=new VideoFrame(ds,{timestamp:Math.round(i*1e6/fps),duration:Math.round(1e6/fps),alpha});
+      dx.clearRect(0,0,W,H); dx.drawImage(cv,0,0,W,H);    // supersample → downscale for clean edges
+      const vf=new VideoFrame(ds,{timestamp:Math.round(i*1e6/fps),duration:Math.round(1e6/fps)});
       encoder.encode(vf,{keyFrame:i%(fps*2)===0});
       vf.close();
       while(encoder.encodeQueueSize>8) await yieldTask();
@@ -2840,14 +2833,13 @@ async function exportWebM(){
       const blob=new Blob([muxer.target.buffer],{type:'video/webm'});
       downloadBlob(blob,fileName('webm'));
       window.__app.lastExport={type:'webm',size:blob.size,frames:totalFrames};
-      toast(`WebM saved — ${(totalFrames/fps).toFixed(1)} s, ${(blob.size/1048576).toFixed(1)} MB`+(alpha==='keep'?' · transparent':''));
+      toast(`WebM saved — ${(totalFrames/fps).toFixed(1)} s, ${(blob.size/1048576).toFixed(1)} MB`);
     } else { try{encoder.close();}catch{} toast('Export cancelled.'); }
   }catch(err){
     console.error('WebM export failed:',err);
     try{ encoder?.close(); }catch{}
     toast('WebM export failed: '+(err.message||err));
   }finally{
-    if(bgForced) applyBackground();
     animTime=prevT; state.playing=prevPlay;
     exporting=false; exportingUI(false);
     resize();
@@ -3164,8 +3156,10 @@ function bindTip(el, mode){
 // bits-per-pixel-per-frame, tuned for crisp web output at a small size; VP9 ~2× more efficient than H.264.
 // Both encoders run CONSTANT-bitrate, so the real file size ≈ bitrate × seconds / 8 (what estimateExport reports).
 function exportBitrate(W,H,fps,fmt){
-  const bpp = fmt==='webm' ? 0.045 : 0.09;
-  return Math.min(40_000_000, Math.round(W*H*fps*bpp));
+  // bumped for crisp output that matches the live preview (0.045 was too low → soft). Still web-sized:
+  // HD/30/20s ≈ 5MB WebM. VP9 ~1.4× more efficient than H.264, so it gets a lower bpp for the same quality.
+  const bpp = fmt==='webm' ? 0.09 : 0.13;
+  return Math.min(50_000_000, Math.round(W*H*fps*bpp));
 }
 function estimateExport(){
   if(!active) return null;
